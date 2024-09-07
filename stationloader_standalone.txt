@@ -131,12 +131,12 @@ function rkn_menu.refreshTitleBar()
 	menu.getImportablePlans()
 
 	if not menu.loadoutMode then
-		text.override = ReadText(1001, 7904)
-		local loadOptions = {}
-		for _, plan in ipairs(menu.constructionplans) do
-			table.insert(loadOptions, { id = plan.id, text = plan.name, icon = "", displayremoveoption = plan.deleteable, active = plan.active, mouseovertext = plan.mouseovertext })
-		end
-		table.sort(loadOptions, function (a, b) return a.text < b.text end)
+		--text.override = ReadText(1001, 7904)
+		--local loadOptions = {}
+		--for _, plan in ipairs(menu.constructionplans) do
+			--table.insert(loadOptions, { id = plan.id, text = plan.name, icon = "", displayremoveoption = plan.deleteable, active = plan.active, mouseovertext = plan.mouseovertext })
+		--end
+		--table.sort(loadOptions, function (a, b) return a.text < b.text end)
 
 		-- editbox
 		local desc = Helper.createEditBox(Helper.createTextInfo(ffi.string(C.GetComponentName(menu.container)), "center", Helper.headerRow1Font, Helper.scaleFont(Helper.headerRow1Font, Helper.headerRow1FontSize), 255, 255, 255, 100), true, 0, 0, 0, 0, nil, nil, false)
@@ -146,7 +146,7 @@ function rkn_menu.refreshTitleBar()
 		--local desc = Helper.createDropDown(loadOptions, "", text, nil, true, true, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize)
 		--Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, nil, menu.dropdownLoad, menu.dropdownRemovedCP)
 
-		local desc = Helper.createButton(nil, Helper.createTextInfo("Plan Browser"), true, true, 0, 0, 0, menu.titleData.height, nil, nil, nil, "")
+		local desc = Helper.createButton(Helper.createTextInfo("Plan Browser", "center", Helper.standardFont, Helper.standardFontSize, 255, 255, 255, 100), nil, true, true, 0, 0, 0, menu.titleData.height, nil, nil, nil, "")
 		Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "button", nil, rkn_menu.buttonTitleLoad)
 		------- Runekn's Changes Stop Here! ----------
 		-- save
@@ -302,8 +302,14 @@ end
 function rkn_menu.addFolderToList(ltable, root, column)
 	for _, folder in ipairs(root.folders_arr) do
 		local row = ltable:addRow(folder, {  })
-		row[column]:setColSpan(config.maxFolders - column + 2):createText("folder: " .. folder.name, { halign = "left" })
-		rkn_menu.addFolderToList(ltable, folder, column + 1)
+		local folderId = "rkn_configbrowser_folder_" .. folder.name
+		local isextended = sc_menu.isResourceEntryExtended(folderId)
+		row[column]:createButton({ helpOverlayID = folderId, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
+		row[column].handlers.onClick = function () return rkn_menu.buttonExtendListEntry(folderId, row.index) end
+		row[column + 1]:setColSpan(config.maxFolders - column + 1):createText("folder: " .. folder.name, Helper.subHeaderTextProperties)
+		if isextended then
+			rkn_menu.addFolderToList(ltable, folder, column + 1)
+		end
 	end
 
 	for _, plan in ipairs(root.plans) do
@@ -349,6 +355,18 @@ function rkn_menu.onRowChanged(row, rowdata, uitable, modified, input, source)
 			end
 		end
 	end
+end
+
+function rkn_menu.buttonExtendListEntry(index, row)
+	sc_menu.extendResourceEntry(index)
+	rkn_menu.createCPBrowserContext();
+
+	--menu.topRows.modules = GetTopRow(menu.moduletable)
+	--menu.selectedRows.modules = Helper.currentTableRow[menu.moduletable]
+	--menu.selectedCols.modules = Helper.currentTableCol[menu.moduletable]
+	--menu.storePlanTableState()
+	--menu.selectedRows.planresources = row
+	--menu.displayMenu()
 end
 
 init()
