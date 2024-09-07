@@ -8,6 +8,7 @@ local sc_menu = {}
 local rkn_menu = {}
 
 local config = {
+	maxFolders = 4,
 	contextLayer = 2,
 	dropDownTextProperties = {
 		halign = "center",
@@ -181,15 +182,8 @@ function rkn_menu.buttonTitleLoad()
 end
 
 function rkn_menu.createCPBrowserContext()
-	DebugError("createCPBrowserContext")
-
-	local loadOptions = {}
-	local planCount = 0
-	for _, plan in ipairs(sc_menu.constructionplans) do
-		table.insert(loadOptions, { id = plan.id, text = plan.name, icon = "", displayremoveoption = plan.deleteable, active = plan.active, mouseovertext = plan.mouseovertext })
-		planCount = planCount + 1
-	end
-	table.sort(loadOptions, function (a, b) return a.text < b.text end)
+	local listRoot = rkn_menu.prepareConstructionPlans()
+	--DebugError(rkn_menu.serializeTable(listRoot))
 
 	sc_menu.displayContextFrame("loadCP", sc_menu.titleData.width, sc_menu.titleData.offsetX, sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
 	Helper.removeAllWidgetScripts(sc_menu, config.contextLayer)
@@ -204,19 +198,20 @@ function rkn_menu.createCPBrowserContext()
 	})
 	sc_menu.contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
 
-
+	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
 	local browserHeight = 0.6 * Helper.viewHeight
 	local headerHeight = Helper.scaleY(Helper.standardTextHeight) + Helper.borderSize * 2
-	local ltable = sc_menu.contextFrame:addTable(1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = browserHeight })
-	local row = ltable:addRow(false, { fixed = true })
-	row[1]:setColSpan(1):createText("Load Construction Plan", Helper.headerRowCenteredProperties)
-
-	rkn_menu.ltable = ltable
-	for i = 1, planCount do
-		local plan = loadOptions[i]
-		local row = ltable:addRow(plan, {  })
-		row[1]:setColSpan(1):createText(plan.text, { halign = "left" })
+	local ltable = sc_menu.contextFrame:addTable(config.maxFolders + 1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = browserHeight })
+	--local ltable = sc_menu.contextFrame:addTable(1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = browserHeight })
+	for column = 1, config.maxFolders do
+		ltable:setColWidth(column, smallColWidth, false)
 	end
+	rkn_menu.ltable = ltable
+	local row = ltable:addRow(false, { fixed = true })
+	row[1]:setColSpan(config.maxFolders + 1):createText("Load Construction Plan", Helper.headerRowCenteredProperties)
+	--row[1]:setColSpan(1):createText("Load Construction Plan", Helper.headerRowCenteredProperties)
+
+	rkn_menu.addFolderToList(ltable, listRoot, 1)
 
 	local tableColumns = 5
 	local btable = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = headerHeight + browserHeight })
@@ -230,6 +225,99 @@ function rkn_menu.createCPBrowserContext()
 	row[tableColumns].handlers.onClick = sc_menu.closeContextMenu
 
 	sc_menu.contextFrame:display()
+end
+
+function rkn_menu.serializeTable(val, name, skipnewlines, depth) -- TODO: delete
+    skipnewlines = skipnewlines or false
+    depth = depth or 0
+
+    local tmp = string.rep(" ", depth)
+
+    if name then tmp = tmp .. name .. " = " end
+
+    if type(val) == "table" then
+        tmp = tmp .. "{" .. (not skipnewlines and "\n" or "")
+
+        for k, v in pairs(val) do
+            tmp =  tmp .. rkn_menu.serializeTable(v, k, skipnewlines, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
+        end
+
+        tmp = tmp .. string.rep(" ", depth) .. "}"
+    elseif type(val) == "number" then
+        tmp = tmp .. tostring(val)
+    elseif type(val) == "string" then
+        tmp = tmp .. string.format("%q", val)
+    elseif type(val) == "boolean" then
+        tmp = tmp .. (val and "true" or "false")
+    else
+        tmp = tmp .. "\"[inserializeable datatype:" .. type(val) .. "]\""
+    end
+
+    return tmp
+end
+
+
+function rkn_menu.prepareConstructionPlans()
+	-- First we build the plans structure --
+	local root = { type = "folder", name = "root", folders = {}, folders_arr = {}, plans = {} }
+	for _, plan in ipairs(sc_menu.constructionplans) do
+		local cwd = root
+		-- iterate through plan folders --
+		local nextMatch = string.gmatch(plan.name, "[^%s]+")
+		local folder = nextMatch()
+		local name = plan.name
+		local levelsLeft = config.maxFolders
+		while 1==1 do
+			-- Check if this is the plan name --
+			local next = nextMatch()
+			if not next then
+				name = folder
+				break
+			end
+			levelsLeft = levelsLeft -1
+			if levelsLeft <= 0 then
+				-- Make the rest of the actual plan name, the displayed name --
+				name = plan.name -- TODO
+				break
+			end
+			-- Otherwise, path to folder --
+			local target = cwd.folders[folder]
+			if not target then
+				target = { type = "folder", name = folder, folders = {}, folders_arr = {}, plans = {} }
+				cwd.folders[folder] = target
+				table.insert(cwd.folders_arr, target)
+			end
+			cwd = target
+			folder = next
+		end
+		table.insert(cwd.plans, { type = "plan", id = plan.id, name = name, active = plan.active })
+	end
+
+	-- Now we sort all folders --
+	rkn_menu.sortFolder(root)
+
+	return root
+end
+
+function rkn_menu.addFolderToList(ltable, root, column)
+	for _, folder in ipairs(root.folders_arr) do
+		local row = ltable:addRow(folder, {  })
+		row[column]:setColSpan(config.maxFolders - column + 2):createText("folder: " .. folder.name, { halign = "left" })
+		rkn_menu.addFolderToList(ltable, folder, column + 1)
+	end
+
+	for _, plan in ipairs(root.plans) do
+		local row = ltable:addRow(plan, {  })
+		row[column]:setColSpan(config.maxFolders - column + 2):createText("plan: " .. plan.name, { halign = "left" })
+	end
+end
+
+function rkn_menu.sortFolder(folder)
+	table.sort(folder.plans, function (a, b) return a.name < b.name end)
+	table.sort(folder.folders_arr, function (a, b) return a.name < b.name end)
+	for _, innerFolder in ipairs(folder.folders_arr) do
+		rkn_menu.sortFolder(innerFolder)
+	end
 end
 
 function rkn_menu.isRowValidForLoad()
