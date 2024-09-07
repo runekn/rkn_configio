@@ -203,18 +203,15 @@ function rkn_menu.createCPBrowserContext()
 	local browserHeight = 0.6 * Helper.viewHeight
 	local headerHeight = Helper.scaleY(Helper.standardTextHeight) + Helper.borderSize * 2
 	local ltable = sc_menu.contextFrame:addTable(config.maxFolders + 1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = browserHeight })
-	--local ltable = sc_menu.contextFrame:addTable(1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = browserHeight })
 	for column = 1, config.maxFolders do
 		ltable:setColWidth(column, smallColWidth, false)
 	end
 	rkn_menu.ltable = ltable
 	local row = ltable:addRow(false, { fixed = true })
 	row[1]:setColSpan(config.maxFolders + 1):createText("Load Construction Plan", Helper.headerRowCenteredProperties)
-	--row[1]:setColSpan(1):createText("Load Construction Plan", Helper.headerRowCenteredProperties)
 
 	rkn_menu.addFolderToList(ltable, listRoot, 1)
 
-	--DebugError("load toprow: " .. tostring(sc_menu.topRows.rkn_configbrowser_load))
 	ltable:setTopRow(sc_menu.topRows.rkn_configbrowser_load)
 	ltable:setSelectedRow(sc_menu.selectedRows.rkn_configbrowser_load)
 
@@ -308,6 +305,7 @@ end
 -- Overriden function --
 function rkn_menu.onRowChanged(row, rowdata, uitable, modified, input, source)
 	local menu = sc_menu
+
 	if not menu.loadoutMode then
 		if uitable == menu.plantable then
 			if menu.holomap ~= 0 then
@@ -336,11 +334,8 @@ end
 function rkn_menu.buttonExtendListEntry(index, row)
 	sc_menu.extendResourceEntry(index)
 
-	--sc_menu.topRows.rkn_configbrowser_load = GetTopRow(rkn_menu.ltable)
-	--sc_menu.selectedRows.rkn_configbrowser_load = Helper.currentTableRow[rkn_menu.ltable]
-	sc_menu.topRows.rkn_configbrowser_load = row
+	sc_menu.topRows.rkn_configbrowser_load = GetTopRow(sc_menu.contexttable)
 	sc_menu.selectedRows.rkn_configbrowser_load = row
-	--DebugError("write toprow: " .. tostring(sc_menu.topRows.rkn_configbrowser_load))
 
 	rkn_menu.createCPBrowserContext();
 end
