@@ -1,0 +1,174 @@
+-- ffi setup 
+local ffi = require("ffi")
+local C = ffi.C
+ 
+local Lib = require("extensions.sn_mod_support_apis.lua_library")
+--local RdLib = require("extensions.reactive_docking.reactivedocking")
+local sc_menu = {}
+local rkn_menu = {}
+
+local config = {
+	contextLayer = 2,
+	dropDownTextProperties = {
+		halign = "center",
+		font = Helper.standardFont,
+		fontsize = Helper.scaleFont(Helper.standardFont, Helper.standardFontSize),
+		color = Color["text_normal"],
+		x = 0,
+		y = 0
+	},
+	scaleSize = 2,
+	stateKeys = {
+		{ "container", "UniverseID" },
+		{ "buildstorage", "UniverseID" },
+		{ "loadoutModuleIdx" },
+		{ "modulesMode", },
+		-- { "upgradeplan" }, -- reserved for loadoutModuleIdx information
+		{ "origDefaultLoadout", "bool" },
+	},
+	maxSidePanelWidth = 800,
+	maxCenterPanelWidth = 1600,
+	fileExtension = ".xml",
+	compatibilityFontSize = 5,
+	mapfilterversion = 2,
+	moduleFilterWidth = 300,
+}
+
+local function init()
+	sc_menu = Lib.Get_Egosoft_Menu("StationConfigurationMenu")
+	sc_menu.createTitleBar = rkn_menu.createTitleBar
+end
+
+function rkn_menu.createTitleBar(frame)
+	local menu = sc_menu
+
+	menu.updateConstructionPlans()
+	menu.getImportablePlans()
+
+	local ftable = frame:addTable(9, { tabOrder = 5, height = 0, x = menu.titleData.offsetX, y = menu.titleData.offsetY, scaling = false, reserveScrollBar = false })
+	ftable:setColWidth(1, menu.titleData.nameWidth)
+	ftable:setColWidth(2, menu.titleData.dropdownWidth)
+	ftable:setColWidth(3, menu.titleData.height)
+	ftable:setColWidth(4, menu.titleData.height)
+	ftable:setColWidth(5, menu.titleData.height)
+	ftable:setColWidth(6, menu.titleData.height)
+	ftable:setColWidth(7, menu.titleData.height)
+	ftable:setColWidth(8, menu.titleData.height)
+	ftable:setColWidth(9, menu.titleData.height)
+
+	local row = ftable:addRow(true, { fixed = true, bgColor = Color["row_background_blue"] })
+	if not menu.loadoutMode then
+		-- name
+		row[1]:createEditBox({ scaling = true }):setText(ffi.string(C.GetComponentName(menu.container)), { halign = "center", font = Helper.headerRow1Font, fontsize = Helper.headerRow1FontSize })
+		row[1].handlers.onEditBoxDeactivated = menu.editboxNameUpdateText
+		-- load
+		--local loadOptions = {}
+		--for _, plan in ipairs(menu.constructionplans) do
+		--	table.insert(loadOptions, { id = plan.id, text = plan.name, icon = "", displayremoveoption = plan.deleteable, active = plan.active, mouseovertext = plan.mouseovertext })
+		--end
+		--table.sort(loadOptions, function (a, b) return a.text < b.text end)
+		--row[2]:createDropDown(loadOptions, { textOverride = ReadText(1001, 7904), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize }):setTextProperties(config.dropDownTextProperties)
+		--row[2].handlers.onDropDownConfirmed = menu.dropdownLoad
+		--row[2].handlers.onDropDownRemoved = menu.dropdownRemovedCP
+		row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = "Load construction plans" }):setText("Plan Browser", { halign = "center" })
+		row[2].handlers.onClick = function () rkn_menu.buttonTitleLoad(frame) end
+		-- save
+		row[3]:createButton({ helpOverlayID = "save_constructionplan", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = ReadText(1026, 7901) }):setIcon("menu_save")
+		row[3].handlers.onClick = menu.buttonTitleSave
+		-- Import
+		row[4]:createButton({ helpOverlayID = "import_constructionplan", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = ReadText(1026, 7916) }):setIcon("menu_import")
+		row[4].handlers.onClick = rkn_menu.buttonTitleImport
+		-- Export
+		row[5]:createButton({ helpOverlayID = "export_constructionplan", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = ReadText(1026, 7917) }):setIcon("menu_export")
+		row[5].handlers.onClick = menu.buttonTitleExport
+		-- reset camera
+		row[6]:createButton({ helpOverlayID = "reset_topview", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = ffi.string(C.ConvertInputString(ReadText(1026, 7911), ReadText(1026, 7902))) }):setIcon("menu_reset_view"):setHotkey("INPUT_STATE_DETAILMONITOR_RESET_VIEW", { displayIcon = false })
+		row[6].handlers.onClick = function () return C.ResetMapPlayerRotation(menu.holomap) end
+		-- undo
+		menu.canundo = false
+		if menu.holomap and (menu.holomap ~= 0) then
+			menu.canundo = C.CanUndoConstructionMapChange(menu.holomap)
+		end
+		row[7]:createButton({ helpOverlayID = "undo_constructionplan", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = menu.canundo, height = menu.titleData.height, mouseOverText = ReadText(1026, 7903) .. Helper.formatOptionalShortcut(" (%s)", "action", 278) }):setIcon("menu_undo")
+		row[7].handlers.onClick = function () return menu.undoHelper(true) end
+		-- redo
+		menu.canredo = false
+		if menu.holomap and (menu.holomap ~= 0) then
+			menu.canredo = C.CanRedoConstructionMapChange(menu.holomap)
+		end
+		row[8]:createButton({ helpOverlayID = "redo_constructionplan", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = menu.canredo, height = menu.titleData.height, mouseOverText = ReadText(1026, 7904) .. Helper.formatOptionalShortcut(" (%s)", "action", 279) }):setIcon("menu_redo")
+		row[8].handlers.onClick = function () return menu.undoHelper(false) end
+		-- settings
+		row[9]:createButton({ helpOverlayID = "settings", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setIcon("menu_options")
+		row[9].handlers.onClick = menu.buttonTitleSettings
+	else
+		-- name
+		row[1]:createEditBox({ scaling = true }):setText(ffi.string(C.GetComponentName(menu.container)), { halign = "center", font = Helper.headerRow1Font, fontsize = Helper.headerRow1FontSize })
+		row[1].handlers.onEditBoxDeactivated = menu.editboxNameUpdateText
+		-- load
+		local loadoutOptions = {}
+		if next(menu.loadouts) then
+			for _, loadout in ipairs(menu.loadouts) do
+				table.insert(loadoutOptions, { id = loadout.id, text = loadout.name, icon = "", displayremoveoption = loadout.deleteable, active = loadout.active, mouseovertext = loadout.mouseovertext })
+			end
+		end
+		row[2]:setColSpan(6):createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), optionWidth = menu.titleData.dropdownWidth + 6 * (menu.titleData.height + Helper.borderSize) }):setTextProperties(config.dropDownTextProperties)
+		row[2].handlers.onDropDownConfirmed = menu.dropdownLoadout
+		row[2].handlers.onDropDownRemoved = menu.dropdownRemovedLoadout
+		-- save
+		row[8]:createButton({ helpOverlayID = "save_loadout", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = ReadText(1026, 7905) }):setIcon("menu_save")
+		row[8].handlers.onClick = menu.buttonTitleSaveLoadout
+		-- reset camera
+		row[9]:createButton({ helpOverlayID = "reset_topview", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = ffi.string(C.ConvertInputString(ReadText(1026, 7911), ReadText(1026, 7902))) }):setIcon("menu_reset_view"):setHotkey("INPUT_STATE_DETAILMONITOR_RESET_VIEW", { displayIcon = false })
+		row[9].handlers.onClick = function () return C.ResetMapPlayerRotation(menu.holomap) end
+	end
+end
+
+function rkn_menu.buttonTitleLoad(frame)
+	if sc_menu.contextMode and (sc_menu.contextMode.mode == "loadCP") then
+		sc_menu.closeContextMenu()
+	else
+		rkn_menu.createCPBrowserContext(frame);
+	end
+end
+
+function rkn_menu.createCPBrowserContext(frame)
+	DebugError("createCPBrowserContext")
+
+	sc_menu.displayContextFrame("loadCP", sc_menu.titleData.width, sc_menu.titleData.offsetX, sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
+	Helper.removeAllWidgetScripts(sc_menu, config.contextLayer)
+
+	sc_menu.contextFrame = Helper.createFrameHandle(sc_menu, {
+		layer = config.contextLayer,
+		standardButtons = {},
+		width = sc_menu.contextMode.width,
+		x = sc_menu.contextMode.x,
+		y = sc_menu.contextMode.y,
+		autoFrameHeight = true,
+	})
+	sc_menu.contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
+
+
+	local table = sc_menu.contextFrame:addTable(1, {  })
+	--ftable:setDefaultCellProperties("button", { height = Helper.standardTextHeight })
+	--ftable:setDefaultComplexCellProperties("button", "text", { fontsize = Helper.standardFontSize, halign = "center" })
+	local row = table:addRow(nil, { fixed = false }) -- TODO: Make separate fixed table
+	row[1]:setColSpan(1):createText("Load Construction Plan", Helper.headerRowCenteredProperties)
+
+	local tableColumns = 5
+	local table = sc_menu.contextFrame:addTable(tableColumns, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = 0.6 * Helper.viewHeight, y = Helper.scaleY(Helper.standardTextHeight) + Helper.borderSize * 2 })
+	for _, plan in ipairs(sc_menu.constructionplans) do
+		local row = table:addRow(plan.id, { fixed = false })
+		row[1]:setColSpan(tableColumns):createText(plan.name, { halign = "left" })
+	end
+
+	local row = table:addRow(true, { fixed = false })
+	row[tableColumns-1]:createButton({  }):setText("Load", { halign = "center" })
+	row[tableColumns-1].handlers.onClick = function() sc_menu.dropdownLoad(nil, plan.id) end
+	row[tableColumns]:createButton({  }):setText("Cancel", { halign = "center" })
+	row[tableColumns].handlers.onClick = sc_menu.closeContextMenu
+
+	sc_menu.contextFrame:display()
+end
+
+init()
