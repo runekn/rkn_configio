@@ -37,6 +37,7 @@ local config = {
 local function init()
 	sc_menu = Lib.Get_Egosoft_Menu("StationConfigurationMenu")
 	sc_menu.createTitleBar = rkn_menu.createTitleBar
+	sc_menu.onRowChanged = rkn_menu.onRowChanged
 end
 
 function rkn_menu.createTitleBar(frame)
@@ -135,6 +136,14 @@ end
 function rkn_menu.createCPBrowserContext(frame)
 	DebugError("createCPBrowserContext")
 
+	local loadOptions = {}
+	local planCount = 0
+	for _, plan in ipairs(sc_menu.constructionplans) do
+		table.insert(loadOptions, { id = plan.id, text = plan.name, icon = "", displayremoveoption = plan.deleteable, active = plan.active, mouseovertext = plan.mouseovertext })
+		planCount = planCount + 1
+	end
+	table.sort(loadOptions, function (a, b) return a.text < b.text end)
+
 	sc_menu.displayContextFrame("loadCP", sc_menu.titleData.width, sc_menu.titleData.offsetX, sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
 	Helper.removeAllWidgetScripts(sc_menu, config.contextLayer)
 
@@ -155,19 +164,23 @@ function rkn_menu.createCPBrowserContext(frame)
 	local row = table:addRow(nil, {  })
 	row[1]:setColSpan(1):createText("Load Construction Plan", Helper.headerRowCenteredProperties)
 
-	local table = sc_menu.contextFrame:addTable(1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = 0.6 * Helper.viewHeight, y = Helper.scaleY(Helper.standardTextHeight) + Helper.borderSize * 2 })
-	for _, plan in ipairs(sc_menu.constructionplans) do
-		local row = table:addRow(plan.id, {  })
-		row[1]:setColSpan(1):createText(plan.name, { halign = "left" })
+	local browserHeight = 0.6 * Helper.viewHeight
+	local browserPositionY = Helper.scaleY(Helper.standardTextHeight) + Helper.borderSize * 2
+	local btable = sc_menu.contextFrame:addTable(1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = browserHeight, y = browserPositionY })
+	for i = 1, planCount do
+		local plan = loadOptions[i]
+		local row = btable:addRow(plan.id, {  })
+		row[1]:setColSpan(1):createText(plan.text, { halign = "left" })
 	end
 
-	--local table = sc_menu.contextFrame:addTable(5, { y = Helper.scaleY(Helper.standardTextHeight) + Helper.borderSize * 2 + 0.6 * Helper.viewHeight})
-	local ttable = sc_menu.contextFrame:addTable(1, {  })
-	local row = ttable:addRow(true, { fixed = false })
-	--row[4]:createButton({  }):setText("Load", { halign = "center" })
-	--row[4].handlers.onClick = function() sc_menu.dropdownLoad(nil, plan.id) end
-	--row[5]:createButton({  }):setText("Cancel", { halign = "center" })
-	--row[5].handlers.onClick = sc_menu.closeContextMenu
+	local tableColumns = 5
+	local table = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = browserPositionY + browserHeight })
+	local row = table:addRow(true, { fixed = true })
+	row[tableColumns-1]:createButton({  }):setText("Load", { halign = "center" })
+	--row[tableColumns-1].handlers.onClick = function() sc_menu.dropdownLoad(nil, plan.id) end
+	row[tableColumns-1].handlers.onClick = function() DebugError(tostring(sc_menu.contextData.newSelectedEntry)) end
+	row[tableColumns]:createButton({  }):setText("Cancel", { halign = "center" })
+	row[tableColumns].handlers.onClick = sc_menu.closeContextMenu
 
 	sc_menu.contextFrame:display()
 end
