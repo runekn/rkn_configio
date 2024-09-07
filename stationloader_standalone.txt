@@ -16,22 +16,7 @@ local config = {
 		color = Color["text_normal"],
 		x = 0,
 		y = 0
-	},
-	scaleSize = 2,
-	stateKeys = {
-		{ "container", "UniverseID" },
-		{ "buildstorage", "UniverseID" },
-		{ "loadoutModuleIdx" },
-		{ "modulesMode", },
-		-- { "upgradeplan" }, -- reserved for loadoutModuleIdx information
-		{ "origDefaultLoadout", "bool" },
-	},
-	maxSidePanelWidth = 800,
-	maxCenterPanelWidth = 1600,
-	fileExtension = ".xml",
-	compatibilityFontSize = 5,
-	mapfilterversion = 2,
-	moduleFilterWidth = 300,
+	}
 }
 
 local function init()
@@ -63,6 +48,7 @@ function rkn_menu.createTitleBar(frame)
 		row[1]:createEditBox({ scaling = true }):setText(ffi.string(C.GetComponentName(menu.container)), { halign = "center", font = Helper.headerRow1Font, fontsize = Helper.headerRow1FontSize })
 		row[1].handlers.onEditBoxDeactivated = menu.editboxNameUpdateText
 		-- load
+		------- Runekn's Changes Start Here! ----------
 		--local loadOptions = {}
 		--for _, plan in ipairs(menu.constructionplans) do
 		--	table.insert(loadOptions, { id = plan.id, text = plan.name, icon = "", displayremoveoption = plan.deleteable, active = plan.active, mouseovertext = plan.mouseovertext })
@@ -72,13 +58,14 @@ function rkn_menu.createTitleBar(frame)
 		--row[2].handlers.onDropDownConfirmed = menu.dropdownLoad
 		--row[2].handlers.onDropDownRemoved = menu.dropdownRemovedCP
 		row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = "Load construction plans" }):setText("Plan Browser", { halign = "center" })
-		row[2].handlers.onClick = function () rkn_menu.buttonTitleLoad(frame) end
+		row[2].handlers.onClick = rkn_menu.buttonTitleLoad
+		------- Runekn's Changes Stop Here! ----------
 		-- save
 		row[3]:createButton({ helpOverlayID = "save_constructionplan", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = ReadText(1026, 7901) }):setIcon("menu_save")
 		row[3].handlers.onClick = menu.buttonTitleSave
 		-- Import
 		row[4]:createButton({ helpOverlayID = "import_constructionplan", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = ReadText(1026, 7916) }):setIcon("menu_import")
-		row[4].handlers.onClick = rkn_menu.buttonTitleImport
+		row[4].handlers.onClick = menu.buttonTitleImport
 		-- Export
 		row[5]:createButton({ helpOverlayID = "export_constructionplan", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = ReadText(1026, 7917) }):setIcon("menu_export")
 		row[5].handlers.onClick = menu.buttonTitleExport
@@ -125,15 +112,15 @@ function rkn_menu.createTitleBar(frame)
 	end
 end
 
-function rkn_menu.buttonTitleLoad(frame)
+function rkn_menu.buttonTitleLoad()
 	if sc_menu.contextMode and (sc_menu.contextMode.mode == "loadCP") then
 		sc_menu.closeContextMenu()
 	else
-		rkn_menu.createCPBrowserContext(frame);
+		rkn_menu.createCPBrowserContext();
 	end
 end
 
-function rkn_menu.createCPBrowserContext(frame)
+function rkn_menu.createCPBrowserContext()
 	DebugError("createCPBrowserContext")
 
 	local loadOptions = {}
@@ -158,31 +145,56 @@ function rkn_menu.createCPBrowserContext(frame)
 	sc_menu.contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
 
 
-	local table = sc_menu.contextFrame:addTable(1, {  })
-	--ftable:setDefaultCellProperties("button", { height = Helper.standardTextHeight })
-	--ftable:setDefaultComplexCellProperties("button", "text", { fontsize = Helper.standardFontSize, halign = "center" })
-	local row = table:addRow(nil, {  })
+	local browserHeight = 0.6 * Helper.viewHeight
+	local headerHeight = Helper.scaleY(Helper.standardTextHeight) + Helper.borderSize * 2
+	local ltable = sc_menu.contextFrame:addTable(1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = browserHeight })
+	local row = ltable:addRow(false, { fixed = true })
 	row[1]:setColSpan(1):createText("Load Construction Plan", Helper.headerRowCenteredProperties)
 
-	local browserHeight = 0.6 * Helper.viewHeight
-	local browserPositionY = Helper.scaleY(Helper.standardTextHeight) + Helper.borderSize * 2
-	local btable = sc_menu.contextFrame:addTable(1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = browserHeight, y = browserPositionY })
+	rkn_menu.ltable = ltable
 	for i = 1, planCount do
 		local plan = loadOptions[i]
-		local row = btable:addRow(plan.id, {  })
+		local row = ltable:addRow(plan, {  })
 		row[1]:setColSpan(1):createText(plan.text, { halign = "left" })
 	end
 
 	local tableColumns = 5
-	local table = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = browserPositionY + browserHeight })
-	local row = table:addRow(true, { fixed = true })
+	local btable = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = headerHeight + browserHeight })
+	rkn_menu.btable = btable
+	local row = btable:addRow(true, { fixed = true })
 	row[tableColumns-1]:createButton({  }):setText("Load", { halign = "center" })
-	--row[tableColumns-1].handlers.onClick = function() sc_menu.dropdownLoad(nil, plan.id) end
-	row[tableColumns-1].handlers.onClick = function() DebugError(tostring(sc_menu.contextData.newSelectedEntry)) end
+	row[tableColumns-1].handlers.onClick = function() sc_menu.dropdownLoad(nil, rkn_menu.selectedEntry.id) end
 	row[tableColumns]:createButton({  }):setText("Cancel", { halign = "center" })
 	row[tableColumns].handlers.onClick = sc_menu.closeContextMenu
 
 	sc_menu.contextFrame:display()
+end
+
+function rkn_menu.onRowChanged(row, rowdata, uitable, modified, input, source)
+	local menu = sc_menu
+	if not menu.loadoutMode then
+		if uitable == menu.plantable then
+			if menu.holomap ~= 0 then
+				if (source ~= "auto") or (menu.selectedModule == nil) then
+					if (type(rowdata) == "table") and rowdata.ismodule and (not rowdata.removed) then
+						menu.newSelectedModule = rowdata.module
+						C.SelectBuildMapEntry(menu.holomap, rowdata.idx)
+					elseif menu.selectedModule ~= nil then
+						menu.newSelectedModule = "clear"
+						C.ClearBuildMapSelection(menu.holomap)
+					end
+				end
+			end
+		elseif rkn_menu.ltable and uitable == rkn_menu.ltable.id then
+			rkn_menu.selectedEntry = rowdata
+		elseif uitable == menu.contexttable then
+			if (source ~= "auto") or (menu.contextData and (menu.contextData.selectedEntry == nil)) then
+				if (type(rowdata) == "table") then
+					menu.contextData.newSelectedEntry = rowdata
+				end
+			end
+		end
+	end
 end
 
 init()
