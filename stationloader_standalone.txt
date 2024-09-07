@@ -162,12 +162,18 @@ function rkn_menu.createCPBrowserContext()
 	local btable = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = headerHeight + browserHeight })
 	rkn_menu.btable = btable
 	local row = btable:addRow(true, { fixed = true })
-	row[tableColumns-1]:createButton({  }):setText("Load", { halign = "center" })
+	row[tableColumns-2]:createButton({  }):setText("Delete", { halign = "center" })
+	row[tableColumns-2].handlers.onClick = function() sc_menu.dropdownRemovedCP(nil, rkn_menu.selectedEntry.id) end
+	row[tableColumns-1]:createButton({ active = rkn_menu.isRowValidForLoad }):setText("Load", { halign = "center" })
 	row[tableColumns-1].handlers.onClick = function() sc_menu.dropdownLoad(nil, rkn_menu.selectedEntry.id) end
 	row[tableColumns]:createButton({  }):setText("Cancel", { halign = "center" })
 	row[tableColumns].handlers.onClick = sc_menu.closeContextMenu
 
 	sc_menu.contextFrame:display()
+end
+
+function rkn_menu.isRowValidForLoad()
+	return rkn_menu.selectedEntry and rkn_menu.selectedEntry.active
 end
 
 function rkn_menu.onRowChanged(row, rowdata, uitable, modified, input, source)
