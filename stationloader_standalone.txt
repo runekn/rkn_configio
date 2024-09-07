@@ -8,7 +8,7 @@ local sc_menu = {}
 local rkn_menu = {}
 
 local config = {
-	maxFolders = 4,
+	maxFolders = 6,
 	contextLayer = 2,
 	dropDownTextProperties = {
 		halign = "center",
@@ -239,6 +239,7 @@ function rkn_menu.prepareConstructionPlans()
 		local folder = nextMatch()
 		local name = plan.name
 		local levelsLeft = config.maxFolders
+		local folderPath = ""
 		while 1==1 do
 			-- Check if this is the plan name --
 			local next = nextMatch()
@@ -253,9 +254,10 @@ function rkn_menu.prepareConstructionPlans()
 				break
 			end
 			-- Otherwise, path to folder --
+			folderPath = folderPath .. "/" .. folder
 			local target = cwd.folders[folder]
 			if not target then
-				target = { type = "folder", name = folder, folders = {}, folders_arr = {}, plans = {} }
+				target = { type = "folder", name = folder, fullname = folderPath, folders = {}, folders_arr = {}, plans = {} }
 				cwd.folders[folder] = target
 				table.insert(cwd.folders_arr, target)
 			end
@@ -274,7 +276,7 @@ end
 function rkn_menu.addFolderToList(ltable, root, column)
 	for _, folder in ipairs(root.folders_arr) do
 		local row = ltable:addRow(folder, {  })
-		local folderId = "rkn_configbrowser_folder_" .. folder.name
+		local folderId = "rkn_configbrowser_folder_" .. folder.fullname
 		local isextended = sc_menu.isResourceEntryExtended(folderId)
 		row[column]:createButton({ helpOverlayID = folderId, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
 		row[column].handlers.onClick = function () return rkn_menu.buttonExtendListEntry(folderId, row.index) end
