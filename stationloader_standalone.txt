@@ -152,21 +152,22 @@ function rkn_menu.createCPBrowserContext(frame)
 	local table = sc_menu.contextFrame:addTable(1, {  })
 	--ftable:setDefaultCellProperties("button", { height = Helper.standardTextHeight })
 	--ftable:setDefaultComplexCellProperties("button", "text", { fontsize = Helper.standardFontSize, halign = "center" })
-	local row = table:addRow(nil, { fixed = false }) -- TODO: Make separate fixed table
+	local row = table:addRow(nil, {  })
 	row[1]:setColSpan(1):createText("Load Construction Plan", Helper.headerRowCenteredProperties)
 
-	local tableColumns = 5
-	local table = sc_menu.contextFrame:addTable(tableColumns, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = 0.6 * Helper.viewHeight, y = Helper.scaleY(Helper.standardTextHeight) + Helper.borderSize * 2 })
+	local table = sc_menu.contextFrame:addTable(1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = 0.6 * Helper.viewHeight, y = Helper.scaleY(Helper.standardTextHeight) + Helper.borderSize * 2 })
 	for _, plan in ipairs(sc_menu.constructionplans) do
-		local row = table:addRow(plan.id, { fixed = false })
-		row[1]:setColSpan(tableColumns):createText(plan.name, { halign = "left" })
+		local row = table:addRow(plan.id, {  })
+		row[1]:setColSpan(1):createText(plan.name, { halign = "left" })
 	end
 
-	local row = table:addRow(true, { fixed = false })
-	row[tableColumns-1]:createButton({  }):setText("Load", { halign = "center" })
-	row[tableColumns-1].handlers.onClick = function() sc_menu.dropdownLoad(nil, plan.id) end
-	row[tableColumns]:createButton({  }):setText("Cancel", { halign = "center" })
-	row[tableColumns].handlers.onClick = sc_menu.closeContextMenu
+	--local table = sc_menu.contextFrame:addTable(5, { y = Helper.scaleY(Helper.standardTextHeight) + Helper.borderSize * 2 + 0.6 * Helper.viewHeight})
+	local ttable = sc_menu.contextFrame:addTable(1, {  })
+	local row = ttable:addRow(true, { fixed = false })
+	--row[4]:createButton({  }):setText("Load", { halign = "center" })
+	--row[4].handlers.onClick = function() sc_menu.dropdownLoad(nil, plan.id) end
+	--row[5]:createButton({  }):setText("Cancel", { halign = "center" })
+	--row[5].handlers.onClick = sc_menu.closeContextMenu
 
 	sc_menu.contextFrame:display()
 end
