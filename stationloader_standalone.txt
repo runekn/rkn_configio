@@ -27,6 +27,7 @@ local function init()
 	sc_menu.onRowChanged = rkn_menu.onRowChanged
 end
 
+-- Overriden function --
 function rkn_menu.createTitleBar(frame)
 	local menu = sc_menu
 
@@ -115,6 +116,7 @@ function rkn_menu.createTitleBar(frame)
 	end
 end
 
+-- Overriden function --
 function rkn_menu.refreshTitleBar()
 	local menu = sc_menu
 
@@ -183,7 +185,6 @@ end
 
 function rkn_menu.createCPBrowserContext()
 	local listRoot = rkn_menu.prepareConstructionPlans()
-	--DebugError(rkn_menu.serializeTable(listRoot))
 
 	sc_menu.displayContextFrame("loadCP", sc_menu.titleData.width, sc_menu.titleData.offsetX, sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
 	Helper.removeAllWidgetScripts(sc_menu, config.contextLayer)
@@ -213,6 +214,10 @@ function rkn_menu.createCPBrowserContext()
 
 	rkn_menu.addFolderToList(ltable, listRoot, 1)
 
+	--DebugError("load toprow: " .. tostring(sc_menu.topRows.rkn_configbrowser_load))
+	ltable:setTopRow(sc_menu.topRows.rkn_configbrowser_load)
+	ltable:setSelectedRow(sc_menu.selectedRows.rkn_configbrowser_load)
+
 	local tableColumns = 5
 	local btable = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = headerHeight + browserHeight })
 	rkn_menu.btable = btable
@@ -226,36 +231,6 @@ function rkn_menu.createCPBrowserContext()
 
 	sc_menu.contextFrame:display()
 end
-
-function rkn_menu.serializeTable(val, name, skipnewlines, depth) -- TODO: delete
-    skipnewlines = skipnewlines or false
-    depth = depth or 0
-
-    local tmp = string.rep(" ", depth)
-
-    if name then tmp = tmp .. name .. " = " end
-
-    if type(val) == "table" then
-        tmp = tmp .. "{" .. (not skipnewlines and "\n" or "")
-
-        for k, v in pairs(val) do
-            tmp =  tmp .. rkn_menu.serializeTable(v, k, skipnewlines, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
-        end
-
-        tmp = tmp .. string.rep(" ", depth) .. "}"
-    elseif type(val) == "number" then
-        tmp = tmp .. tostring(val)
-    elseif type(val) == "string" then
-        tmp = tmp .. string.format("%q", val)
-    elseif type(val) == "boolean" then
-        tmp = tmp .. (val and "true" or "false")
-    else
-        tmp = tmp .. "\"[inserializeable datatype:" .. type(val) .. "]\""
-    end
-
-    return tmp
-end
-
 
 function rkn_menu.prepareConstructionPlans()
 	-- First we build the plans structure --
@@ -290,7 +265,7 @@ function rkn_menu.prepareConstructionPlans()
 			cwd = target
 			folder = next
 		end
-		table.insert(cwd.plans, { type = "plan", id = plan.id, name = name, active = plan.active })
+		table.insert(cwd.plans, { type = "plan", id = plan.id, name = name, fullname = plan.name, active = plan.active })
 	end
 
 	-- Now we sort all folders --
@@ -306,7 +281,7 @@ function rkn_menu.addFolderToList(ltable, root, column)
 		local isextended = sc_menu.isResourceEntryExtended(folderId)
 		row[column]:createButton({ helpOverlayID = folderId, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
 		row[column].handlers.onClick = function () return rkn_menu.buttonExtendListEntry(folderId, row.index) end
-		row[column + 1]:setColSpan(config.maxFolders - column + 1):createText("folder: " .. folder.name, Helper.subHeaderTextProperties)
+		row[column + 1]:setColSpan(config.maxFolders - column + 1):createText(folder.name, Helper.subHeaderTextProperties)
 		if isextended then
 			rkn_menu.addFolderToList(ltable, folder, column + 1)
 		end
@@ -314,7 +289,7 @@ function rkn_menu.addFolderToList(ltable, root, column)
 
 	for _, plan in ipairs(root.plans) do
 		local row = ltable:addRow(plan, {  })
-		row[column]:setColSpan(config.maxFolders - column + 2):createText("plan: " .. plan.name, { halign = "left" })
+		row[column]:setColSpan(config.maxFolders - column + 2):createText(plan.fullname, { halign = "left" })
 	end
 end
 
@@ -330,6 +305,7 @@ function rkn_menu.isRowValidForLoad()
 	return rkn_menu.selectedEntry and rkn_menu.selectedEntry.active
 end
 
+-- Overriden function --
 function rkn_menu.onRowChanged(row, rowdata, uitable, modified, input, source)
 	local menu = sc_menu
 	if not menu.loadoutMode then
@@ -359,14 +335,14 @@ end
 
 function rkn_menu.buttonExtendListEntry(index, row)
 	sc_menu.extendResourceEntry(index)
-	rkn_menu.createCPBrowserContext();
 
-	--menu.topRows.modules = GetTopRow(menu.moduletable)
-	--menu.selectedRows.modules = Helper.currentTableRow[menu.moduletable]
-	--menu.selectedCols.modules = Helper.currentTableCol[menu.moduletable]
-	--menu.storePlanTableState()
-	--menu.selectedRows.planresources = row
-	--menu.displayMenu()
+	--sc_menu.topRows.rkn_configbrowser_load = GetTopRow(rkn_menu.ltable)
+	--sc_menu.selectedRows.rkn_configbrowser_load = Helper.currentTableRow[rkn_menu.ltable]
+	sc_menu.topRows.rkn_configbrowser_load = row
+	sc_menu.selectedRows.rkn_configbrowser_load = row
+	--DebugError("write toprow: " .. tostring(sc_menu.topRows.rkn_configbrowser_load))
+
+	rkn_menu.createCPBrowserContext();
 end
 
 init()
