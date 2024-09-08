@@ -23,7 +23,7 @@ local config = {
 		fontsize = Helper.standardFontSize,
 		height = Helper.subHeaderHeight,
 		cellBGColor = Color["row_background"],
-		titleColor = { r = 128, g = 128, b = 128, a = 100 },
+		titleColor = { r = 128, g = 128, b = 128, a = 100 }
 	},
 	planTextProperties = {
 
@@ -212,7 +212,7 @@ function rkn_menu.createCPBrowserContext()
 
 	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
 	local browserHeight = 0.6 * Helper.viewHeight
-	local ltable = sc_menu.contextFrame:addTable(config.maxFolders + 1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = browserHeight })
+	local ltable = sc_menu.contextFrame:addTable(config.maxFolders + 1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = browserHeight, x = Helper.borderSize, width = sc_menu.contextMode.width - Helper.borderSize * 2 })
 	for column = 1, config.maxFolders do
 		ltable:setColWidth(column, smallColWidth, false)
 	end
