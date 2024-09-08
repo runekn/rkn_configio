@@ -18,6 +18,16 @@ local config = {
 		x = 0,
 		y = 0
 	},
+	browserHeaderTextProperties = {
+		font = Helper.headerRow1Font,
+		fontsize = Helper.headerRow1FontSize,
+		x = Helper.headerRow1Offsetx,
+		y = math.floor((Helper.scaleY(30) - Helper.scaleY(Helper.headerRow1Height)) / 2 + Helper.scaleY(Helper.headerRow1Offsety)),
+		height = Helper.scaleY(30),
+		halign = "center",
+		cellBGColor = Color["row_background"],
+		titleColor = Color["row_title"],
+	},
 	folderTextProperties = {
 		font = Helper.titleFont,
 		fontsize = Helper.standardFontSize,
@@ -72,7 +82,7 @@ function rkn_menu.createTitleBar(frame)
 		--row[2].handlers.onDropDownConfirmed = menu.dropdownLoad
 		--row[2].handlers.onDropDownRemoved = menu.dropdownRemovedCP
 
-		row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = "Load construction plans" }):setText("Plan Browser", { halign = "center" })
+		row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText("Plan Browser", { halign = "center" })
 		row[2].handlers.onClick = rkn_menu.buttonTitleLoad
 		------- Runekn's Changes Stop Here! ----------
 		-- save
@@ -218,7 +228,7 @@ function rkn_menu.createCPBrowserContext()
 	end
 	rkn_menu.ltable = ltable
 	local row = ltable:addRow(false, { fixed = true })
-	row[1]:setColSpan(config.maxFolders + 1):createText("Load Construction Plan", Helper.headerRowCenteredProperties)
+	row[1]:setColSpan(config.maxFolders + 1):createText("Load Construction Plan", config.browserHeaderTextProperties)
 
 	rkn_menu.addFolderToList(ltable, listRoot, 1)
 
@@ -245,7 +255,7 @@ function rkn_menu.prepareBrowserStructure(itemList)
 	for _, item in ipairs(itemList) do
 		local cwd = root
 		-- iterate through item folders --
-		local nextMatch = string.gmatch(item.name, "[^%s]+")
+		local nextMatch = string.gmatch(item.name, "[^ ]+")
 		local folder = nextMatch()
 		local name = item.name
 		local levelsLeft = config.maxFolders
