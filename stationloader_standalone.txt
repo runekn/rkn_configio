@@ -17,7 +17,18 @@ local config = {
 		color = Color["text_normal"],
 		x = 0,
 		y = 0
-	}
+	},
+	folderTextProperties = {
+		font = Helper.titleFont,
+		fontsize = Helper.standardFontSize,
+		height = Helper.subHeaderHeight,
+		cellBGColor = Color["row_background"],
+		titleColor = { r = 128, g = 128, b = 128, a = 100 },
+	},
+	planTextProperties = {
+
+	},
+	inactiveColor = { r = 128, g = 128, b = 128, a = 100 }
 }
 
 local function init()
@@ -184,7 +195,7 @@ function rkn_menu.buttonTitleLoad()
 end
 
 function rkn_menu.createCPBrowserContext()
-	local listRoot = rkn_menu.prepareConstructionPlans()
+	local listRoot = rkn_menu.prepareBrowserStructure(sc_menu.constructionplans)
 
 	sc_menu.displayContextFrame("loadCP", sc_menu.titleData.width, sc_menu.titleData.offsetX, sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
 	Helper.removeAllWidgetScripts(sc_menu, config.contextLayer)
@@ -201,7 +212,6 @@ function rkn_menu.createCPBrowserContext()
 
 	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
 	local browserHeight = 0.6 * Helper.viewHeight
-	local headerHeight = Helper.scaleY(Helper.standardTextHeight) + Helper.borderSize * 2
 	local ltable = sc_menu.contextFrame:addTable(config.maxFolders + 1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = browserHeight })
 	for column = 1, config.maxFolders do
 		ltable:setColWidth(column, smallColWidth, false)
@@ -216,32 +226,32 @@ function rkn_menu.createCPBrowserContext()
 	ltable:setSelectedRow(sc_menu.selectedRows.rkn_configbrowser_load)
 
 	local tableColumns = 5
-	local btable = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = headerHeight + browserHeight })
+	local btable = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = browserHeight })
 	rkn_menu.btable = btable
 	local row = btable:addRow(true, { fixed = true })
-	row[tableColumns-2]:createButton({  }):setText("Delete", { halign = "center" })
-	row[tableColumns-2].handlers.onClick = function() sc_menu.dropdownRemovedCP(nil, rkn_menu.selectedEntry.id) end
+	row[tableColumns-2]:createButton({ active = rkn_menu.isRowValidForDeletion }):setText("Delete", { halign = "center" })
+	row[tableColumns-2].handlers.onClick = rkn_menu.buttonDeletePlan
 	row[tableColumns-1]:createButton({ active = rkn_menu.isRowValidForLoad }):setText("Load", { halign = "center" })
-	row[tableColumns-1].handlers.onClick = function() sc_menu.dropdownLoad(nil, rkn_menu.selectedEntry.id) end
+	row[tableColumns-1].handlers.onClick = rkn_menu.buttonLoadPlan
 	row[tableColumns]:createButton({  }):setText("Cancel", { halign = "center" })
 	row[tableColumns].handlers.onClick = sc_menu.closeContextMenu
 
 	sc_menu.contextFrame:display()
 end
 
-function rkn_menu.prepareConstructionPlans()
-	-- First we build the plans structure --
-	local root = { type = "folder", name = "root", folders = {}, folders_arr = {}, plans = {} }
-	for _, plan in ipairs(sc_menu.constructionplans) do
+function rkn_menu.prepareBrowserStructure(itemList)
+	-- First we build the folder structure --
+	local root = { type = "folder", name = "root", folders = {}, folders_arr = {}, items = {} }
+	for _, item in ipairs(itemList) do
 		local cwd = root
-		-- iterate through plan folders --
-		local nextMatch = string.gmatch(plan.name, "[^%s]+")
+		-- iterate through item folders --
+		local nextMatch = string.gmatch(item.name, "[^%s]+")
 		local folder = nextMatch()
-		local name = plan.name
+		local name = item.name
 		local levelsLeft = config.maxFolders
 		local folderPath = ""
 		while 1==1 do
-			-- Check if this is the plan name --
+			-- Check if this is the item name --
 			local next = nextMatch()
 			if not next then
 				name = folder
@@ -249,22 +259,22 @@ function rkn_menu.prepareConstructionPlans()
 			end
 			levelsLeft = levelsLeft -1
 			if levelsLeft <= 0 then
-				-- Make the rest of the actual plan name, the displayed name --
-				name = plan.name -- TODO
+				-- Make the rest of the actual item name, the displayed name --
+				name = item.name -- TODO
 				break
 			end
 			-- Otherwise, path to folder --
 			folderPath = folderPath .. "/" .. folder
 			local target = cwd.folders[folder]
 			if not target then
-				target = { type = "folder", name = folder, fullname = folderPath, folders = {}, folders_arr = {}, plans = {} }
+				target = { type = "folder", name = folder, fullname = folderPath, folders = {}, folders_arr = {}, items = {} }
 				cwd.folders[folder] = target
 				table.insert(cwd.folders_arr, target)
 			end
 			cwd = target
 			folder = next
 		end
-		table.insert(cwd.plans, { type = "plan", id = plan.id, name = name, fullname = plan.name, active = plan.active })
+		table.insert(cwd.items, { type = "item", name = name, active = item.active, deleteable = item.deleteable, item = item })
 	end
 
 	-- Now we sort all folders --
@@ -280,20 +290,25 @@ function rkn_menu.addFolderToList(ltable, root, column)
 		local isextended = sc_menu.isResourceEntryExtended(folderId)
 		row[column]:createButton({ helpOverlayID = folderId, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
 		row[column].handlers.onClick = function () return rkn_menu.buttonExtendListEntry(folderId, row.index) end
-		row[column + 1]:setColSpan(config.maxFolders - column + 1):createText(folder.name, Helper.subHeaderTextProperties)
+		row[column + 1]:setColSpan(config.maxFolders - column + 1):createText(folder.name, config.folderTextProperties)
 		if isextended then
 			rkn_menu.addFolderToList(ltable, folder, column + 1)
 		end
 	end
 
-	for _, plan in ipairs(root.plans) do
-		local row = ltable:addRow(plan, {  })
-		row[column]:setColSpan(config.maxFolders - column + 2):createText(plan.fullname, { halign = "left" })
+	for _, item in ipairs(root.items) do
+		local row = ltable:addRow(item, {  })
+		local text = item.item.name
+		if not item.active then
+			text = Helper.convertColorToText(config.inactiveColor) .. text
+		end
+		row[column]:setColSpan(config.maxFolders - column + 2):createText(text, config.planTextProperties)
+		row[column].properties.mouseOverText = item.item.mouseovertext
 	end
 end
 
 function rkn_menu.sortFolder(folder)
-	table.sort(folder.plans, function (a, b) return a.name < b.name end)
+	table.sort(folder.items, function (a, b) return a.name < b.name end)
 	table.sort(folder.folders_arr, function (a, b) return a.name < b.name end)
 	for _, innerFolder in ipairs(folder.folders_arr) do
 		rkn_menu.sortFolder(innerFolder)
@@ -302,6 +317,22 @@ end
 
 function rkn_menu.isRowValidForLoad()
 	return rkn_menu.selectedEntry and rkn_menu.selectedEntry.active
+end
+
+function rkn_menu.isRowValidForDeletion()
+	return rkn_menu.selectedEntry and rkn_menu.selectedEntry.deleteable
+end
+
+function rkn_menu.buttonDeletePlan()
+	if rkn_menu.isRowValidForDeletion then
+		sc_menu.dropdownRemovedCP(nil, rkn_menu.selectedEntry.item.id)
+	end
+end
+
+function rkn_menu.buttonLoadPlan()
+	if rkn_menu.isRowValidForLoad then
+		sc_menu.dropdownLoad(nil, rkn_menu.selectedEntry.item.id)
+	end
 end
 
 -- Overriden function --
