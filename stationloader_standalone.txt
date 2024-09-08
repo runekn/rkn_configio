@@ -226,6 +226,32 @@ function rkn_menu.createCPBrowserContext()
 	local browserHeight = 0.5 * Helper.viewHeight
 	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
 
+	-- Create item list --
+	local ltable = sc_menu.contextFrame:addTable(config.maxFolders + 1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = browserHeight, x = config.browserSettingsWidth + Helper.borderSize, width = sc_menu.contextMode.width - config.browserSettingsWidth - Helper.borderSize * 2 })
+	for column = 1, config.maxFolders do
+		ltable:setColWidth(column, smallColWidth, false)
+	end
+	rkn_menu.ltable = ltable
+	local row = ltable:addRow(false, { fixed = true })
+	row[1]:setColSpan(config.maxFolders + 1):createText("Load Construction Plan", config.browserHeaderTextProperties)
+
+	rkn_menu.addFolderToList(ltable, listRoot, 1)
+
+	ltable:setTopRow(sc_menu.topRows.rkn_configbrowser_load)
+	ltable:setSelectedRow(sc_menu.selectedRows.rkn_configbrowser_load)
+
+	-- Create list buttons --
+	local tableColumns = 5
+	local btable = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = browserHeight, x = config.browserSettingsWidth + Helper.borderSize, width = sc_menu.contextMode.width - config.browserSettingsWidth - Helper.borderSize * 2 })
+	rkn_menu.btable = btable
+	local row = btable:addRow(true, { fixed = true })
+	row[tableColumns-2]:createButton({ active = rkn_menu.isRowValidForDeletion }):setText("Delete", { halign = "center" })
+	row[tableColumns-2].handlers.onClick = rkn_menu.buttonDeletePlan
+	row[tableColumns-1]:createButton({ active = rkn_menu.isRowValidForLoad }):setText("Load", { halign = "center" })
+	row[tableColumns-1].handlers.onClick = rkn_menu.buttonLoadPlan
+	row[tableColumns]:createButton({  }):setText("Cancel", { halign = "center" })
+	row[tableColumns].handlers.onClick = sc_menu.closeContextMenu
+
 	-- Create settings list --
 	local stable = sc_menu.contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = browserHeight, x = Helper.borderSize, width = config.browserSettingsWidth - Helper.borderSize * 2 })
 	local row = stable:addRow(false, { })
@@ -261,32 +287,6 @@ function rkn_menu.createCPBrowserContext()
 	row[2]:createCheckBox(rkn_menu.settings.folder_single_item, { width = smallColWidth })
 	row[2].handlers.onClick = rkn_menu.folderSingleItemToggled
 	row[2].properties.active = rkn_menu.settings.folder_enabled
-
-	-- Create item list --
-	local ltable = sc_menu.contextFrame:addTable(config.maxFolders + 1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = browserHeight, x = config.browserSettingsWidth + Helper.borderSize, width = sc_menu.contextMode.width - config.browserSettingsWidth - Helper.borderSize * 2 })
-	for column = 1, config.maxFolders do
-		ltable:setColWidth(column, smallColWidth, false)
-	end
-	rkn_menu.ltable = ltable
-	local row = ltable:addRow(false, { fixed = true })
-	row[1]:setColSpan(config.maxFolders + 1):createText("Load Construction Plan", config.browserHeaderTextProperties)
-
-	rkn_menu.addFolderToList(ltable, listRoot, 1)
-
-	ltable:setTopRow(sc_menu.topRows.rkn_configbrowser_load)
-	ltable:setSelectedRow(sc_menu.selectedRows.rkn_configbrowser_load)
-
-	-- Create list buttons --
-	local tableColumns = 5
-	local btable = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = browserHeight, x = config.browserSettingsWidth + Helper.borderSize, width = sc_menu.contextMode.width - config.browserSettingsWidth - Helper.borderSize * 2 })
-	rkn_menu.btable = btable
-	local row = btable:addRow(true, { fixed = true })
-	row[tableColumns-2]:createButton({ active = rkn_menu.isRowValidForDeletion }):setText("Delete", { halign = "center" })
-	row[tableColumns-2].handlers.onClick = rkn_menu.buttonDeletePlan
-	row[tableColumns-1]:createButton({ active = rkn_menu.isRowValidForLoad }):setText("Load", { halign = "center" })
-	row[tableColumns-1].handlers.onClick = rkn_menu.buttonLoadPlan
-	row[tableColumns]:createButton({  }):setText("Cancel", { halign = "center" })
-	row[tableColumns].handlers.onClick = sc_menu.closeContextMenu
 
 	sc_menu.contextFrame:display()
 end
@@ -339,16 +339,32 @@ function rkn_menu.prepareBrowserStructure(itemList)
 	return root
 end
 
-function rkn_menu.undentSingleItems(root) -- TODO: doesn't work
-	for _, subfolder in ipairs(root.folders_arr) do
-		local itemCount = 0
-  		for _ in pairs(subfolder.items) do itemCount = itemCount + 1 end
-		if itemCount == 1 then
-			table.insert(root.items, subfolder.items[0])
-			table.remove(subfolder.items, 0)
-		end
-		rkn_menu.undentSingleItems(subfolder)
+function rkn_menu.undentSingleItems(folder, parent)
+	local canDelete = true
+	local atLeastOneSubFolder = false
+	-- recursive --
+	ArrayRemove(folder.folders_arr, function(t, i, j)
+		local subfolder = folder.folders_arr[i];
+		local keepSubFolder = rkn_menu.undentSingleItems(subfolder, folder)
+		canDelete = canDelete and not keepSubFolder
+		atLeastOneSubFolder = atLeastOneSubFolder or keepSubFolder
+		return keepSubFolder
+	end);
+
+	-- move item to parent if there is only one --
+	local itemCount = 0
+	for _ in pairs(folder.items) do itemCount = itemCount + 1 end
+	if itemCount == 1 and not atLeastOneSubFolder then
+		local item = folder.items[1]
+
+		table.insert(parent.items, item)
+		table.remove(folder.items, 1)
+
+		item.name = folder.name .. rkn_menu.settings.folder_delimiter .. item.name
+	elseif itemCount > 1 then
+		canDelete = false
 	end
+	return not canDelete
 end
 
 function EscapeGmatch(s)
@@ -446,24 +462,27 @@ function rkn_menu.buttonExtendListEntry(index, row)
 	rkn_menu.createCPBrowserContext();
 end
 
-function rkn_menu.folderEnabledToggled(_, checked)
-	rkn_menu.setBrowserSetting("station", "folder_enabled", checked)
+function rkn_menu.settingChanged(k, v)
+	--DebugError("rkn_menu.settingChanged(" .. k .. ", " .. tostring(v) .. ")")
+	rkn_menu.setBrowserSetting("station", k, v)
+	sc_menu.topRows.rkn_configbrowser_load = GetTopRow(sc_menu.contexttable)
 	rkn_menu.createCPBrowserContext()
+end
+
+function rkn_menu.folderEnabledToggled(_, checked)
+	rkn_menu.settingChanged("folder_enabled", checked)
 end
 
 function rkn_menu.itemFullnameToggled(_, checked)
-	rkn_menu.setBrowserSetting("station", "item_fullname", checked)
-	rkn_menu.createCPBrowserContext()
+	rkn_menu.settingChanged("item_fullname", checked)
 end
 
 function rkn_menu.folderFullnameToggled(_, checked)
-	rkn_menu.setBrowserSetting("station", "folder_fullname", checked)
-	rkn_menu.createCPBrowserContext()
+	rkn_menu.settingChanged("folder_fullname", checked)
 end
 
 function rkn_menu.folderSingleItemToggled(_, checked)
-	rkn_menu.setBrowserSetting("station", "folder_single_item", checked)
-	rkn_menu.createCPBrowserContext()
+	rkn_menu.settingChanged("folder_single_item", checked)
 end
 
 function rkn_menu.folderDelimeterEdit(_, text, textchanged)
@@ -472,8 +491,7 @@ function rkn_menu.folderDelimeterEdit(_, text, textchanged)
 		if text:len() > 1 then
 			text = text:sub(1, 1)
 		end
-		rkn_menu.setBrowserSetting("station", "folder_delimiter", text)
-		rkn_menu.createCPBrowserContext()
+		rkn_menu.settingChanged("folder_delimiter", text)
 	end
 end
 
@@ -483,7 +501,7 @@ function rkn_menu.getBrowserSettings(browser)
 		return {
 			folder_enabled = true,
 			folder_delimiter = " ",
-			folder_single_item = true,
+			folder_single_item = false,
 			folder_fullname = false,
 			item_fullname = true
 		}
@@ -503,6 +521,26 @@ function rkn_menu.setBrowserSetting(browser, key, value)
 	SetNPCBlackboard(rkn_menu.playerID, "$rkn_configbrowser_settings_" .. browser, settings)
 end
 
+function ArrayRemove(t, fnKeep)
+    local j, n = 1, #t;
+
+    for i=1,n do
+        if (fnKeep(t, i, j)) then
+            -- Move i's kept value to j's position, if it's not already there.
+            if (i ~= j) then
+                t[j] = t[i];
+                t[i] = nil;
+            end
+            j = j + 1; -- Increment position of where we'll place the next kept value.
+        else
+            t[i] = nil;
+        end
+    end
+
+    return t;
+end
+
+-- For debugging --
 function DebugSettings()
 	local settings = GetNPCBlackboard(rkn_menu.playerID, "$rkn_configbrowser_settings_station")
 	DebugError(string.format("{\n  folder_enabled = %s,\n  folder_delimiter = %s,\n  folder_single_item = %s,\n  folder_fullname = %s,\n  item_fullname = %s }",
@@ -513,5 +551,37 @@ function DebugSettings()
 		tostring(settings.item_fullname)
 	))
 end
+
+-- For debugging --
+function SerializeTable(val, name, skipnewlines, depth)
+    skipnewlines = skipnewlines or false
+    depth = depth or 0
+
+    local tmp = string.rep(" ", depth)
+
+    if name then tmp = tmp .. name .. " = " end
+
+    if type(val) == "table" then
+        tmp = tmp .. "{" .. (not skipnewlines and "\n" or "")
+
+        for k, v in pairs(val) do
+            tmp =  tmp .. SerializeTable(v, k, skipnewlines, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
+        end
+
+        tmp = tmp .. string.rep(" ", depth) .. "}"
+    elseif type(val) == "number" then
+        tmp = tmp .. tostring(val)
+    elseif type(val) == "string" then
+        tmp = tmp .. string.format("%q", val)
+    elseif type(val) == "boolean" then
+        tmp = tmp .. (val and "true" or "false")
+    else
+        tmp = tmp .. "\"[inserializeable datatype:" .. type(val) .. "]\""
+    end
+
+    return tmp
+end
+
+
 
 init()

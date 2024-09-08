@@ -16,10 +16,10 @@ local function init()
     --end
 
 	if compat == true then
-		DebugError("Reactive Docking: Loading in High Compatibility Mode")
+		DebugError("Station Loader: Loading in High Compatibility Mode")
 		require('extensions.rkn_stationloader.stationloader_uix')
 	else
-		DebugError("Reactive Docking: Loading in Stand Alone Mode")
+		DebugError("Station Loader: Loading in Stand Alone Mode")
 		require('extensions.rkn_stationloader.stationloader_standalone')
 	end
 end
