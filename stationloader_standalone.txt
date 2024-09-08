@@ -264,9 +264,9 @@ function rkn_menu.createCPBrowserContext()
 
 	local row = stable:addRow(true, { })
 	row[1]:createText("Folder delimiter", { })
-	local delimeterEditBoxText = rkn_menu.settings.folder_delimiter:gsub(" ", "(space)") -- Replace spaces with '(space)' so that it is easier to read
-	row[2]:createEditBox({ scaling = true }):setText(delimeterEditBoxText, { })
-	row[2].handlers.onEditBoxDeactivated = rkn_menu.folderDelimeterEdit
+	local delimiterEditBoxText = rkn_menu.settings.folder_delimiter:gsub(" ", "(space)") -- Replace spaces with '(space)' so that it is easier to read
+	row[2]:createEditBox({ scaling = true }):setText(delimiterEditBoxText, { })
+	row[2].handlers.onEditBoxDeactivated = rkn_menu.folderDelimiterEdit
 	row[2].properties.mouseOverText = "The character that the browser should split item names by to create folders. Only one character allowed."
 	row[2].properties.active = rkn_menu.settings.folder_enabled
 
@@ -286,6 +286,7 @@ function rkn_menu.createCPBrowserContext()
 	row[1]:createText("Single item folder", { })
 	row[2]:createCheckBox(rkn_menu.settings.folder_single_item, { width = smallColWidth })
 	row[2].handlers.onClick = rkn_menu.folderSingleItemToggled
+	row[2].properties.mouseOverText = "Allow folders that only contain one item."
 	row[2].properties.active = rkn_menu.settings.folder_enabled
 
 	sc_menu.contextFrame:display()
@@ -485,7 +486,7 @@ function rkn_menu.folderSingleItemToggled(_, checked)
 	rkn_menu.settingChanged("folder_single_item", checked)
 end
 
-function rkn_menu.folderDelimeterEdit(_, text, textchanged)
+function rkn_menu.folderDelimiterEdit(_, text, textchanged)
 	if textchanged then
 		text = text:gsub("(space)", " ")
 		if text:len() > 1 then
