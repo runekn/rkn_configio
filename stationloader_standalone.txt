@@ -313,7 +313,7 @@ function rkn_menu.prepareBrowserStructure(itemList)
 			levelsLeft = levelsLeft -1
 			if levelsLeft <= 0 then
 				-- Make the rest of the actual item name, the displayed name --
-				name = item.name -- TODO
+				name = item.name:sub(folderPath:len())
 				break
 			end
 			-- Otherwise, path to folder --
