@@ -18,6 +18,7 @@ local config = {
 		x = 0,
 		y = 0
 	},
+	browserSettingsWidth = Helper.scaleX(300),
 	browserHeaderTextProperties = {
 		font = Helper.headerRow1Font,
 		fontsize = Helper.headerRow1FontSize,
@@ -38,7 +39,7 @@ local config = {
 	planTextProperties = {
 
 	},
-	inactiveColor = { r = 128, g = 128, b = 128, a = 100 }
+	inactiveColor = { r = 128, g = 128, b = 128, a = 100 },
 }
 
 local function init()
@@ -46,6 +47,8 @@ local function init()
 	sc_menu.createTitleBar = rkn_menu.createTitleBar
 	sc_menu.refreshTitleBar = rkn_menu.refreshTitleBar
 	sc_menu.onRowChanged = rkn_menu.onRowChanged
+
+	rkn_menu.playerID = ConvertStringTo64Bit(tostring(C.GetPlayerID()))
 end
 
 -- Overriden function --
@@ -205,6 +208,7 @@ function rkn_menu.buttonTitleLoad()
 end
 
 function rkn_menu.createCPBrowserContext()
+	rkn_menu.settings = rkn_menu.getBrowserSettings("station")
 	local listRoot = rkn_menu.prepareBrowserStructure(sc_menu.constructionplans)
 
 	sc_menu.displayContextFrame("loadCP", sc_menu.titleData.width, sc_menu.titleData.offsetX, sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
@@ -219,10 +223,47 @@ function rkn_menu.createCPBrowserContext()
 		autoFrameHeight = true,
 	})
 	sc_menu.contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
-
+	local browserHeight = 0.5 * Helper.viewHeight
 	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
-	local browserHeight = 0.6 * Helper.viewHeight
-	local ltable = sc_menu.contextFrame:addTable(config.maxFolders + 1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = browserHeight, x = Helper.borderSize, width = sc_menu.contextMode.width - Helper.borderSize * 2 })
+
+	-- Create settings list --
+	local stable = sc_menu.contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = browserHeight, x = Helper.borderSize, width = config.browserSettingsWidth - Helper.borderSize * 2 })
+	local row = stable:addRow(false, { })
+	row[1]:setColSpan(2):createText("Settings", config.browserHeaderTextProperties)
+
+	local row = stable:addRow(true, { })
+	row[1]:createText("Enable folders", { })
+	row[2]:createCheckBox(rkn_menu.settings.folder_enabled, { width = smallColWidth })
+	row[2].handlers.onClick = rkn_menu.folderEnabledToggled
+
+	local row = stable:addRow(true, { })
+	row[1]:createText("Folder delimiter", { })
+	local delimeterEditBoxText = rkn_menu.settings.folder_delimiter:gsub(" ", "(space)") -- Replace spaces with '(space)' so that it is easier to read
+	row[2]:createEditBox({ scaling = true }):setText(delimeterEditBoxText, { })
+	row[2].handlers.onEditBoxDeactivated = rkn_menu.folderDelimeterEdit
+	row[2].properties.mouseOverText = "The character that the browser should split item names by to create folders. Only one character allowed."
+	row[2].properties.active = rkn_menu.settings.folder_enabled
+
+	local row = stable:addRow(true, { })
+	row[1]:createText("Display full item name", { })
+	row[2]:createCheckBox(rkn_menu.settings.item_fullname, { width = smallColWidth })
+	row[2].handlers.onClick = rkn_menu.itemFullnameToggled
+	row[2].properties.active = rkn_menu.settings.folder_enabled
+
+	local row = stable:addRow(true, { })
+	row[1]:createText("Display full folder name", { })
+	row[2]:createCheckBox(rkn_menu.settings.folder_fullname, { width = smallColWidth })
+	row[2].handlers.onClick = rkn_menu.folderFullnameToggled
+	row[2].properties.active = rkn_menu.settings.folder_enabled
+
+	local row = stable:addRow(true, { })
+	row[1]:createText("Single item folder", { })
+	row[2]:createCheckBox(rkn_menu.settings.folder_single_item, { width = smallColWidth })
+	row[2].handlers.onClick = rkn_menu.folderSingleItemToggled
+	row[2].properties.active = rkn_menu.settings.folder_enabled
+
+	-- Create item list --
+	local ltable = sc_menu.contextFrame:addTable(config.maxFolders + 1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = browserHeight, x = config.browserSettingsWidth + Helper.borderSize, width = sc_menu.contextMode.width - config.browserSettingsWidth - Helper.borderSize * 2 })
 	for column = 1, config.maxFolders do
 		ltable:setColWidth(column, smallColWidth, false)
 	end
@@ -235,8 +276,9 @@ function rkn_menu.createCPBrowserContext()
 	ltable:setTopRow(sc_menu.topRows.rkn_configbrowser_load)
 	ltable:setSelectedRow(sc_menu.selectedRows.rkn_configbrowser_load)
 
+	-- Create list buttons --
 	local tableColumns = 5
-	local btable = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = browserHeight })
+	local btable = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = browserHeight, x = config.browserSettingsWidth + Helper.borderSize, width = sc_menu.contextMode.width - config.browserSettingsWidth - Helper.borderSize * 2 })
 	rkn_menu.btable = btable
 	local row = btable:addRow(true, { fixed = true })
 	row[tableColumns-2]:createButton({ active = rkn_menu.isRowValidForDeletion }):setText("Delete", { halign = "center" })
@@ -255,10 +297,10 @@ function rkn_menu.prepareBrowserStructure(itemList)
 	for _, item in ipairs(itemList) do
 		local cwd = root
 		-- iterate through item folders --
-		local nextMatch = string.gmatch(item.name, "[^ ]+")
+		local nextMatch = string.gmatch(item.name, "[^" .. EscapeGmatch(rkn_menu.settings.folder_delimiter) .. "]+")
 		local folder = nextMatch()
 		local name = item.name
-		local levelsLeft = config.maxFolders
+		local levelsLeft = rkn_menu.settings.folder_enabled and config.maxFolders or 0
 		local folderPath = ""
 		while 1==1 do
 			-- Check if this is the item name --
@@ -287,10 +329,30 @@ function rkn_menu.prepareBrowserStructure(itemList)
 		table.insert(cwd.items, { type = "item", name = name, active = item.active, deleteable = item.deleteable, item = item })
 	end
 
+	if not rkn_menu.settings.folder_single_item then
+		rkn_menu.undentSingleItems(root)
+	end
+
 	-- Now we sort all folders --
 	rkn_menu.sortFolder(root)
 
 	return root
+end
+
+function rkn_menu.undentSingleItems(root) -- TODO: doesn't work
+	for _, subfolder in ipairs(root.folders_arr) do
+		local itemCount = 0
+  		for _ in pairs(subfolder.items) do itemCount = itemCount + 1 end
+		if itemCount == 1 then
+			table.insert(root.items, subfolder.items[0])
+			table.remove(subfolder.items, 0)
+		end
+		rkn_menu.undentSingleItems(subfolder)
+	end
+end
+
+function EscapeGmatch(s)
+    return (s:gsub('[%-%.%+%[%]%(%)%$%^%%%?%*]','%%%1'))
 end
 
 function rkn_menu.addFolderToList(ltable, root, column)
@@ -300,7 +362,8 @@ function rkn_menu.addFolderToList(ltable, root, column)
 		local isextended = sc_menu.isResourceEntryExtended(folderId)
 		row[column]:createButton({ helpOverlayID = folderId, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
 		row[column].handlers.onClick = function () return rkn_menu.buttonExtendListEntry(folderId, row.index) end
-		row[column + 1]:setColSpan(config.maxFolders - column + 1):createText(folder.name, config.folderTextProperties)
+		local text = rkn_menu.settings.folder_fullname and folder.fullname or folder.name
+		row[column + 1]:setColSpan(config.maxFolders - column + 1):createText(text, config.folderTextProperties)
 		if isextended then
 			rkn_menu.addFolderToList(ltable, folder, column + 1)
 		end
@@ -308,7 +371,7 @@ function rkn_menu.addFolderToList(ltable, root, column)
 
 	for _, item in ipairs(root.items) do
 		local row = ltable:addRow(item, {  })
-		local text = item.item.name
+		local text = rkn_menu.settings.item_fullname and item.item.name or item.name
 		if not item.active then
 			text = Helper.convertColorToText(config.inactiveColor) .. text
 		end
@@ -381,6 +444,74 @@ function rkn_menu.buttonExtendListEntry(index, row)
 	sc_menu.selectedRows.rkn_configbrowser_load = row
 
 	rkn_menu.createCPBrowserContext();
+end
+
+function rkn_menu.folderEnabledToggled(_, checked)
+	rkn_menu.setBrowserSetting("station", "folder_enabled", checked)
+	rkn_menu.createCPBrowserContext()
+end
+
+function rkn_menu.itemFullnameToggled(_, checked)
+	rkn_menu.setBrowserSetting("station", "item_fullname", checked)
+	rkn_menu.createCPBrowserContext()
+end
+
+function rkn_menu.folderFullnameToggled(_, checked)
+	rkn_menu.setBrowserSetting("station", "folder_fullname", checked)
+	rkn_menu.createCPBrowserContext()
+end
+
+function rkn_menu.folderSingleItemToggled(_, checked)
+	rkn_menu.setBrowserSetting("station", "folder_single_item", checked)
+	rkn_menu.createCPBrowserContext()
+end
+
+function rkn_menu.folderDelimeterEdit(_, text, textchanged)
+	if textchanged then
+		text = text:gsub("(space)", " ")
+		if text:len() > 1 then
+			text = text:sub(1, 1)
+		end
+		rkn_menu.setBrowserSetting("station", "folder_delimiter", text)
+		rkn_menu.createCPBrowserContext()
+	end
+end
+
+function rkn_menu.getBrowserSettings(browser)
+	local s = GetNPCBlackboard(rkn_menu.playerID, "$rkn_configbrowser_settings_" .. browser)
+	if not s then
+		return {
+			folder_enabled = true,
+			folder_delimiter = " ",
+			folder_single_item = true,
+			folder_fullname = false,
+			item_fullname = true
+		}
+	end
+	return {
+		folder_enabled = s.folder_enabled == 1,
+		folder_delimiter = (not s.folder_delimiter or s.folder_delimiter == "") and " " or s.folder_delimiter,
+		folder_single_item = s.folder_single_item == 1,
+		folder_fullname = s.folder_fullname == 1,
+		item_fullname = s.item_fullname == 1
+	}
+end
+
+function rkn_menu.setBrowserSetting(browser, key, value)
+	local settings = rkn_menu.getBrowserSettings(browser)
+	settings[key] = value
+	SetNPCBlackboard(rkn_menu.playerID, "$rkn_configbrowser_settings_" .. browser, settings)
+end
+
+function DebugSettings()
+	local settings = GetNPCBlackboard(rkn_menu.playerID, "$rkn_configbrowser_settings_station")
+	DebugError(string.format("{\n  folder_enabled = %s,\n  folder_delimiter = %s,\n  folder_single_item = %s,\n  folder_fullname = %s,\n  item_fullname = %s }",
+		tostring(settings.folder_enabled),
+		tostring(settings.folder_delimiter),
+		tostring(settings.folder_single_item),
+		tostring(settings.folder_fullname),
+		tostring(settings.item_fullname)
+	))
 end
 
 init()
