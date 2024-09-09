@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<mdscript name="rkn_stationloader" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+<mdscript name="rkn_configio" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
 	<cues>
 		<cue name="OnLuaLoaderReady">
 			<conditions>
@@ -8,7 +8,7 @@
 			<actions>
 				<!--<raise_lua_event name="'Lua_Loader.Load'" param="'extensions.kuertee_ui_extensions.ui.kuertee_menu_map'"/>
 				<raise_lua_event name="'Lua_Loader.Load'" param="'extensions.kuertee_ui_extensions.ui.kuertee_menu_docked'"/>-->
-				<raise_lua_event name="'Lua_Loader.Load'" param="'extensions.rkn_stationloader.ui_initializer'"/>
+				<raise_lua_event name="'Lua_Loader.Load'" param="'extensions.rkn_configio.ui_initializer'"/>
 			</actions>
 		</cue>
 		<cue name="OnLuaLoaderReadyCompleted">

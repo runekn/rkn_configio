@@ -85,7 +85,7 @@ end
 
 -- For debugging --
 local function DebugSettings()
-	local settings = GetNPCBlackboard(rkn_menu.playerID, "$rkn_configbrowser_settings_station")
+	local settings = GetNPCBlackboard(rkn_menu.playerID, "$rkn_configio_settings_station")
 	DebugError(string.format("{\n  folder_enabled = %s,\n  folder_delimiter = %s,\n  folder_single_item = %s,\n  folder_fullname = %s,\n  item_fullname = %s }",
 		tostring(settings.folder_enabled),
 		tostring(settings.folder_delimiter),
@@ -385,8 +385,8 @@ function rkn_menu.createCPBrowserContext()
 
 	rkn_menu.addFolderToList(ltable, listRoot, 1)
 
-	ltable:setTopRow(sc_menu.topRows.rkn_configbrowser_load)
-	ltable:setSelectedRow(sc_menu.selectedRows.rkn_configbrowser_load)
+	ltable:setTopRow(sc_menu.topRows.rkn_configio_load)
+	ltable:setSelectedRow(sc_menu.selectedRows.rkn_configio_load)
 
 	-- Create list buttons --
 	local tableColumns = 5
@@ -571,7 +571,7 @@ end
 function rkn_menu.addFolderToList(ltable, root, column)
 	for _, folder in ipairs(root.folders_arr) do
 		local row = ltable:addRow(folder, {  })
-		local folderId = "rkn_configbrowser_folder_" .. folder.fullname
+		local folderId = "rkn_configio_folder_" .. folder.fullname
 		local isextended = sc_menu.isResourceEntryExtended(folderId)
 		row[column]:createButton({ helpOverlayID = folderId, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
 		row[column].handlers.onClick = function () return rkn_menu.buttonExtendListEntry(folderId, row.index) end
@@ -629,13 +629,13 @@ function rkn_menu.buttonLoadPlan()
 end
 
 function rkn_menu.refreshCPBrowserFrame()
-	sc_menu.topRows.rkn_configbrowser_load = GetTopRow(sc_menu.contexttable)
+	sc_menu.topRows.rkn_configio_load = GetTopRow(sc_menu.contexttable)
 	rkn_menu.createCPBrowserContext()
 end
 
 function rkn_menu.buttonExtendListEntry(index, row)
 	sc_menu.extendResourceEntry(index)
-	sc_menu.selectedRows.rkn_configbrowser_load = row
+	sc_menu.selectedRows.rkn_configio_load = row
 	rkn_menu.refreshCPBrowserFrame()
 end
 
@@ -694,7 +694,7 @@ function rkn_menu.filterMacroToggled(macro, checked)
 end
 
 function rkn_menu.getBrowserSettings(browser)
-	local s = GetNPCBlackboard(rkn_menu.playerID, "$rkn_configbrowser_settings_" .. browser)
+	local s = GetNPCBlackboard(rkn_menu.playerID, "$rkn_configio_settings_" .. browser)
 	if not s then
 		return {
 			folder_enabled = false,
@@ -716,7 +716,7 @@ end
 function rkn_menu.setBrowserSetting(browser, key, value)
 	local settings = rkn_menu.getBrowserSettings(browser)
 	settings[key] = value
-	SetNPCBlackboard(rkn_menu.playerID, "$rkn_configbrowser_settings_" .. browser, settings)
+	SetNPCBlackboard(rkn_menu.playerID, "$rkn_configio_settings_" .. browser, settings)
 end
 
 

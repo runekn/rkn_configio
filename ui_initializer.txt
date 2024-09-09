@@ -3,7 +3,7 @@ local ffi = require("ffi")
 local C = ffi.C
 
 local function init()
-	DebugError("Station Loader: extension_check Init")
+	--DebugError("Improved Config I/O: extension_check Init")
 
 	--local extensions = GetExtensionList()
 	local compat = false
@@ -16,11 +16,11 @@ local function init()
     --end
 
 	if compat == true then
-		DebugError("Station Loader: Loading in High Compatibility Mode")
-		require('extensions.rkn_stationloader.stationloader_uix')
+		DebugError("Improved Config I/O: Loading in High Compatibility Mode")
+		require('extensions.rkn_configio.configio_uix')
 	else
-		DebugError("Station Loader: Loading in Stand Alone Mode")
-		require('extensions.rkn_stationloader.stationloader_standalone')
+		DebugError("Improved Config I/O: Loading in Stand Alone Mode")
+		require('extensions.rkn_configio.configio_standalone')
 	end
 end
 

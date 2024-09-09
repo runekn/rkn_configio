@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<content id="rkn_stationloader" author="Runekn" name="Station Load Dialog" description="Replaces station load dropdown with dialog window." version="100" date="2024-09-07" save="false">
+<content id="rkn_configio" author="Runekn" name="Improved Station Load" description="Replaces station load dropdown with dialog window." version="100" date="2024-09-09" save="false">
   <dependency name="SirNukes Mod Support APIs" id="ws_2042901274" version="100" optional="true"/>
 </content>
