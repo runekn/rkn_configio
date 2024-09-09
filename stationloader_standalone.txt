@@ -510,6 +510,7 @@ function rkn_menu.addFolderToList(ltable, root, column)
 			text = Helper.convertColorToText(rkn_config.inactiveColor) .. text
 		end
 		row[column]:setColSpan(rkn_config.maxFolders - column + 2):createText(text, rkn_config.planTextProperties)
+		row[column].properties.mouseOverText = item.item.mouseovertext
 	end
 end
 
