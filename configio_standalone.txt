@@ -20,11 +20,13 @@ local sc_config = {
 }
 
 local rkn_config = {
-	folderIdPrefix = "rkn_configio_folder_",
-	browserWidthMultiplier = 0.8,
+	folderIdFormat = "rkn_configio.folder.%s.%s",
+	settingsIdFormat = "rkn_configio.settings.%s",
+	loadWidthMultiplier = 0.8,
 	maxFolders = 6,
-	browserHeight = 0.5 * Helper.viewHeight,
-	browserSettingsWidth = Helper.scaleX(300),
+	stationLoadHeight = 0.5 * Helper.viewHeight,
+	stationLoadoutLoadHeight = 0.3 * Helper.viewHeight,
+	loadSettingsWidth = Helper.scaleX(300),
 	settingsBrowserSeparation = Helper.borderSize * 10,
 	browserHeaderTextProperties = {
 		font = Helper.headerRow1Font,
@@ -88,7 +90,7 @@ end
 
 -- For debugging --
 local function DebugSettings()
-	local settings = GetNPCBlackboard(rkn_menu.playerID, "$rkn_configio_settings_station")
+	local settings = rkn_menu.getLoadSettings(sc_menu.contextMode.settingKey)
 	DebugError(string.format("{\n  folder_enabled = %s,\n  folder_delimiter = %s,\n  folder_single_item = %s,\n  folder_fullname = %s,\n  item_fullname = %s }",
 		tostring(settings.folder_enabled),
 		tostring(settings.folder_delimiter),
@@ -137,7 +139,7 @@ local function init()
 	sc_menu.onSelectElement = rkn_menu.onSelectElement
 
 	rkn_menu.playerID = ConvertStringTo64Bit(tostring(C.GetPlayerID()))
-	rkn_menu.filter = { macros = {} }
+	rkn_menu.filter = { station = { macros = {} }, station_loadout = {} }
 	rkn_menu.settings = {}
 end
 
@@ -223,8 +225,8 @@ function rkn_menu.createTitleBar(frame)
 		--row[2].handlers.onDropDownConfirmed = menu.dropdownLoadout
 		--row[2].handlers.onDropDownRemoved = menu.dropdownRemovedLoadout
 
-		row[2]:setColSpan(6):createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(1811143915, 1), { halign = "center" })
-		row[2].handlers.onClick = rkn_menu.buttonTitleLoad
+		row[2]:setColSpan(6):createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(1811143915, 22), { halign = "center" })
+		row[2].handlers.onClick = rkn_menu.buttonStationLoadoutTitleLoad
 		------- Runekn's Changes Stop Here! ----------
 		-- save
 		row[8]:createButton({ helpOverlayID = "save_loadout", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = ReadText(1026, 7905) }):setIcon("menu_save")
@@ -298,15 +300,16 @@ end
 function rkn_menu.onRowChanged(row, rowdata, uitable, modified, input, source)
 	local menu = sc_menu
 
+	-- Runekn's Changes Start Here! --
+	if rkn_menu.ltable and uitable == rkn_menu.ltable.id then
+		rkn_menu.selectedEntry = rowdata
+		return
+	else
+		rkn_menu.selectedEntry = nil
+	end
+	-- Runekn's Changes Stop Here! --
+
 	if not menu.loadoutMode then
-		-- Runekn's Changes Start Here! --
-		if rkn_menu.ltable and uitable == rkn_menu.ltable.id then
-			rkn_menu.selectedEntry = rowdata
-			return
-		else
-			rkn_menu.selectedEntry = nil
-		end
-		-- Runekn's Changes Stop Here! --
 		if uitable == menu.plantable then
 			if menu.holomap ~= 0 then
 				if (source ~= "auto") or (menu.selectedModule == nil) then
@@ -355,8 +358,9 @@ function rkn_menu.buttonStationTitleLoad()
 	if sc_menu.contextMode and (sc_menu.contextMode.mode == "loadCP") then
 		sc_menu.closeContextMenu()
 	else
-		sc_menu.displayContextFrame("loadCP", sc_menu.titleData.width * rkn_config.browserWidthMultiplier, sc_menu.titleData.offsetX + (sc_menu.titleData.width * (1 - rkn_config.browserWidthMultiplier) / 2), sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
+		sc_menu.displayContextFrame("loadCP", sc_menu.titleData.width * rkn_config.loadWidthMultiplier, sc_menu.titleData.offsetX + (sc_menu.titleData.width * (1 - rkn_config.loadWidthMultiplier) / 2), sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
 		sc_menu.contextMode.settingKey = "station"
+		sc_menu.contextMode.height = rkn_config.stationLoadHeight
 		sc_menu.contextMode.itemsList = sc_menu.constructionplans
 		sc_menu.contextMode.header = ReadText(1811143915, 2)
 		sc_menu.contextMode.onSelection = function(id) sc_menu.dropdownLoad(nil, id) end
@@ -367,8 +371,26 @@ function rkn_menu.buttonStationTitleLoad()
 	end
 end
 
+function rkn_menu.buttonStationLoadoutTitleLoad()
+	if sc_menu.contextMode and (sc_menu.contextMode.mode == "loadCL") then
+		sc_menu.closeContextMenu()
+	else
+		sc_menu.displayContextFrame("loadCL", sc_menu.titleData.width * rkn_config.loadWidthMultiplier, sc_menu.titleData.offsetX + (sc_menu.titleData.width * (1 - rkn_config.loadWidthMultiplier) / 2), sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
+		sc_menu.contextMode.settingKey = "station_loadout"
+		sc_menu.contextMode.height = rkn_config.stationLoadoutLoadHeight
+		sc_menu.contextMode.itemsList = sc_menu.loadouts
+		sc_menu.contextMode.header = "Select Loadout"
+		sc_menu.contextMode.onSelection = function(id)
+			sc_menu.closeContextMenu()
+			sc_menu.dropdownLoadout(nil, id)
+		end
+		sc_menu.contextMode.onDeletion = function(id) sc_menu.dropdownRemovedLoadout(nil, id) end
+		rkn_menu.createLoadContext()
+	end
+end
+
 function rkn_menu.createLoadContext()
-	rkn_menu.settings = rkn_menu.getBrowserSettings(sc_menu.contextMode.settingKey)
+	rkn_menu.settings = rkn_menu.getLoadSettings(sc_menu.contextMode.settingKey)
 	local listRoot = rkn_menu.prepareBrowserStructure(sc_menu.contextMode.itemsList)
 
 	Helper.removeAllWidgetScripts(sc_menu, sc_config.contextLayer)
@@ -384,11 +406,11 @@ function rkn_menu.createLoadContext()
 	sc_menu.contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
 
 	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
-	local browserWidth = sc_menu.contextMode.width - rkn_config.browserSettingsWidth - Helper.borderSize * 2 - rkn_config.settingsBrowserSeparation
-	local browserX = rkn_config.browserSettingsWidth + Helper.borderSize + rkn_config.settingsBrowserSeparation
+	local browserWidth = sc_menu.contextMode.width - rkn_config.loadSettingsWidth - Helper.borderSize * 2 - rkn_config.settingsBrowserSeparation
+	local browserX = rkn_config.loadSettingsWidth + Helper.borderSize + rkn_config.settingsBrowserSeparation
 
 	-- Create item list --
-	local ltable = sc_menu.contextFrame:addTable(rkn_config.maxFolders + 1, { wraparound = true, tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = rkn_config.browserHeight - Helper.standardButtonHeight, x = browserX, width = browserWidth })
+	local ltable = sc_menu.contextFrame:addTable(rkn_config.maxFolders + 1, { wraparound = true, tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = sc_menu.contextMode.height - Helper.standardButtonHeight, x = browserX, width = browserWidth })
 	for column = 1, rkn_config.maxFolders do
 		ltable:setColWidth(column, smallColWidth, false)
 	end
@@ -403,7 +425,7 @@ function rkn_menu.createLoadContext()
 
 	-- Create list buttons --
 	local tableColumns = 4
-	local btable = sc_menu.contextFrame:addTable(tableColumns, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = rkn_config.browserHeight - Helper.standardButtonHeight, x = browserX, width = browserWidth })
+	local btable = sc_menu.contextFrame:addTable(tableColumns, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = sc_menu.contextMode.height - Helper.standardButtonHeight, x = browserX, width = browserWidth })
 	rkn_menu.btable = btable
 	local row = btable:addRow(true, { fixed = true })
 	row[tableColumns-2]:createButton({ active = rkn_menu.isRowValidForLoad }):setText(ReadText(1811143915, 3), { halign = "center" })
@@ -422,8 +444,8 @@ function rkn_menu.createLoadContext()
 	row[2].handlers.onClick = rkn_menu.buttonCollapseAll
 
 	-- Create settings list --
-	local stable = sc_menu.contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = rkn_config.browserHeight, x = Helper.borderSize, width = rkn_config.browserSettingsWidth - Helper.borderSize * 2 })
-	stable:setColWidth(1, rkn_config.browserSettingsWidth * 0.7, false)
+	local stable = sc_menu.contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = sc_menu.contextMode.height, x = Helper.borderSize, width = rkn_config.loadSettingsWidth - Helper.borderSize * 2 })
+	stable:setColWidth(1, rkn_config.loadSettingsWidth * 0.7, false)
 	local row = stable:addRow(false, { fixed = true })
 	row[1]:setColSpan(2):createText(ReadText(1811143915, 6), rkn_config.browserHeaderTextProperties)
 
@@ -467,7 +489,7 @@ function rkn_menu.createLoadContext()
 	row[1]:setColSpan(2):createText(ReadText(1811143915, 15), rkn_config.browserHeaderTextProperties)
 
 	local row = stable:addRow(true, { fixed = true })
-	row[1]:createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(rkn_menu.filter.search, { })
+	row[1]:createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(rkn_menu.filter[sc_menu.contextMode.settingKey].search, { })
 	row[1].handlers.onEditBoxDeactivated = rkn_menu.searchItemEdit
 	row[2]:createButton({  }):setText(ReadText(1811143915, 16), { halign = "center" })
 	row[2].handlers.onClick = function () rkn_menu.searchItemEdit(nil, "", true) end
@@ -529,7 +551,8 @@ function rkn_menu.prepareBrowserStructure(itemList)
 			cwd = target
 			folder = next
 		end
-		table.insert(cwd.items, { type = "item", name = name, active = item.active, deleteable = item.deleteable, item = item })
+		-- Inser item to final folder --
+		table.insert(cwd.items, { type = "item", name = name, active = item.active or (item.preset and true or false), deleteable = item.deleteable, item = item })
 		::continue::
 	end
 
@@ -544,8 +567,9 @@ function rkn_menu.prepareBrowserStructure(itemList)
 end
 
 function rkn_menu.filterItem(item)
-	if rkn_menu.filter.search and rkn_menu.filter.search ~= "" then
-		local searchMatch = item.name:lower():find(rkn_menu.filter.search:lower())
+	local search = rkn_menu.filter[sc_menu.contextMode.settingKey].search
+	if search and search ~= "" then
+		local searchMatch = item.name:lower():find(search:lower())
 		if not searchMatch then
 			return false
 		end
@@ -557,8 +581,9 @@ function rkn_menu.filterItem(item)
 end
 
 function rkn_menu.filterItemByModules(item)
-	if rkn_menu.filter.macros and #rkn_menu.filter.macros > 0 then
-		local hasmacros = Helper.textArrayHelper(rkn_menu.filter.macros, function (numtexts, texts) return C.CheckConstructionPlanForMacros(item.id, texts, numtexts) end)
+	local selectedMacros = rkn_menu.filter[sc_menu.contextMode.settingKey].macros
+	if selectedMacros and #selectedMacros > 0 then
+		local hasmacros = Helper.textArrayHelper(selectedMacros, function (numtexts, texts) return C.CheckConstructionPlanForMacros(item.id, texts, numtexts) end)
 		if not hasmacros then
 			return false
 		end
@@ -604,10 +629,9 @@ end
 function rkn_menu.addFolderToList(ltable, root, column)
 	for _, folder in ipairs(root.folders_arr) do
 		local row = ltable:addRow(folder, {  })
-		local folderId = rkn_config.folderIdPrefix .. folder.fullname
-		local isextended = sc_menu.isResourceEntryExtended(folderId)
-		row[column]:createButton({ helpOverlayID = folderId, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
-		row[column].handlers.onClick = function () return rkn_menu.buttonExtendListEntry(folderId, row.index) end
+		local isextended = sc_menu.isResourceEntryExtended(rkn_config.folderIdFormat:format(sc_menu.contextMode.settingKey, folder.fullname))
+		row[column]:createButton({ helpOverlayID = folder.fullname, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
+		row[column].handlers.onClick = function () return rkn_menu.buttonExtendListEntry(folder.fullname, row.index) end
 		local text = rkn_menu.settings.folder_fullname and folder.fullname or folder.name
 		row[column + 1]:setColSpan(rkn_config.maxFolders - column + 1):createText(text, rkn_config.folderTextProperties)
 		if isextended then
@@ -628,8 +652,9 @@ end
 
 function rkn_menu.addModulesToFilter(table, buttonText, checked)
 	local atLeastOneAdded = false;
+	local selectedMacros = rkn_menu.filter[sc_menu.contextMode.settingKey].macros
 	for _, macro in ipairs(sc_menu.modules["moduletypes_production"]) do
-		if (checked and ArrayIndexOf(rkn_menu.filter.macros, macro) ~= nil) or (not checked and ArrayIndexOf(rkn_menu.filter.macros, macro) == nil) then
+		if (checked and ArrayIndexOf(selectedMacros, macro) ~= nil) or (not checked and ArrayIndexOf(selectedMacros, macro) == nil) then
 			local row = table:addRow(true, { })
 			local name = GetMacroData(macro, "name")
 			row[1]:createText(name, { })
@@ -667,7 +692,7 @@ function rkn_menu.refreshLoadFrame()
 end
 
 function rkn_menu.buttonExtendListEntry(index, row)
-	sc_menu.extendResourceEntry(index)
+	sc_menu.extendResourceEntry(rkn_config.folderIdFormat:format(sc_menu.contextMode.settingKey, index))
 	sc_menu.selectedRows.rkn_configio_load = row
 	rkn_menu.refreshLoadFrame()
 end
@@ -679,14 +704,15 @@ end
 
 function rkn_menu.expandAll(root)
 	for _,folder in ipairs(root.folders_arr) do
-		sc_menu.extendedresourceentries[rkn_config.folderIdPrefix .. folder.fullname] = true
+		sc_menu.extendedresourceentries[rkn_config.folderIdFormat:format(sc_menu.contextMode.settingKey, folder.fullname)] = true
 		rkn_menu.expandAll(folder)
 	end
 end
 
 function rkn_menu.buttonCollapseAll()
+	local keyPrefix = rkn_config.folderIdFormat:format(sc_menu.contextMode.settingKey, "")
 	for k,_ in pairs(sc_menu.extendedresourceentries) do
-		if k:sub(1, rkn_config.folderIdPrefix:len()) == rkn_config.folderIdPrefix then
+		if k:sub(1, keyPrefix:len()) == keyPrefix then
 			sc_menu.extendedresourceentries[k] = false
 		end
 	end
@@ -694,22 +720,22 @@ function rkn_menu.buttonCollapseAll()
 end
 
 function rkn_menu.folderEnabledToggled(_, checked)
-	rkn_menu.setBrowserSetting("station", "folder_enabled", checked)
+	rkn_menu.setLoadSetting(sc_menu.contextMode.settingKey, "folder_enabled", checked)
 	rkn_menu.refreshLoadFrame()
 end
 
 function rkn_menu.itemFullnameToggled(_, checked)
-	rkn_menu.setBrowserSetting("station", "item_fullname", checked)
+	rkn_menu.setLoadSetting(sc_menu.contextMode.settingKey, "item_fullname", checked)
 	rkn_menu.refreshLoadFrame()
 end
 
 function rkn_menu.folderFullnameToggled(_, checked)
-	rkn_menu.setBrowserSetting("station", "folder_fullname", checked)
+	rkn_menu.setLoadSetting(sc_menu.contextMode.settingKey, "folder_fullname", checked)
 	rkn_menu.refreshLoadFrame()
 end
 
 function rkn_menu.folderSingleItemToggled(_, checked)
-	rkn_menu.setBrowserSetting("station", "folder_single_item", checked)
+	rkn_menu.setLoadSetting(sc_menu.contextMode.settingKey, "folder_single_item", checked)
 	rkn_menu.refreshLoadFrame()
 end
 
@@ -722,7 +748,7 @@ function rkn_menu.folderDelimiterEdit(_, text, textchanged)
 	if text:len() > 1 then
 		text = text:sub(1, 1)
 	end
-	rkn_menu.setBrowserSetting("station", "folder_delimiter", text)
+	rkn_menu.setLoadSetting(sc_menu.contextMode.settingKey, "folder_delimiter", text)
 	rkn_menu.refreshLoadFrame()
 end
 
@@ -731,24 +757,25 @@ function rkn_menu.searchItemEdit(_, text, textchanged)
 		return
 	end
 
-	rkn_menu.filter.search = text
+	rkn_menu.filter[sc_menu.contextMode.settingKey].search = text
 	rkn_menu.refreshLoadFrame()
 end
 
 function rkn_menu.filterMacroToggled(macro, checked)
+	local selectedMacros = rkn_menu.filter[sc_menu.contextMode.settingKey].macros
 	if checked then
-		table.insert(rkn_menu.filter.macros, macro)
+		table.insert(selectedMacros, macro)
 	else
-		local index = ArrayIndexOf(rkn_menu.filter.macros, macro)
+		local index = ArrayIndexOf(selectedMacros, macro)
 		if index then
-			table.remove(rkn_menu.filter.macros, index)
+			table.remove(selectedMacros, index)
 		end
 	end
 	rkn_menu.refreshLoadFrame()
 end
 
-function rkn_menu.getBrowserSettings(browser)
-	local s = GetNPCBlackboard(rkn_menu.playerID, "$rkn_configio_settings_" .. browser)
+function rkn_menu.getLoadSettings(configKey)
+	local s = GetNPCBlackboard(rkn_menu.playerID, rkn_config.settingsIdFormat:format(configKey))
 	if not s then
 		return {
 			folder_enabled = false,
@@ -767,10 +794,10 @@ function rkn_menu.getBrowserSettings(browser)
 	}
 end
 
-function rkn_menu.setBrowserSetting(browser, key, value)
-	local settings = rkn_menu.getBrowserSettings(browser)
+function rkn_menu.setLoadSetting(configKey, key, value)
+	local settings = rkn_menu.getLoadSettings(configKey)
 	settings[key] = value
-	SetNPCBlackboard(rkn_menu.playerID, "$rkn_configio_settings_" .. browser, settings)
+	SetNPCBlackboard(rkn_menu.playerID, rkn_config.settingsIdFormat:format(configKey), settings)
 end
 
 
