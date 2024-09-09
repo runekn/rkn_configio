@@ -20,6 +20,7 @@ local sc_config = {
 }
 
 local rkn_config = {
+	browserWidthMultiplier = 0.8,
 	maxFolders = 6,
 	browserHeight = 0.5 * Helper.viewHeight,
 	browserSettingsWidth = Helper.scaleX(300),
@@ -42,7 +43,8 @@ local rkn_config = {
 		titleColor = { r = 128, g = 128, b = 128, a = 100 }
 	},
 	planTextProperties = {
-
+		height = math.floor(Helper.standardTextHeight + Helper.scaleY(2) * 2),
+		y = math.floor(Helper.scaleY(3)),
 	},
 	inactiveColor = { r = 128, g = 128, b = 128, a = 100 }
 }
@@ -357,7 +359,7 @@ function rkn_menu.createCPBrowserContext()
 	rkn_menu.settings = rkn_menu.getBrowserSettings("station")
 	local listRoot = rkn_menu.prepareBrowserStructure(sc_menu.constructionplans)
 
-	sc_menu.displayContextFrame("loadCP", sc_menu.titleData.width, sc_menu.titleData.offsetX, sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
+	sc_menu.displayContextFrame("loadCP", sc_menu.titleData.width * rkn_config.browserWidthMultiplier, sc_menu.titleData.offsetX + (sc_menu.titleData.width * (1 - rkn_config.browserWidthMultiplier) / 2), sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
 	Helper.removeAllWidgetScripts(sc_menu, sc_config.contextLayer)
 
 	sc_menu.contextFrame = Helper.createFrameHandle(sc_menu, {
@@ -389,8 +391,8 @@ function rkn_menu.createCPBrowserContext()
 	ltable:setSelectedRow(sc_menu.selectedRows.rkn_configio_load)
 
 	-- Create list buttons --
-	local tableColumns = 5
-	local btable = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = rkn_config.browserHeight - Helper.standardButtonHeight, x = browserX, width = browserWidth })
+	local tableColumns = 4
+	local btable = sc_menu.contextFrame:addTable(tableColumns, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = rkn_config.browserHeight - Helper.standardButtonHeight, x = browserX, width = browserWidth })
 	rkn_menu.btable = btable
 	local row = btable:addRow(true, { fixed = true })
 	row[tableColumns-2]:createButton({ active = rkn_menu.isRowValidForLoad }):setText(ReadText(1811143915, 3), { halign = "center" })
