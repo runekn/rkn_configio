@@ -18,7 +18,9 @@ local config = {
 		x = 0,
 		y = 0
 	},
+	browserHeight = 0.5 * Helper.viewHeight,
 	browserSettingsWidth = Helper.scaleX(300),
+	settingsBrowserSeparation = Helper.borderSize * 10,
 	browserHeaderTextProperties = {
 		font = Helper.headerRow1Font,
 		fontsize = Helper.headerRow1FontSize,
@@ -39,7 +41,7 @@ local config = {
 	planTextProperties = {
 
 	},
-	inactiveColor = { r = 128, g = 128, b = 128, a = 100 },
+	inactiveColor = { r = 128, g = 128, b = 128, a = 100 }
 }
 
 local function init()
@@ -49,6 +51,8 @@ local function init()
 	sc_menu.onRowChanged = rkn_menu.onRowChanged
 
 	rkn_menu.playerID = ConvertStringTo64Bit(tostring(C.GetPlayerID()))
+	rkn_menu.filter = { macros = {} }
+	rkn_menu.settings = {}
 end
 
 -- Overriden function --
@@ -223,11 +227,13 @@ function rkn_menu.createCPBrowserContext()
 		autoFrameHeight = true,
 	})
 	sc_menu.contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
-	local browserHeight = 0.5 * Helper.viewHeight
+
 	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
+	local browserWidth = sc_menu.contextMode.width - config.browserSettingsWidth - Helper.borderSize * 2 - config.settingsBrowserSeparation
+	local browserX = config.browserSettingsWidth + Helper.borderSize + config.settingsBrowserSeparation
 
 	-- Create item list --
-	local ltable = sc_menu.contextFrame:addTable(config.maxFolders + 1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = browserHeight, x = config.browserSettingsWidth + Helper.borderSize, width = sc_menu.contextMode.width - config.browserSettingsWidth - Helper.borderSize * 2 })
+	local ltable = sc_menu.contextFrame:addTable(config.maxFolders + 1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = config.browserHeight - Helper.standardButtonHeight, x = browserX, width = browserWidth })
 	for column = 1, config.maxFolders do
 		ltable:setColWidth(column, smallColWidth, false)
 	end
@@ -242,7 +248,7 @@ function rkn_menu.createCPBrowserContext()
 
 	-- Create list buttons --
 	local tableColumns = 5
-	local btable = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = browserHeight, x = config.browserSettingsWidth + Helper.borderSize, width = sc_menu.contextMode.width - config.browserSettingsWidth - Helper.borderSize * 2 })
+	local btable = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = config.browserHeight - Helper.standardButtonHeight, x = browserX, width = browserWidth })
 	rkn_menu.btable = btable
 	local row = btable:addRow(true, { fixed = true })
 	row[tableColumns-2]:createButton({ active = rkn_menu.isRowValidForDeletion }):setText("Delete", { halign = "center" })
@@ -253,16 +259,20 @@ function rkn_menu.createCPBrowserContext()
 	row[tableColumns].handlers.onClick = sc_menu.closeContextMenu
 
 	-- Create settings list --
-	local stable = sc_menu.contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = browserHeight, x = Helper.borderSize, width = config.browserSettingsWidth - Helper.borderSize * 2 })
-	local row = stable:addRow(false, { })
+	local stable = sc_menu.contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = config.browserHeight, x = Helper.borderSize, width = config.browserSettingsWidth - Helper.borderSize * 2 })
+	stable:setColWidth(1, config.browserSettingsWidth * 0.7, false)
+	local row = stable:addRow(false, { fixed = true })
 	row[1]:setColSpan(2):createText("Settings", config.browserHeaderTextProperties)
 
-	local row = stable:addRow(true, { })
+	local row = stable:addRow(true, { fixed = true })
 	row[1]:createText("Enable folders", { })
 	row[2]:createCheckBox(rkn_menu.settings.folder_enabled, { width = smallColWidth })
 	row[2].handlers.onClick = rkn_menu.folderEnabledToggled
+	
+	local row = stable:addRow(false, { fixed = true }) -- bit of separation
+	row[1]:createText("", { })
 
-	local row = stable:addRow(true, { })
+	local row = stable:addRow(true, { fixed = true })
 	row[1]:createText("Folder delimiter", { })
 	local delimiterEditBoxText = rkn_menu.settings.folder_delimiter:gsub(" ", "(space)") -- Replace spaces with '(space)' so that it is easier to read
 	row[2]:createEditBox({ scaling = true }):setText(delimiterEditBoxText, { })
@@ -270,24 +280,45 @@ function rkn_menu.createCPBrowserContext()
 	row[2].properties.mouseOverText = "The character that the browser should split item names by to create folders. Only one character allowed."
 	row[2].properties.active = rkn_menu.settings.folder_enabled
 
-	local row = stable:addRow(true, { })
+	local row = stable:addRow(true, { fixed = true })
 	row[1]:createText("Display full item name", { })
 	row[2]:createCheckBox(rkn_menu.settings.item_fullname, { width = smallColWidth })
 	row[2].handlers.onClick = rkn_menu.itemFullnameToggled
 	row[2].properties.active = rkn_menu.settings.folder_enabled
 
-	local row = stable:addRow(true, { })
+	local row = stable:addRow(true, { fixed = true })
 	row[1]:createText("Display full folder name", { })
 	row[2]:createCheckBox(rkn_menu.settings.folder_fullname, { width = smallColWidth })
 	row[2].handlers.onClick = rkn_menu.folderFullnameToggled
 	row[2].properties.active = rkn_menu.settings.folder_enabled
 
-	local row = stable:addRow(true, { })
+	local row = stable:addRow(true, { fixed = true })
 	row[1]:createText("Single item folder", { })
 	row[2]:createCheckBox(rkn_menu.settings.folder_single_item, { width = smallColWidth })
 	row[2].handlers.onClick = rkn_menu.folderSingleItemToggled
 	row[2].properties.mouseOverText = "Allow folders that only contain one item."
 	row[2].properties.active = rkn_menu.settings.folder_enabled
+
+	-- Search bar --
+	local row = stable:addRow(false, { fixed = true })
+	row[1]:setColSpan(2):createText("Search", config.browserHeaderTextProperties)
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:setColSpan(2):createEditBox({ scaling = true, height = Helper.standardTextHeight }):setText(rkn_menu.filter.search, { }) -- TODO: why do I need to specify height?
+	row[1].handlers.onEditBoxDeactivated = rkn_menu.searchItemEdit
+
+	-- Module filter --
+	local row = stable:addRow(false, { fixed = true })
+	row[1]:setColSpan(2):createText("Module filter", config.browserHeaderTextProperties)
+	
+	for _, macro in ipairs(sc_menu.modules["moduletypes_production"]) do
+		local row = stable:addRow(true, { })
+		local name = GetMacroData(macro, "name")
+		row[1]:createText(name, { })
+		local macroChecked = ArrayIndexOf(rkn_menu.filter.macros, macro) ~= nil
+		row[2]:createCheckBox(macroChecked, { width = smallColWidth })
+		row[2].handlers.onClick = function (_, checked) rkn_menu.filterMacroToggled(macro, checked) end
+	end
 
 	sc_menu.contextFrame:display()
 end
@@ -296,6 +327,9 @@ function rkn_menu.prepareBrowserStructure(itemList)
 	-- First we build the folder structure --
 	local root = { type = "folder", name = "root", folders = {}, folders_arr = {}, items = {} }
 	for _, item in ipairs(itemList) do
+		if not rkn_menu.filterItem(item) then
+			goto continue
+		end
 		local cwd = root
 		-- iterate through item folders --
 		local nextMatch = string.gmatch(item.name, "[^" .. EscapeGmatch(rkn_menu.settings.folder_delimiter) .. "]+")
@@ -328,6 +362,7 @@ function rkn_menu.prepareBrowserStructure(itemList)
 			folder = next
 		end
 		table.insert(cwd.items, { type = "item", name = name, active = item.active, deleteable = item.deleteable, item = item })
+		::continue::
 	end
 
 	if not rkn_menu.settings.folder_single_item then
@@ -338,6 +373,22 @@ function rkn_menu.prepareBrowserStructure(itemList)
 	rkn_menu.sortFolder(root)
 
 	return root
+end
+
+function rkn_menu.filterItem(item)
+	if rkn_menu.filter.macros and CountArray(rkn_menu.filter.macros) > 0 then
+		local hasmacros = Helper.textArrayHelper(rkn_menu.filter.macros, function (numtexts, texts) return C.CheckConstructionPlanForMacros(item.id, texts, numtexts) end)
+		if not hasmacros then
+			return false
+		end
+	end
+	if rkn_menu.filter.search and rkn_menu.filter.search ~= "" then
+		local searchMatch = item.name:find(rkn_menu.filter.search)
+		if not searchMatch then
+			return false
+		end
+	end
+	return true
 end
 
 function rkn_menu.undentSingleItems(folder, parent)
@@ -353,9 +404,8 @@ function rkn_menu.undentSingleItems(folder, parent)
 	end);
 
 	-- move item to parent if there is only one --
-	local itemCount = 0
-	for _ in pairs(folder.items) do itemCount = itemCount + 1 end
-	if itemCount == 1 and not atLeastOneSubFolder then
+	local itemCount = CountArray(folder.items)
+	if itemCount == 1 and not atLeastOneSubFolder and parent then
 		local item = folder.items[1]
 
 		table.insert(parent.items, item)
@@ -366,10 +416,6 @@ function rkn_menu.undentSingleItems(folder, parent)
 		canDelete = false
 	end
 	return not canDelete
-end
-
-function EscapeGmatch(s)
-    return (s:gsub('[%-%.%+%[%]%(%)%$%^%%%?%*]','%%%1'))
 end
 
 function rkn_menu.addFolderToList(ltable, root, column)
@@ -487,13 +533,38 @@ function rkn_menu.folderSingleItemToggled(_, checked)
 end
 
 function rkn_menu.folderDelimiterEdit(_, text, textchanged)
-	if textchanged then
-		text = text:gsub("(space)", " ")
-		if text:len() > 1 then
-			text = text:sub(1, 1)
-		end
-		rkn_menu.settingChanged("folder_delimiter", text)
+	if not textchanged then
+		return
 	end
+
+	text = text:gsub("(space)", " ")
+	if text:len() > 1 then
+		text = text:sub(1, 1)
+	end
+	rkn_menu.settingChanged("folder_delimiter", text)
+end
+
+function rkn_menu.searchItemEdit(_, text, textchanged)
+	if not textchanged then
+		return
+	end
+
+	rkn_menu.filter.search = text
+	sc_menu.topRows.rkn_configbrowser_load = GetTopRow(sc_menu.contexttable)
+	rkn_menu.createCPBrowserContext()
+end
+
+function rkn_menu.filterMacroToggled(macro, checked)
+	if checked then
+		table.insert(rkn_menu.filter.macros, macro)
+	else
+		local index = ArrayIndexOf(rkn_menu.filter.macros, macro)
+		if index then
+			table.remove(rkn_menu.filter.macros, index)
+		end
+	end
+	sc_menu.topRows.rkn_configbrowser_load = GetTopRow(sc_menu.contexttable)
+	rkn_menu.createCPBrowserContext()
 end
 
 function rkn_menu.getBrowserSettings(browser)
@@ -522,6 +593,16 @@ function rkn_menu.setBrowserSetting(browser, key, value)
 	SetNPCBlackboard(rkn_menu.playerID, "$rkn_configbrowser_settings_" .. browser, settings)
 end
 
+function CountArray(arr)
+	local count = 0
+	for _ in pairs(arr) do count = count + 1 end
+	return count
+end
+
+function EscapeGmatch(s)
+    return (s:gsub('[%-%.%+%[%]%(%)%$%^%%%?%*]','%%%1'))
+end
+
 function ArrayRemove(t, fnKeep)
     local j, n = 1, #t;
 
@@ -539,6 +620,18 @@ function ArrayRemove(t, fnKeep)
     end
 
     return t;
+end
+
+function ArrayIndexOf(arr, v)
+	if not arr then
+		return nil
+	end
+	for i, m in ipairs(arr) do
+		if m == v then
+			return i
+		end
+	end
+	return nil
 end
 
 -- For debugging --
