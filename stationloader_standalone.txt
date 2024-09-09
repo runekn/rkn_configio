@@ -629,36 +629,35 @@ function rkn_menu.buttonLoadPlan()
 	end
 end
 
-function rkn_menu.buttonExtendListEntry(index, row)
-	sc_menu.extendResourceEntry(index)
-
-	sc_menu.topRows.rkn_configbrowser_load = GetTopRow(sc_menu.contexttable)
-	sc_menu.selectedRows.rkn_configbrowser_load = row
-
-	rkn_menu.createCPBrowserContext();
-end
-
-function rkn_menu.settingChanged(k, v)
-	--DebugError("rkn_menu.settingChanged(" .. k .. ", " .. tostring(v) .. ")")
-	rkn_menu.setBrowserSetting("station", k, v)
+function rkn_menu.refreshCPBrowserFrame()
 	sc_menu.topRows.rkn_configbrowser_load = GetTopRow(sc_menu.contexttable)
 	rkn_menu.createCPBrowserContext()
 end
 
+function rkn_menu.buttonExtendListEntry(index, row)
+	sc_menu.extendResourceEntry(index)
+	sc_menu.selectedRows.rkn_configbrowser_load = row
+	rkn_menu.refreshCPBrowserFrame()
+end
+
 function rkn_menu.folderEnabledToggled(_, checked)
-	rkn_menu.settingChanged("folder_enabled", checked)
+	rkn_menu.setBrowserSetting("station", "folder_enabled", checked)
+	rkn_menu.refreshCPBrowserFrame()
 end
 
 function rkn_menu.itemFullnameToggled(_, checked)
-	rkn_menu.settingChanged("item_fullname", checked)
+	rkn_menu.setBrowserSetting("station", "item_fullname", checked)
+	rkn_menu.refreshCPBrowserFrame()
 end
 
 function rkn_menu.folderFullnameToggled(_, checked)
-	rkn_menu.settingChanged("folder_fullname", checked)
+	rkn_menu.setBrowserSetting("station", "folder_fullname", checked)
+	rkn_menu.refreshCPBrowserFrame()
 end
 
 function rkn_menu.folderSingleItemToggled(_, checked)
-	rkn_menu.settingChanged("folder_single_item", checked)
+	rkn_menu.setBrowserSetting("station", "folder_single_item", checked)
+	rkn_menu.refreshCPBrowserFrame()
 end
 
 function rkn_menu.folderDelimiterEdit(_, text, textchanged)
@@ -670,7 +669,8 @@ function rkn_menu.folderDelimiterEdit(_, text, textchanged)
 	if text:len() > 1 then
 		text = text:sub(1, 1)
 	end
-	rkn_menu.settingChanged("folder_delimiter", text)
+	rkn_menu.setBrowserSetting("station", "folder_delimiter", text)
+	rkn_menu.refreshCPBrowserFrame()
 end
 
 function rkn_menu.searchItemEdit(_, text, textchanged)
@@ -679,8 +679,7 @@ function rkn_menu.searchItemEdit(_, text, textchanged)
 	end
 
 	rkn_menu.filter.search = text
-	sc_menu.topRows.rkn_configbrowser_load = GetTopRow(sc_menu.contexttable)
-	rkn_menu.createCPBrowserContext()
+	rkn_menu.refreshCPBrowserFrame()
 end
 
 function rkn_menu.filterMacroToggled(macro, checked)
@@ -692,8 +691,7 @@ function rkn_menu.filterMacroToggled(macro, checked)
 			table.remove(rkn_menu.filter.macros, index)
 		end
 	end
-	sc_menu.topRows.rkn_configbrowser_load = GetTopRow(sc_menu.contexttable)
-	rkn_menu.createCPBrowserContext()
+	rkn_menu.refreshCPBrowserFrame()
 end
 
 function rkn_menu.getBrowserSettings(browser)
