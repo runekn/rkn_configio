@@ -439,7 +439,7 @@ function rkn_menu.prepareBrowserStructure(itemList)
 end
 
 function rkn_menu.filterItem(item)
-	if rkn_menu.filter.macros and CountArray(rkn_menu.filter.macros) > 0 then
+	if rkn_menu.filter.macros and #rkn_menu.filter.macros > 0 then
 		local hasmacros = Helper.textArrayHelper(rkn_menu.filter.macros, function (numtexts, texts) return C.CheckConstructionPlanForMacros(item.id, texts, numtexts) end)
 		if not hasmacros then
 			return false
@@ -467,7 +467,7 @@ function rkn_menu.undentSingleItems(folder, parent)
 	end);
 
 	-- move item to parent if there is only one --
-	local itemCount = CountArray(folder.items)
+	local itemCount = #folder.items
 	if itemCount == 1 and not atLeastOneSubFolder and parent then
 		local item = folder.items[1]
 
@@ -642,11 +642,6 @@ function rkn_menu.setBrowserSetting(browser, key, value)
 	SetNPCBlackboard(rkn_menu.playerID, "$rkn_configbrowser_settings_" .. browser, settings)
 end
 
-function CountArray(arr)
-	local count = 0
-	for _ in pairs(arr) do count = count + 1 end
-	return count
-end
 
 function EscapeGmatch(s)
     return (s:gsub('[%-%.%+%[%]%(%)%$%^%%%?%*]','%%%1'))
