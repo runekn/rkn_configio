@@ -20,6 +20,7 @@ local sc_config = {
 }
 
 local rkn_config = {
+	folderIdPrefix = "rkn_configio_folder_",
 	browserWidthMultiplier = 0.8,
 	maxFolders = 6,
 	browserHeight = 0.5 * Helper.viewHeight,
@@ -43,8 +44,8 @@ local rkn_config = {
 		titleColor = { r = 128, g = 128, b = 128, a = 100 }
 	},
 	planTextProperties = {
-		height = math.floor(Helper.standardTextHeight + Helper.scaleY(2) * 2),
-		y = math.floor(Helper.scaleY(3)),
+		height = math.floor(Helper.standardTextHeight + Helper.scaleY(1) * 2),
+		y = math.floor(Helper.scaleY(1)),
 	},
 	inactiveColor = { r = 128, g = 128, b = 128, a = 100 }
 }
@@ -402,6 +403,14 @@ function rkn_menu.createCPBrowserContext()
 	row[tableColumns]:createButton({  }):setText(ReadText(1811143915, 5), { halign = "center" })
 	row[tableColumns].handlers.onClick = sc_menu.closeContextMenu
 
+	-- Create expand/collapse all buttons --
+	local etable = sc_menu.contextFrame:addTable(2, { tabOrder = 5, x = browserX, y = rkn_config.browserHeaderTextProperties.y, width = smallColWidth * 2 })
+	local row = etable:addRow(true, { })
+	row[1]:createButton({ mouseOverText = ReadText(1811143915, 20), active = rkn_menu.settings.folder_enabled }):setText("+", { halign = "center" })
+	row[1].handlers.onClick = function() rkn_menu.buttonExpandAll(listRoot) end
+	row[2]:createButton({ mouseOverText = ReadText(1811143915, 21), active = rkn_menu.settings.folder_enabled }):setText("-", { halign = "center" })
+	row[2].handlers.onClick = rkn_menu.buttonCollapseAll
+
 	-- Create settings list --
 	local stable = sc_menu.contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = rkn_config.browserHeight, x = Helper.borderSize, width = rkn_config.browserSettingsWidth - Helper.borderSize * 2 })
 	stable:setColWidth(1, rkn_config.browserSettingsWidth * 0.7, false)
@@ -573,7 +582,7 @@ end
 function rkn_menu.addFolderToList(ltable, root, column)
 	for _, folder in ipairs(root.folders_arr) do
 		local row = ltable:addRow(folder, {  })
-		local folderId = "rkn_configio_folder_" .. folder.fullname
+		local folderId = rkn_config.folderIdPrefix .. folder.fullname
 		local isextended = sc_menu.isResourceEntryExtended(folderId)
 		row[column]:createButton({ helpOverlayID = folderId, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
 		row[column].handlers.onClick = function () return rkn_menu.buttonExtendListEntry(folderId, row.index) end
@@ -638,6 +647,27 @@ end
 function rkn_menu.buttonExtendListEntry(index, row)
 	sc_menu.extendResourceEntry(index)
 	sc_menu.selectedRows.rkn_configio_load = row
+	rkn_menu.refreshCPBrowserFrame()
+end
+
+function rkn_menu.buttonExpandAll(listRoot)
+	rkn_menu.expandAll(listRoot)
+	rkn_menu.refreshCPBrowserFrame()
+end
+
+function rkn_menu.expandAll(root)
+	for _,folder in ipairs(root.folders_arr) do
+		sc_menu.extendedresourceentries[rkn_config.folderIdPrefix .. folder.fullname] = true
+		rkn_menu.expandAll(folder)
+	end
+end
+
+function rkn_menu.buttonCollapseAll()
+	for k,_ in pairs(sc_menu.extendedresourceentries) do
+		if k:sub(1, rkn_config.folderIdPrefix:len()) == rkn_config.folderIdPrefix then
+			sc_menu.extendedresourceentries[k] = false
+		end
+	end
 	rkn_menu.refreshCPBrowserFrame()
 end
 
