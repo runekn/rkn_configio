@@ -47,10 +47,10 @@ local rkn_config = {
 	inactiveColor = { r = 128, g = 128, b = 128, a = 100 }
 }
 
-function EscapeGmatch(s)
+
+local function EscapeGmatch(s)
     return (s:gsub('[%-%.%+%[%]%(%)%$%^%%%?%*]','%%%1'))
 end
-
 
 local function ArrayRemove(t, fnKeep)
     local j, n = 1, #t;
@@ -124,6 +124,7 @@ local function SerializeTable(val, name, skipnewlines, depth)
 
     return tmp
 end
+
 
 local function init()
 	sc_menu = Lib.Get_Egosoft_Menu("StationConfigurationMenu")
