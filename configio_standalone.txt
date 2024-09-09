@@ -304,8 +304,6 @@ function rkn_menu.onRowChanged(row, rowdata, uitable, modified, input, source)
 	if rkn_menu.ltable and uitable == rkn_menu.ltable.id then
 		rkn_menu.selectedEntry = rowdata
 		return
-	else
-		rkn_menu.selectedEntry = nil
 	end
 	-- Runekn's Changes Stop Here! --
 
@@ -367,7 +365,7 @@ function rkn_menu.buttonStationTitleLoad()
 		sc_menu.contextMode.onDeletion = function(id) sc_menu.dropdownRemovedCP(nil, id) end
 		sc_menu.contextMode.addToSettingsTable = rkn_menu.createCPModulesFilter
 		sc_menu.contextMode.itemFilter = rkn_menu.filterItemByModules
-		rkn_menu.createLoadContext()
+		rkn_menu.createLoadContext(true)
 	end
 end
 
@@ -385,11 +383,11 @@ function rkn_menu.buttonStationLoadoutTitleLoad()
 			sc_menu.dropdownLoadout(nil, id)
 		end
 		sc_menu.contextMode.onDeletion = function(id) sc_menu.dropdownRemovedLoadout(nil, id) end
-		rkn_menu.createLoadContext()
+		rkn_menu.createLoadContext(true)
 	end
 end
 
-function rkn_menu.createLoadContext()
+function rkn_menu.createLoadContext(first)
 	rkn_menu.settings = rkn_menu.getLoadSettings(sc_menu.contextMode.settingKey)
 	local listRoot = rkn_menu.prepareBrowserStructure(sc_menu.contextMode.itemsList)
 
@@ -454,8 +452,7 @@ function rkn_menu.createLoadContext()
 	row[2]:createCheckBox(rkn_menu.settings.folder_enabled, { width = smallColWidth })
 	row[2].handlers.onClick = rkn_menu.folderEnabledToggled
 	
-	local row = stable:addRow(false, { fixed = true }) -- bit of separation
-	row[1]:createText("", { })
+	stable:addEmptyRow(Helper.standardTextHeight)
 
 	local row = stable:addRow(true, { fixed = true })
 	row[1]:createText(ReadText(1811143915, 8), { })
@@ -489,10 +486,14 @@ function rkn_menu.createLoadContext()
 	row[1]:setColSpan(2):createText(ReadText(1811143915, 15), rkn_config.browserHeaderTextProperties)
 
 	local row = stable:addRow(true, { fixed = true })
-	row[1]:createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(rkn_menu.filter[sc_menu.contextMode.settingKey].search, { })
+	local editBox = row[1]:createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(rkn_menu.filter[sc_menu.contextMode.settingKey].search, { })
 	row[1].handlers.onEditBoxDeactivated = rkn_menu.searchItemEdit
 	row[2]:createButton({  }):setText(ReadText(1811143915, 16), { halign = "center" })
 	row[2].handlers.onClick = function () rkn_menu.searchItemEdit(nil, "", true) end
+	if first then
+		-- This will cause the editbox to be automatically activated --
+		sc_menu.contextMode.nameEditBox = editBox
+	end
 
 	if sc_menu.contextMode.addToSettingsTable then
 		sc_menu.contextMode.addToSettingsTable(stable)
@@ -507,8 +508,7 @@ function rkn_menu.createCPModulesFilter(stable)
 
 	local addSeparation = rkn_menu.addModulesToFilter(stable, ReadText(1811143915, 18), true)
 	if addSeparation then
-		local row = stable:addRow(false, { }) -- bit of separation
-		row[1]:createText("", { height = Helper.standardButtonHeight })
+		stable:addEmptyRow(Helper.standardTextHeight)
 	end
 	rkn_menu.addModulesToFilter(stable, ReadText(1811143915, 19), false)
 end
@@ -688,7 +688,7 @@ end
 
 function rkn_menu.refreshLoadFrame()
 	sc_menu.topRows.rkn_configio_load = GetTopRow(sc_menu.contexttable)
-	rkn_menu.createLoadContext()
+	rkn_menu.createLoadContext(false)
 end
 
 function rkn_menu.buttonExtendListEntry(index, row)
