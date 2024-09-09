@@ -316,28 +316,10 @@ function rkn_menu.createCPBrowserContext()
 	local row = stable:addRow(false, { fixed = true })
 	row[1]:setColSpan(2):createText("Module filter", rkn_config.browserHeaderTextProperties)
 
-	for _, macro in ipairs(sc_menu.modules["moduletypes_production"]) do
-		if ArrayIndexOf(rkn_menu.filter.macros, macro) ~= nil then
-			local row = stable:addRow(true, { })
-			local name = GetMacroData(macro, "name")
-			row[1]:createText(name, { })
-			row[2]:createButton({  }):setText("Remove", { halign = "center" })
-			row[2].handlers.onClick = function () rkn_menu.filterMacroToggled(macro, false) end
-		end
-	end
-
+	rkn_menu.addModulesToFilter(stable, "Remove", true)
 	local row = stable:addRow(false, { }) -- bit of separation
 	row[1]:createText("", { })
-
-	for _, macro in ipairs(sc_menu.modules["moduletypes_production"]) do
-		if ArrayIndexOf(rkn_menu.filter.macros, macro) == nil then
-			local row = stable:addRow(true, { })
-			local name = GetMacroData(macro, "name")
-			row[1]:createText(name, { })
-			row[2]:createButton({  }):setText("Add", { halign = "center" })
-			row[2].handlers.onClick = function () rkn_menu.filterMacroToggled(macro, true) end
-		end
-	end
+	rkn_menu.addModulesToFilter(stable, "Add", false)
 
 	sc_menu.contextFrame:display()
 end
@@ -437,6 +419,14 @@ function rkn_menu.undentSingleItems(folder, parent)
 	return not canDelete
 end
 
+function rkn_menu.sortFolder(folder)
+	table.sort(folder.items, function (a, b) return a.name < b.name end)
+	table.sort(folder.folders_arr, function (a, b) return a.name < b.name end)
+	for _, innerFolder in ipairs(folder.folders_arr) do
+		rkn_menu.sortFolder(innerFolder)
+	end
+end
+
 function rkn_menu.addFolderToList(ltable, root, column)
 	for _, folder in ipairs(root.folders_arr) do
 		local row = ltable:addRow(folder, {  })
@@ -462,11 +452,15 @@ function rkn_menu.addFolderToList(ltable, root, column)
 	end
 end
 
-function rkn_menu.sortFolder(folder)
-	table.sort(folder.items, function (a, b) return a.name < b.name end)
-	table.sort(folder.folders_arr, function (a, b) return a.name < b.name end)
-	for _, innerFolder in ipairs(folder.folders_arr) do
-		rkn_menu.sortFolder(innerFolder)
+function rkn_menu.addModulesToFilter(table, buttonText, checked)
+	for _, macro in ipairs(sc_menu.modules["moduletypes_production"]) do
+		if (checked and ArrayIndexOf(rkn_menu.filter.macros, macro) ~= nil) or (not checked and ArrayIndexOf(rkn_menu.filter.macros, macro) == nil) then
+			local row = table:addRow(true, { })
+			local name = GetMacroData(macro, "name")
+			row[1]:createText(name, { })
+			row[2]:createButton({  }):setText(buttonText, { halign = "center" })
+			row[2].handlers.onClick = function () rkn_menu.filterMacroToggled(macro, not checked) end
+		end
 	end
 end
 
