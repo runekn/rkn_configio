@@ -144,7 +144,6 @@ end
 -- Overriden function --
 function rkn_menu.createTitleBar(frame)
 	local menu = sc_menu
-	local config = sc_config
 
 	menu.updateConstructionPlans()
 	menu.getImportablePlans()
@@ -177,7 +176,7 @@ function rkn_menu.createTitleBar(frame)
 		--row[2].handlers.onDropDownRemoved = menu.dropdownRemovedCP
 
 		row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(1811143915, 1), { halign = "center" })
-		row[2].handlers.onClick = rkn_menu.buttonTitleLoad
+		row[2].handlers.onClick = rkn_menu.buttonStationTitleLoad
 		------- Runekn's Changes Stop Here! ----------
 		-- save
 		row[3]:createButton({ helpOverlayID = "save_constructionplan", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = ReadText(1026, 7901) }):setIcon("menu_save")
@@ -213,15 +212,20 @@ function rkn_menu.createTitleBar(frame)
 		row[1]:createEditBox({ scaling = true }):setText(ffi.string(C.GetComponentName(menu.container)), { halign = "center", font = Helper.headerRow1Font, fontsize = Helper.headerRow1FontSize })
 		row[1].handlers.onEditBoxDeactivated = menu.editboxNameUpdateText
 		-- load
-		local loadoutOptions = {}
-		if next(menu.loadouts) then
-			for _, loadout in ipairs(menu.loadouts) do
-				table.insert(loadoutOptions, { id = loadout.id, text = loadout.name, icon = "", displayremoveoption = loadout.deleteable, active = loadout.active, mouseovertext = loadout.mouseovertext })
-			end
-		end
-		row[2]:setColSpan(6):createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), optionWidth = menu.titleData.dropdownWidth + 6 * (menu.titleData.height + Helper.borderSize) }):setTextProperties(config.dropDownTextProperties)
-		row[2].handlers.onDropDownConfirmed = menu.dropdownLoadout
-		row[2].handlers.onDropDownRemoved = menu.dropdownRemovedLoadout
+		------- Runekn's Changes Start Here! ----------
+		--local loadoutOptions = {}
+		--if next(menu.loadouts) then
+		--	for _, loadout in ipairs(menu.loadouts) do
+		--		table.insert(loadoutOptions, { id = loadout.id, text = loadout.name, icon = "", displayremoveoption = loadout.deleteable, active = loadout.active, mouseovertext = loadout.mouseovertext })
+		--	end
+		--end
+		--row[2]:setColSpan(6):createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), optionWidth = menu.titleData.dropdownWidth + 6 * (menu.titleData.height + Helper.borderSize) }):setTextProperties(config.dropDownTextProperties)
+		--row[2].handlers.onDropDownConfirmed = menu.dropdownLoadout
+		--row[2].handlers.onDropDownRemoved = menu.dropdownRemovedLoadout
+
+		row[2]:setColSpan(6):createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(1811143915, 1), { halign = "center" })
+		row[2].handlers.onClick = rkn_menu.buttonTitleLoad
+		------- Runekn's Changes Stop Here! ----------
 		-- save
 		row[8]:createButton({ helpOverlayID = "save_loadout", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = ReadText(1026, 7905) }):setIcon("menu_save")
 		row[8].handlers.onClick = menu.buttonTitleSaveLoadout
@@ -234,7 +238,6 @@ end
 -- Overriden function --
 function rkn_menu.refreshTitleBar()
 	local menu = sc_menu
-	local config = sc_config
 
 	local text = {
 		alignment = "center",
@@ -265,7 +268,7 @@ function rkn_menu.refreshTitleBar()
 		--Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, nil, menu.dropdownLoad, menu.dropdownRemovedCP)
 
 		local desc = Helper.createButton(Helper.createTextInfo(ReadText(1811143915, 1), "center", Helper.standardFont, Helper.standardFontSize, 255, 255, 255, 100), nil, true, true, 0, 0, 0, menu.titleData.height, nil, nil, nil, "")
-		Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "button", nil, rkn_menu.buttonTitleLoad)
+		Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "button", nil, rkn_menu.buttonStationTitleLoad)
 		------- Runekn's Changes Stop Here! ----------
 		-- save
 		local desc = Helper.createButton(nil, Helper.createButtonIcon("menu_save", nil, 255, 255, 255, 100), true, true, 0, 0, 0, menu.titleData.height, nil, nil, nil, ReadText(1026, 7901))
@@ -341,26 +344,33 @@ function rkn_menu.onSelectElement(uitable, modified, row)
 		end
 	-- Runekn's Changes Start Here! --
 	elseif uitable == rkn_menu.ltable.id then
-		rkn_menu.buttonLoadPlan()
+		rkn_menu.buttonLoadItem()
 	-- Runekn's Changes Stop Here! --
 	end
 end
 
 
 
-function rkn_menu.buttonTitleLoad()
+function rkn_menu.buttonStationTitleLoad()
 	if sc_menu.contextMode and (sc_menu.contextMode.mode == "loadCP") then
 		sc_menu.closeContextMenu()
 	else
-		rkn_menu.createCPBrowserContext();
+		sc_menu.displayContextFrame("loadCP", sc_menu.titleData.width * rkn_config.browserWidthMultiplier, sc_menu.titleData.offsetX + (sc_menu.titleData.width * (1 - rkn_config.browserWidthMultiplier) / 2), sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
+		sc_menu.contextMode.settingKey = "station"
+		sc_menu.contextMode.itemsList = sc_menu.constructionplans
+		sc_menu.contextMode.header = ReadText(1811143915, 2)
+		sc_menu.contextMode.onSelection = function(id) sc_menu.dropdownLoad(nil, id) end
+		sc_menu.contextMode.onDeletion = function(id) sc_menu.dropdownRemovedCP(nil, id) end
+		sc_menu.contextMode.addToSettingsTable = rkn_menu.createCPModulesFilter
+		sc_menu.contextMode.itemFilter = rkn_menu.filterItemByModules
+		rkn_menu.createLoadContext()
 	end
 end
 
-function rkn_menu.createCPBrowserContext()
-	rkn_menu.settings = rkn_menu.getBrowserSettings("station")
-	local listRoot = rkn_menu.prepareBrowserStructure(sc_menu.constructionplans)
+function rkn_menu.createLoadContext()
+	rkn_menu.settings = rkn_menu.getBrowserSettings(sc_menu.contextMode.settingKey)
+	local listRoot = rkn_menu.prepareBrowserStructure(sc_menu.contextMode.itemsList)
 
-	sc_menu.displayContextFrame("loadCP", sc_menu.titleData.width * rkn_config.browserWidthMultiplier, sc_menu.titleData.offsetX + (sc_menu.titleData.width * (1 - rkn_config.browserWidthMultiplier) / 2), sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
 	Helper.removeAllWidgetScripts(sc_menu, sc_config.contextLayer)
 
 	sc_menu.contextFrame = Helper.createFrameHandle(sc_menu, {
@@ -384,7 +394,7 @@ function rkn_menu.createCPBrowserContext()
 	end
 	rkn_menu.ltable = ltable
 	local row = ltable:addRow(false, { fixed = true })
-	row[1]:setColSpan(rkn_config.maxFolders + 1):createText(ReadText(1811143915, 2), rkn_config.browserHeaderTextProperties)
+	row[1]:setColSpan(rkn_config.maxFolders + 1):createText(sc_menu.contextMode.header, rkn_config.browserHeaderTextProperties)
 
 	rkn_menu.addFolderToList(ltable, listRoot, 1)
 
@@ -397,9 +407,9 @@ function rkn_menu.createCPBrowserContext()
 	rkn_menu.btable = btable
 	local row = btable:addRow(true, { fixed = true })
 	row[tableColumns-2]:createButton({ active = rkn_menu.isRowValidForLoad }):setText(ReadText(1811143915, 3), { halign = "center" })
-	row[tableColumns-2].handlers.onClick = rkn_menu.buttonLoadPlan
+	row[tableColumns-2].handlers.onClick = rkn_menu.buttonLoadItem
 	row[tableColumns-1]:createButton({ active = rkn_menu.isRowValidForDeletion }):setText(ReadText(1811143915, 4), { halign = "center" })
-	row[tableColumns-1].handlers.onClick = rkn_menu.buttonDeletePlan
+	row[tableColumns-1].handlers.onClick = rkn_menu.buttonDeleteItem
 	row[tableColumns]:createButton({  }):setText(ReadText(1811143915, 5), { halign = "center" })
 	row[tableColumns].handlers.onClick = sc_menu.closeContextMenu
 
@@ -462,7 +472,14 @@ function rkn_menu.createCPBrowserContext()
 	row[2]:createButton({  }):setText(ReadText(1811143915, 16), { halign = "center" })
 	row[2].handlers.onClick = function () rkn_menu.searchItemEdit(nil, "", true) end
 
-	-- Module filter --
+	if sc_menu.contextMode.addToSettingsTable then
+		sc_menu.contextMode.addToSettingsTable(stable)
+	end
+
+	sc_menu.contextFrame:display()
+end
+
+function rkn_menu.createCPModulesFilter(stable)
 	local row = stable:addRow(false, { fixed = true })
 	row[1]:setColSpan(2):createText(ReadText(1811143915, 17), rkn_config.browserHeaderTextProperties)
 
@@ -472,8 +489,6 @@ function rkn_menu.createCPBrowserContext()
 		row[1]:createText("", { height = Helper.standardButtonHeight })
 	end
 	rkn_menu.addModulesToFilter(stable, ReadText(1811143915, 19), false)
-
-	sc_menu.contextFrame:display()
 end
 
 function rkn_menu.prepareBrowserStructure(itemList)
@@ -529,15 +544,22 @@ function rkn_menu.prepareBrowserStructure(itemList)
 end
 
 function rkn_menu.filterItem(item)
-	if rkn_menu.filter.macros and #rkn_menu.filter.macros > 0 then
-		local hasmacros = Helper.textArrayHelper(rkn_menu.filter.macros, function (numtexts, texts) return C.CheckConstructionPlanForMacros(item.id, texts, numtexts) end)
-		if not hasmacros then
-			return false
-		end
-	end
 	if rkn_menu.filter.search and rkn_menu.filter.search ~= "" then
 		local searchMatch = item.name:lower():find(rkn_menu.filter.search:lower())
 		if not searchMatch then
+			return false
+		end
+	end
+	if sc_menu.contextMode.itemFilter and (not sc_menu.contextMode.itemFilter(item)) then
+		return false
+	end
+	return true
+end
+
+function rkn_menu.filterItemByModules(item)
+	if rkn_menu.filter.macros and #rkn_menu.filter.macros > 0 then
+		local hasmacros = Helper.textArrayHelper(rkn_menu.filter.macros, function (numtexts, texts) return C.CheckConstructionPlanForMacros(item.id, texts, numtexts) end)
+		if not hasmacros then
 			return false
 		end
 	end
@@ -627,32 +649,32 @@ function rkn_menu.isRowValidForDeletion()
 	return rkn_menu.selectedEntry and rkn_menu.selectedEntry.deleteable
 end
 
-function rkn_menu.buttonDeletePlan()
+function rkn_menu.buttonDeleteItem()
 	if rkn_menu.isRowValidForDeletion then
-		sc_menu.dropdownRemovedCP(nil, rkn_menu.selectedEntry.item.id)
+		sc_menu.contextMode.onDeletion(rkn_menu.selectedEntry.item.id)
 	end
 end
 
-function rkn_menu.buttonLoadPlan()
+function rkn_menu.buttonLoadItem()
 	if rkn_menu.isRowValidForLoad then
-		sc_menu.dropdownLoad(nil, rkn_menu.selectedEntry.item.id)
+		sc_menu.contextMode.onSelection(rkn_menu.selectedEntry.item.id)
 	end
 end
 
-function rkn_menu.refreshCPBrowserFrame()
+function rkn_menu.refreshLoadFrame()
 	sc_menu.topRows.rkn_configio_load = GetTopRow(sc_menu.contexttable)
-	rkn_menu.createCPBrowserContext()
+	rkn_menu.createLoadContext()
 end
 
 function rkn_menu.buttonExtendListEntry(index, row)
 	sc_menu.extendResourceEntry(index)
 	sc_menu.selectedRows.rkn_configio_load = row
-	rkn_menu.refreshCPBrowserFrame()
+	rkn_menu.refreshLoadFrame()
 end
 
 function rkn_menu.buttonExpandAll(listRoot)
 	rkn_menu.expandAll(listRoot)
-	rkn_menu.refreshCPBrowserFrame()
+	rkn_menu.refreshLoadFrame()
 end
 
 function rkn_menu.expandAll(root)
@@ -668,27 +690,27 @@ function rkn_menu.buttonCollapseAll()
 			sc_menu.extendedresourceentries[k] = false
 		end
 	end
-	rkn_menu.refreshCPBrowserFrame()
+	rkn_menu.refreshLoadFrame()
 end
 
 function rkn_menu.folderEnabledToggled(_, checked)
 	rkn_menu.setBrowserSetting("station", "folder_enabled", checked)
-	rkn_menu.refreshCPBrowserFrame()
+	rkn_menu.refreshLoadFrame()
 end
 
 function rkn_menu.itemFullnameToggled(_, checked)
 	rkn_menu.setBrowserSetting("station", "item_fullname", checked)
-	rkn_menu.refreshCPBrowserFrame()
+	rkn_menu.refreshLoadFrame()
 end
 
 function rkn_menu.folderFullnameToggled(_, checked)
 	rkn_menu.setBrowserSetting("station", "folder_fullname", checked)
-	rkn_menu.refreshCPBrowserFrame()
+	rkn_menu.refreshLoadFrame()
 end
 
 function rkn_menu.folderSingleItemToggled(_, checked)
 	rkn_menu.setBrowserSetting("station", "folder_single_item", checked)
-	rkn_menu.refreshCPBrowserFrame()
+	rkn_menu.refreshLoadFrame()
 end
 
 function rkn_menu.folderDelimiterEdit(_, text, textchanged)
@@ -701,7 +723,7 @@ function rkn_menu.folderDelimiterEdit(_, text, textchanged)
 		text = text:sub(1, 1)
 	end
 	rkn_menu.setBrowserSetting("station", "folder_delimiter", text)
-	rkn_menu.refreshCPBrowserFrame()
+	rkn_menu.refreshLoadFrame()
 end
 
 function rkn_menu.searchItemEdit(_, text, textchanged)
@@ -710,7 +732,7 @@ function rkn_menu.searchItemEdit(_, text, textchanged)
 	end
 
 	rkn_menu.filter.search = text
-	rkn_menu.refreshCPBrowserFrame()
+	rkn_menu.refreshLoadFrame()
 end
 
 function rkn_menu.filterMacroToggled(macro, checked)
@@ -722,7 +744,7 @@ function rkn_menu.filterMacroToggled(macro, checked)
 			table.remove(rkn_menu.filter.macros, index)
 		end
 	end
-	rkn_menu.refreshCPBrowserFrame()
+	rkn_menu.refreshLoadFrame()
 end
 
 function rkn_menu.getBrowserSettings(browser)
