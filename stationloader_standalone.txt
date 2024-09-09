@@ -309,8 +309,10 @@ function rkn_menu.createCPBrowserContext()
 	row[1]:setColSpan(2):createText("Search", rkn_config.browserHeaderTextProperties)
 
 	local row = stable:addRow(true, { fixed = true })
-	row[1]:setColSpan(2):createEditBox({ scaling = true, height = Helper.standardTextHeight }):setText(rkn_menu.filter.search, { }) -- TODO: why do I need to specify height?
+	row[1]:createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(rkn_menu.filter.search, { }) -- TODO: why do I need to specify height?
 	row[1].handlers.onEditBoxDeactivated = rkn_menu.searchItemEdit
+	row[2]:createButton({  }):setText("Clear", { halign = "center" })
+	row[2].handlers.onClick = function () rkn_menu.searchItemEdit(nil, "", true) end
 
 	-- Module filter --
 	local row = stable:addRow(false, { fixed = true })
