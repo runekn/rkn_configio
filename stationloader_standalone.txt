@@ -52,6 +52,7 @@ local function init()
 	sc_menu.createTitleBar = rkn_menu.createTitleBar
 	sc_menu.refreshTitleBar = rkn_menu.refreshTitleBar
 	sc_menu.onRowChanged = rkn_menu.onRowChanged
+	sc_menu.onSelectElement = rkn_menu.onSelectElement
 
 	rkn_menu.playerID = ConvertStringTo64Bit(tostring(C.GetPlayerID()))
 	rkn_menu.filter = { macros = {} }
@@ -93,7 +94,7 @@ function rkn_menu.createTitleBar(frame)
 		--row[2].handlers.onDropDownConfirmed = menu.dropdownLoad
 		--row[2].handlers.onDropDownRemoved = menu.dropdownRemovedCP
 
-		row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText("Plan Browser", { halign = "center" })
+		row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText("Load Plan", { halign = "center" })
 		row[2].handlers.onClick = rkn_menu.buttonTitleLoad
 		------- Runekn's Changes Stop Here! ----------
 		-- save
@@ -181,7 +182,7 @@ function rkn_menu.refreshTitleBar()
 		--local desc = Helper.createDropDown(loadOptions, "", text, nil, true, true, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize)
 		--Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, nil, menu.dropdownLoad, menu.dropdownRemovedCP)
 
-		local desc = Helper.createButton(Helper.createTextInfo("Plan Browser", "center", Helper.standardFont, Helper.standardFontSize, 255, 255, 255, 100), nil, true, true, 0, 0, 0, menu.titleData.height, nil, nil, nil, "")
+		local desc = Helper.createButton(Helper.createTextInfo("Load Plan", "center", Helper.standardFont, Helper.standardFontSize, 255, 255, 255, 100), nil, true, true, 0, 0, 0, menu.titleData.height, nil, nil, nil, "")
 		Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "button", nil, rkn_menu.buttonTitleLoad)
 		------- Runekn's Changes Stop Here! ----------
 		-- save
@@ -207,6 +208,63 @@ function rkn_menu.refreshTitleBar()
 		Helper.setCellContent(menu, menu.titlebartable, desc, 1, 8, nil, "button", nil, menu.buttonTitleSaveLoadout)
 	end
 end
+
+-- Overriden function --
+function rkn_menu.onRowChanged(row, rowdata, uitable, modified, input, source)
+	local menu = sc_menu
+
+	if not menu.loadoutMode then
+		-- Runekn's Changes Start Here! --
+		if rkn_menu.ltable and uitable == rkn_menu.ltable.id then
+			rkn_menu.selectedEntry = rowdata
+			return
+		else
+			rkn_menu.selectedEntry = nil
+		end
+		-- Runekn's Changes Stop Here! --
+		if uitable == menu.plantable then
+			if menu.holomap ~= 0 then
+				if (source ~= "auto") or (menu.selectedModule == nil) then
+					if (type(rowdata) == "table") and rowdata.ismodule and (not rowdata.removed) then
+						menu.newSelectedModule = rowdata.module
+						C.SelectBuildMapEntry(menu.holomap, rowdata.idx)
+					elseif menu.selectedModule ~= nil then
+						menu.newSelectedModule = "clear"
+						C.ClearBuildMapSelection(menu.holomap)
+					end
+				end
+			end
+		elseif uitable == menu.contexttable then
+			if (source ~= "auto") or (menu.contextData and (menu.contextData.selectedEntry == nil)) then
+				if (type(rowdata) == "table") then
+					menu.contextData.newSelectedEntry = rowdata
+				end
+			end
+		end
+	end
+end
+
+-- Overriden function --
+function rkn_menu.onSelectElement(uitable, modified, row)
+	local menu = sc_menu
+
+	if uitable == menu.plantable then
+		if menu.holomap ~= 0 then
+			if (source ~= "auto") or (menu.selectedModule == nil) then
+				local rowdata = Helper.getCurrentRowData(menu, uitable)
+				if (type(rowdata) == "table") and rowdata.ismodule and (not rowdata.removed) then
+					C.SetFocusMapConstructionPlanEntry(menu.holomap, rowdata.idx, true)
+				end
+			end
+		end
+	-- Runekn's Changes Start Here! --
+	elseif uitable == rkn_menu.ltable.id then
+		rkn_menu.buttonLoadPlan()
+	-- Runekn's Changes Stop Here! --
+	end
+end
+
+
 
 function rkn_menu.buttonTitleLoad()
 	if sc_menu.contextMode and (sc_menu.contextMode.mode == "loadCP") then
@@ -309,7 +367,7 @@ function rkn_menu.createCPBrowserContext()
 	row[1]:setColSpan(2):createText("Search", rkn_config.browserHeaderTextProperties)
 
 	local row = stable:addRow(true, { fixed = true })
-	row[1]:createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(rkn_menu.filter.search, { }) -- TODO: why do I need to specify height?
+	row[1]:createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(rkn_menu.filter.search, { })
 	row[1].handlers.onEditBoxDeactivated = rkn_menu.searchItemEdit
 	row[2]:createButton({  }):setText("Clear", { halign = "center" })
 	row[2].handlers.onClick = function () rkn_menu.searchItemEdit(nil, "", true) end
@@ -452,7 +510,6 @@ function rkn_menu.addFolderToList(ltable, root, column)
 			text = Helper.convertColorToText(rkn_config.inactiveColor) .. text
 		end
 		row[column]:setColSpan(rkn_config.maxFolders - column + 2):createText(text, rkn_config.planTextProperties)
-		row[column].properties.mouseOverText = item.item.mouseovertext
 	end
 end
 
@@ -488,35 +545,6 @@ end
 function rkn_menu.buttonLoadPlan()
 	if rkn_menu.isRowValidForLoad then
 		sc_menu.dropdownLoad(nil, rkn_menu.selectedEntry.item.id)
-	end
-end
-
--- Overriden function --
-function rkn_menu.onRowChanged(row, rowdata, uitable, modified, input, source)
-	local menu = sc_menu
-
-	if not menu.loadoutMode then
-		if uitable == menu.plantable then
-			if menu.holomap ~= 0 then
-				if (source ~= "auto") or (menu.selectedModule == nil) then
-					if (type(rowdata) == "table") and rowdata.ismodule and (not rowdata.removed) then
-						menu.newSelectedModule = rowdata.module
-						C.SelectBuildMapEntry(menu.holomap, rowdata.idx)
-					elseif menu.selectedModule ~= nil then
-						menu.newSelectedModule = "clear"
-						C.ClearBuildMapSelection(menu.holomap)
-					end
-				end
-			end
-		elseif rkn_menu.ltable and uitable == rkn_menu.ltable.id then
-			rkn_menu.selectedEntry = rowdata
-		elseif uitable == menu.contexttable then
-			if (source ~= "auto") or (menu.contextData and (menu.contextData.selectedEntry == nil)) then
-				if (type(rowdata) == "table") then
-					menu.contextData.newSelectedEntry = rowdata
-				end
-			end
-		end
 	end
 end
 
@@ -591,7 +619,7 @@ function rkn_menu.getBrowserSettings(browser)
 	local s = GetNPCBlackboard(rkn_menu.playerID, "$rkn_configbrowser_settings_" .. browser)
 	if not s then
 		return {
-			folder_enabled = true,
+			folder_enabled = false,
 			folder_delimiter = " ",
 			folder_single_item = false,
 			folder_fullname = false,
