@@ -375,7 +375,7 @@ function rkn_menu.createCPBrowserContext()
 	local browserX = rkn_config.browserSettingsWidth + Helper.borderSize + rkn_config.settingsBrowserSeparation
 
 	-- Create item list --
-	local ltable = sc_menu.contextFrame:addTable(rkn_config.maxFolders + 1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = rkn_config.browserHeight - Helper.standardButtonHeight, x = browserX, width = browserWidth })
+	local ltable = sc_menu.contextFrame:addTable(rkn_config.maxFolders + 1, { wraparound = true, tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = rkn_config.browserHeight - Helper.standardButtonHeight, x = browserX, width = browserWidth })
 	for column = 1, rkn_config.maxFolders do
 		ltable:setColWidth(column, smallColWidth, false)
 	end
@@ -525,7 +525,7 @@ function rkn_menu.filterItem(item)
 		end
 	end
 	if rkn_menu.filter.search and rkn_menu.filter.search ~= "" then
-		local searchMatch = item.name:find(rkn_menu.filter.search)
+		local searchMatch = item.name:lower():find(rkn_menu.filter.search:lower())
 		if not searchMatch then
 			return false
 		end
