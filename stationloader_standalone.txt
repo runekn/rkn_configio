@@ -315,14 +315,28 @@ function rkn_menu.createCPBrowserContext()
 	-- Module filter --
 	local row = stable:addRow(false, { fixed = true })
 	row[1]:setColSpan(2):createText("Module filter", rkn_config.browserHeaderTextProperties)
-	
+
 	for _, macro in ipairs(sc_menu.modules["moduletypes_production"]) do
-		local row = stable:addRow(true, { })
-		local name = GetMacroData(macro, "name")
-		row[1]:createText(name, { })
-		local macroChecked = ArrayIndexOf(rkn_menu.filter.macros, macro) ~= nil
-		row[2]:createCheckBox(macroChecked, { width = smallColWidth })
-		row[2].handlers.onClick = function (_, checked) rkn_menu.filterMacroToggled(macro, checked) end
+		if ArrayIndexOf(rkn_menu.filter.macros, macro) ~= nil then
+			local row = stable:addRow(true, { })
+			local name = GetMacroData(macro, "name")
+			row[1]:createText(name, { })
+			row[2]:createButton({  }):setText("Remove", { halign = "center" })
+			row[2].handlers.onClick = function () rkn_menu.filterMacroToggled(macro, false) end
+		end
+	end
+
+	local row = stable:addRow(false, { }) -- bit of separation
+	row[1]:createText("", { })
+
+	for _, macro in ipairs(sc_menu.modules["moduletypes_production"]) do
+		if ArrayIndexOf(rkn_menu.filter.macros, macro) == nil then
+			local row = stable:addRow(true, { })
+			local name = GetMacroData(macro, "name")
+			row[1]:createText(name, { })
+			row[2]:createButton({  }):setText("Add", { halign = "center" })
+			row[2].handlers.onClick = function () rkn_menu.filterMacroToggled(macro, true) end
+		end
 	end
 
 	sc_menu.contextFrame:display()
