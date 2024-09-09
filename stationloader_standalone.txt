@@ -318,9 +318,11 @@ function rkn_menu.createCPBrowserContext()
 	local row = stable:addRow(false, { fixed = true })
 	row[1]:setColSpan(2):createText("Module filter", rkn_config.browserHeaderTextProperties)
 
-	rkn_menu.addModulesToFilter(stable, "Remove", true)
-	local row = stable:addRow(false, { }) -- bit of separation
-	row[1]:createText("", { })
+	local addSeparation = rkn_menu.addModulesToFilter(stable, "Remove", true)
+	if addSeparation then
+		local row = stable:addRow(false, { }) -- bit of separation
+		row[1]:createText("", { height = Helper.standardButtonHeight })
+	end
 	rkn_menu.addModulesToFilter(stable, "Add", false)
 
 	sc_menu.contextFrame:display()
@@ -455,6 +457,7 @@ function rkn_menu.addFolderToList(ltable, root, column)
 end
 
 function rkn_menu.addModulesToFilter(table, buttonText, checked)
+	local atLeastOneAdded = false;
 	for _, macro in ipairs(sc_menu.modules["moduletypes_production"]) do
 		if (checked and ArrayIndexOf(rkn_menu.filter.macros, macro) ~= nil) or (not checked and ArrayIndexOf(rkn_menu.filter.macros, macro) == nil) then
 			local row = table:addRow(true, { })
@@ -462,8 +465,10 @@ function rkn_menu.addModulesToFilter(table, buttonText, checked)
 			row[1]:createText(name, { })
 			row[2]:createButton({  }):setText(buttonText, { halign = "center" })
 			row[2].handlers.onClick = function () rkn_menu.filterMacroToggled(macro, not checked) end
+			atLeastOneAdded = true
 		end
 	end
+	return atLeastOneAdded
 end
 
 function rkn_menu.isRowValidForLoad()
