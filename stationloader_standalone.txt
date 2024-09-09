@@ -7,8 +7,7 @@ local Lib = require("extensions.sn_mod_support_apis.lua_library")
 local sc_menu = {}
 local rkn_menu = {}
 
-local config = {
-	maxFolders = 6,
+local sc_config = {
 	contextLayer = 2,
 	dropDownTextProperties = {
 		halign = "center",
@@ -17,7 +16,11 @@ local config = {
 		color = Color["text_normal"],
 		x = 0,
 		y = 0
-	},
+	}
+}
+
+local rkn_config = {
+	maxFolders = 6,
 	browserHeight = 0.5 * Helper.viewHeight,
 	browserSettingsWidth = Helper.scaleX(300),
 	settingsBrowserSeparation = Helper.borderSize * 10,
@@ -58,6 +61,7 @@ end
 -- Overriden function --
 function rkn_menu.createTitleBar(frame)
 	local menu = sc_menu
+	local config = sc_config
 
 	menu.updateConstructionPlans()
 	menu.getImportablePlans()
@@ -147,6 +151,7 @@ end
 -- Overriden function --
 function rkn_menu.refreshTitleBar()
 	local menu = sc_menu
+	local config = sc_config
 
 	local text = {
 		alignment = "center",
@@ -216,10 +221,10 @@ function rkn_menu.createCPBrowserContext()
 	local listRoot = rkn_menu.prepareBrowserStructure(sc_menu.constructionplans)
 
 	sc_menu.displayContextFrame("loadCP", sc_menu.titleData.width, sc_menu.titleData.offsetX, sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
-	Helper.removeAllWidgetScripts(sc_menu, config.contextLayer)
+	Helper.removeAllWidgetScripts(sc_menu, sc_config.contextLayer)
 
 	sc_menu.contextFrame = Helper.createFrameHandle(sc_menu, {
-		layer = config.contextLayer,
+		layer = sc_config.contextLayer,
 		standardButtons = {},
 		width = sc_menu.contextMode.width,
 		x = sc_menu.contextMode.x,
@@ -229,17 +234,17 @@ function rkn_menu.createCPBrowserContext()
 	sc_menu.contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
 
 	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
-	local browserWidth = sc_menu.contextMode.width - config.browserSettingsWidth - Helper.borderSize * 2 - config.settingsBrowserSeparation
-	local browserX = config.browserSettingsWidth + Helper.borderSize + config.settingsBrowserSeparation
+	local browserWidth = sc_menu.contextMode.width - rkn_config.browserSettingsWidth - Helper.borderSize * 2 - rkn_config.settingsBrowserSeparation
+	local browserX = rkn_config.browserSettingsWidth + Helper.borderSize + rkn_config.settingsBrowserSeparation
 
 	-- Create item list --
-	local ltable = sc_menu.contextFrame:addTable(config.maxFolders + 1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = config.browserHeight - Helper.standardButtonHeight, x = browserX, width = browserWidth })
-	for column = 1, config.maxFolders do
+	local ltable = sc_menu.contextFrame:addTable(rkn_config.maxFolders + 1, { tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = rkn_config.browserHeight - Helper.standardButtonHeight, x = browserX, width = browserWidth })
+	for column = 1, rkn_config.maxFolders do
 		ltable:setColWidth(column, smallColWidth, false)
 	end
 	rkn_menu.ltable = ltable
 	local row = ltable:addRow(false, { fixed = true })
-	row[1]:setColSpan(config.maxFolders + 1):createText("Load Construction Plan", config.browserHeaderTextProperties)
+	row[1]:setColSpan(rkn_config.maxFolders + 1):createText("Load Construction Plan", rkn_config.browserHeaderTextProperties)
 
 	rkn_menu.addFolderToList(ltable, listRoot, 1)
 
@@ -248,7 +253,7 @@ function rkn_menu.createCPBrowserContext()
 
 	-- Create list buttons --
 	local tableColumns = 5
-	local btable = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = config.browserHeight - Helper.standardButtonHeight, x = browserX, width = browserWidth })
+	local btable = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = rkn_config.browserHeight - Helper.standardButtonHeight, x = browserX, width = browserWidth })
 	rkn_menu.btable = btable
 	local row = btable:addRow(true, { fixed = true })
 	row[tableColumns-2]:createButton({ active = rkn_menu.isRowValidForDeletion }):setText("Delete", { halign = "center" })
@@ -259,10 +264,10 @@ function rkn_menu.createCPBrowserContext()
 	row[tableColumns].handlers.onClick = sc_menu.closeContextMenu
 
 	-- Create settings list --
-	local stable = sc_menu.contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = config.browserHeight, x = Helper.borderSize, width = config.browserSettingsWidth - Helper.borderSize * 2 })
-	stable:setColWidth(1, config.browserSettingsWidth * 0.7, false)
+	local stable = sc_menu.contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = rkn_config.browserHeight, x = Helper.borderSize, width = rkn_config.browserSettingsWidth - Helper.borderSize * 2 })
+	stable:setColWidth(1, rkn_config.browserSettingsWidth * 0.7, false)
 	local row = stable:addRow(false, { fixed = true })
-	row[1]:setColSpan(2):createText("Settings", config.browserHeaderTextProperties)
+	row[1]:setColSpan(2):createText("Settings", rkn_config.browserHeaderTextProperties)
 
 	local row = stable:addRow(true, { fixed = true })
 	row[1]:createText("Enable folders", { })
@@ -301,7 +306,7 @@ function rkn_menu.createCPBrowserContext()
 
 	-- Search bar --
 	local row = stable:addRow(false, { fixed = true })
-	row[1]:setColSpan(2):createText("Search", config.browserHeaderTextProperties)
+	row[1]:setColSpan(2):createText("Search", rkn_config.browserHeaderTextProperties)
 
 	local row = stable:addRow(true, { fixed = true })
 	row[1]:setColSpan(2):createEditBox({ scaling = true, height = Helper.standardTextHeight }):setText(rkn_menu.filter.search, { }) -- TODO: why do I need to specify height?
@@ -309,7 +314,7 @@ function rkn_menu.createCPBrowserContext()
 
 	-- Module filter --
 	local row = stable:addRow(false, { fixed = true })
-	row[1]:setColSpan(2):createText("Module filter", config.browserHeaderTextProperties)
+	row[1]:setColSpan(2):createText("Module filter", rkn_config.browserHeaderTextProperties)
 	
 	for _, macro in ipairs(sc_menu.modules["moduletypes_production"]) do
 		local row = stable:addRow(true, { })
@@ -335,7 +340,7 @@ function rkn_menu.prepareBrowserStructure(itemList)
 		local nextMatch = string.gmatch(item.name, "[^" .. EscapeGmatch(rkn_menu.settings.folder_delimiter) .. "]+")
 		local folder = nextMatch()
 		local name = item.name
-		local levelsLeft = rkn_menu.settings.folder_enabled and config.maxFolders or 0
+		local levelsLeft = rkn_menu.settings.folder_enabled and rkn_config.maxFolders or 0
 		local folderPath = ""
 		while 1==1 do
 			-- Check if this is the item name --
@@ -426,7 +431,7 @@ function rkn_menu.addFolderToList(ltable, root, column)
 		row[column]:createButton({ helpOverlayID = folderId, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
 		row[column].handlers.onClick = function () return rkn_menu.buttonExtendListEntry(folderId, row.index) end
 		local text = rkn_menu.settings.folder_fullname and folder.fullname or folder.name
-		row[column + 1]:setColSpan(config.maxFolders - column + 1):createText(text, config.folderTextProperties)
+		row[column + 1]:setColSpan(rkn_config.maxFolders - column + 1):createText(text, rkn_config.folderTextProperties)
 		if isextended then
 			rkn_menu.addFolderToList(ltable, folder, column + 1)
 		end
@@ -436,9 +441,9 @@ function rkn_menu.addFolderToList(ltable, root, column)
 		local row = ltable:addRow(item, {  })
 		local text = rkn_menu.settings.item_fullname and item.item.name or item.name
 		if not item.active then
-			text = Helper.convertColorToText(config.inactiveColor) .. text
+			text = Helper.convertColorToText(rkn_config.inactiveColor) .. text
 		end
-		row[column]:setColSpan(config.maxFolders - column + 2):createText(text, config.planTextProperties)
+		row[column]:setColSpan(rkn_config.maxFolders - column + 2):createText(text, rkn_config.planTextProperties)
 		row[column].properties.mouseOverText = item.item.mouseovertext
 	end
 end
