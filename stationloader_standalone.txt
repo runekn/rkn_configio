@@ -416,7 +416,6 @@ function rkn_menu.createCPBrowserContext()
 
 	local row = stable:addRow(true, { fixed = true })
 	row[1]:createText(ReadText(1811143915, 8), { })
-	DebugError(ReadText(1811143915, 13))
 	local delimiterEditBoxText = rkn_menu.settings.folder_delimiter:gsub(" ", "(space)") -- Replace spaces with '(space)' so that it is easier to read
 	row[2]:createEditBox({ scaling = true }):setText(delimiterEditBoxText, { })
 	row[2].handlers.onEditBoxDeactivated = rkn_menu.folderDelimiterEdit
