@@ -94,7 +94,7 @@ function rkn_menu.createTitleBar(frame)
 		--row[2].handlers.onDropDownConfirmed = menu.dropdownLoad
 		--row[2].handlers.onDropDownRemoved = menu.dropdownRemovedCP
 
-		row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText("Load Plan", { halign = "center" })
+		row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(1811143915, 1), { halign = "center" })
 		row[2].handlers.onClick = rkn_menu.buttonTitleLoad
 		------- Runekn's Changes Stop Here! ----------
 		-- save
@@ -182,7 +182,7 @@ function rkn_menu.refreshTitleBar()
 		--local desc = Helper.createDropDown(loadOptions, "", text, nil, true, true, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize)
 		--Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, nil, menu.dropdownLoad, menu.dropdownRemovedCP)
 
-		local desc = Helper.createButton(Helper.createTextInfo("Load Plan", "center", Helper.standardFont, Helper.standardFontSize, 255, 255, 255, 100), nil, true, true, 0, 0, 0, menu.titleData.height, nil, nil, nil, "")
+		local desc = Helper.createButton(Helper.createTextInfo(ReadText(1811143915, 1), "center", Helper.standardFont, Helper.standardFontSize, 255, 255, 255, 100), nil, true, true, 0, 0, 0, menu.titleData.height, nil, nil, nil, "")
 		Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "button", nil, rkn_menu.buttonTitleLoad)
 		------- Runekn's Changes Stop Here! ----------
 		-- save
@@ -302,7 +302,7 @@ function rkn_menu.createCPBrowserContext()
 	end
 	rkn_menu.ltable = ltable
 	local row = ltable:addRow(false, { fixed = true })
-	row[1]:setColSpan(rkn_config.maxFolders + 1):createText("Load Construction Plan", rkn_config.browserHeaderTextProperties)
+	row[1]:setColSpan(rkn_config.maxFolders + 1):createText(ReadText(1811143915, 2), rkn_config.browserHeaderTextProperties)
 
 	rkn_menu.addFolderToList(ltable, listRoot, 1)
 
@@ -314,21 +314,21 @@ function rkn_menu.createCPBrowserContext()
 	local btable = sc_menu.contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = rkn_config.browserHeight - Helper.standardButtonHeight, x = browserX, width = browserWidth })
 	rkn_menu.btable = btable
 	local row = btable:addRow(true, { fixed = true })
-	row[tableColumns-2]:createButton({ active = rkn_menu.isRowValidForDeletion }):setText("Delete", { halign = "center" })
-	row[tableColumns-2].handlers.onClick = rkn_menu.buttonDeletePlan
-	row[tableColumns-1]:createButton({ active = rkn_menu.isRowValidForLoad }):setText("Load", { halign = "center" })
-	row[tableColumns-1].handlers.onClick = rkn_menu.buttonLoadPlan
-	row[tableColumns]:createButton({  }):setText("Cancel", { halign = "center" })
+	row[tableColumns-2]:createButton({ active = rkn_menu.isRowValidForLoad }):setText(ReadText(1811143915, 3), { halign = "center" })
+	row[tableColumns-2].handlers.onClick = rkn_menu.buttonLoadPlan
+	row[tableColumns-1]:createButton({ active = rkn_menu.isRowValidForDeletion }):setText(ReadText(1811143915, 4), { halign = "center" })
+	row[tableColumns-1].handlers.onClick = rkn_menu.buttonDeletePlan
+	row[tableColumns]:createButton({  }):setText(ReadText(1811143915, 5), { halign = "center" })
 	row[tableColumns].handlers.onClick = sc_menu.closeContextMenu
 
 	-- Create settings list --
 	local stable = sc_menu.contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = rkn_config.browserHeight, x = Helper.borderSize, width = rkn_config.browserSettingsWidth - Helper.borderSize * 2 })
 	stable:setColWidth(1, rkn_config.browserSettingsWidth * 0.7, false)
 	local row = stable:addRow(false, { fixed = true })
-	row[1]:setColSpan(2):createText("Settings", rkn_config.browserHeaderTextProperties)
+	row[1]:setColSpan(2):createText(ReadText(1811143915, 6), rkn_config.browserHeaderTextProperties)
 
 	local row = stable:addRow(true, { fixed = true })
-	row[1]:createText("Enable folders", { })
+	row[1]:createText(ReadText(1811143915, 7), { })
 	row[2]:createCheckBox(rkn_menu.settings.folder_enabled, { width = smallColWidth })
 	row[2].handlers.onClick = rkn_menu.folderEnabledToggled
 	
@@ -336,52 +336,53 @@ function rkn_menu.createCPBrowserContext()
 	row[1]:createText("", { })
 
 	local row = stable:addRow(true, { fixed = true })
-	row[1]:createText("Folder delimiter", { })
+	row[1]:createText(ReadText(1811143915, 8), { })
+	DebugError(ReadText(1811143915, 13))
 	local delimiterEditBoxText = rkn_menu.settings.folder_delimiter:gsub(" ", "(space)") -- Replace spaces with '(space)' so that it is easier to read
 	row[2]:createEditBox({ scaling = true }):setText(delimiterEditBoxText, { })
 	row[2].handlers.onEditBoxDeactivated = rkn_menu.folderDelimiterEdit
-	row[2].properties.mouseOverText = "The character that the browser should split item names by to create folders. Only one character allowed."
+	row[2].properties.mouseOverText = ReadText(1811143915, 12)
 	row[2].properties.active = rkn_menu.settings.folder_enabled
 
 	local row = stable:addRow(true, { fixed = true })
-	row[1]:createText("Display full item name", { })
+	row[1]:createText(ReadText(1811143915, 9), { })
 	row[2]:createCheckBox(rkn_menu.settings.item_fullname, { width = smallColWidth })
 	row[2].handlers.onClick = rkn_menu.itemFullnameToggled
 	row[2].properties.active = rkn_menu.settings.folder_enabled
 
 	local row = stable:addRow(true, { fixed = true })
-	row[1]:createText("Display full folder name", { })
+	row[1]:createText(ReadText(1811143915, 10), { })
 	row[2]:createCheckBox(rkn_menu.settings.folder_fullname, { width = smallColWidth })
 	row[2].handlers.onClick = rkn_menu.folderFullnameToggled
 	row[2].properties.active = rkn_menu.settings.folder_enabled
 
 	local row = stable:addRow(true, { fixed = true })
-	row[1]:createText("Single item folder", { })
+	row[1]:createText(ReadText(1811143915, 11), { })
 	row[2]:createCheckBox(rkn_menu.settings.folder_single_item, { width = smallColWidth })
 	row[2].handlers.onClick = rkn_menu.folderSingleItemToggled
-	row[2].properties.mouseOverText = "Allow folders that only contain one item."
+	row[2].properties.mouseOverText = ReadText(1811143915, 14)
 	row[2].properties.active = rkn_menu.settings.folder_enabled
 
 	-- Search bar --
 	local row = stable:addRow(false, { fixed = true })
-	row[1]:setColSpan(2):createText("Search", rkn_config.browserHeaderTextProperties)
+	row[1]:setColSpan(2):createText(ReadText(1811143915, 15), rkn_config.browserHeaderTextProperties)
 
 	local row = stable:addRow(true, { fixed = true })
 	row[1]:createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(rkn_menu.filter.search, { })
 	row[1].handlers.onEditBoxDeactivated = rkn_menu.searchItemEdit
-	row[2]:createButton({  }):setText("Clear", { halign = "center" })
+	row[2]:createButton({  }):setText(ReadText(1811143915, 16), { halign = "center" })
 	row[2].handlers.onClick = function () rkn_menu.searchItemEdit(nil, "", true) end
 
 	-- Module filter --
 	local row = stable:addRow(false, { fixed = true })
-	row[1]:setColSpan(2):createText("Module filter", rkn_config.browserHeaderTextProperties)
+	row[1]:setColSpan(2):createText(ReadText(1811143915, 17), rkn_config.browserHeaderTextProperties)
 
-	local addSeparation = rkn_menu.addModulesToFilter(stable, "Remove", true)
+	local addSeparation = rkn_menu.addModulesToFilter(stable, ReadText(1811143915, 18), true)
 	if addSeparation then
 		local row = stable:addRow(false, { }) -- bit of separation
 		row[1]:createText("", { height = Helper.standardButtonHeight })
 	end
-	rkn_menu.addModulesToFilter(stable, "Add", false)
+	rkn_menu.addModulesToFilter(stable, ReadText(1811143915, 19), false)
 
 	sc_menu.contextFrame:display()
 end

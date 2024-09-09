@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" ?> 
+<!-- english -->  
+<language>
+	<!-- "Runekn: Configuration I/O" = "RKNCIO" = "18 11 14 3 9 15 " = "181114415" in  https://www.boxentriq.com/code-breaking/letters-to-numbers -->
+	<page id="1811143915" voice="no">
+		<t id="1">Load Plan</t>
+		<t id="2">Load Construction Plan</t>
+		<t id="3">Load</t>
+		<t id="4">Delete</t>
+		<t id="5">Cancel</t>
+		<t id="6">Settings</t>
+		<t id="7">Enable folders</t>
+		<t id="8">Folder delimiter</t>
+		<t id="9">Display full item name</t>
+		<t id="10">Display full folder name</t>
+		<t id="11">Single item folder</t>
+		<t id="12">The character that the browser should split item names by to create folders. Only one character allowed.</t>
+		<t id="14">Allow folders that only contain one item.</t>
+		<t id="15">Search</t>
+		<t id="16">Clear</t>
+		<t id="17">Module filter</t>
+		<t id="18">Remove</t>
+		<t id="19">Add</t>
+	</page>
+</language>
