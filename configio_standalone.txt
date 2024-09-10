@@ -505,6 +505,7 @@ end
 function rkn_menu.createCPModulesFilter(stable)
 	local row = stable:addRow(false, { fixed = true })
 	row[1]:setColSpan(2):createText(ReadText(1811143915, 17), rkn_config.browserHeaderTextProperties)
+	row[1].properties.mouseOverText = ReadText(1811143915, 23)
 
 	local addSeparation = rkn_menu.addModulesToFilter(stable, ReadText(1811143915, 18), true)
 	if addSeparation then
@@ -653,7 +654,8 @@ end
 function rkn_menu.addModulesToFilter(table, buttonText, checked)
 	local atLeastOneAdded = false;
 	local selectedMacros = rkn_menu.filter[sc_menu.contextMode.settingKey].macros
-	for _, macro in ipairs(sc_menu.modules["moduletypes_production"]) do
+	for _, module in ipairs(GetLibrary("moduletypes_production")) do
+		local macro = module.id
 		if (checked and ArrayIndexOf(selectedMacros, macro) ~= nil) or (not checked and ArrayIndexOf(selectedMacros, macro) == nil) then
 			local row = table:addRow(true, { })
 			local name = GetMacroData(macro, "name")
