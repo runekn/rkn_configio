@@ -1,0 +1,626 @@
+-- ffi setup 
+local ffi = require("ffi")
+local C = ffi.C
+
+local L = {}
+
+local config = {
+	folderIdFormat = "rkn_configio.folder.%s.%s",
+	settingsIdFormat = "rkn_configio.settings.%s",
+	loadWidthMultiplier = 0.8,
+	maxFolders = 6,
+	stationLoadHeight = 0.5 * Helper.viewHeight,
+	stationLoadoutLoadHeight = 0.3 * Helper.viewHeight,
+	loadSettingsWidth = Helper.scaleX(300),
+	settingsBrowserSeparation = Helper.borderSize * 10,
+	browserHeaderTextProperties = {
+		font = Helper.headerRow1Font,
+		fontsize = Helper.headerRow1FontSize,
+		x = Helper.headerRow1Offsetx,
+		y = math.floor((Helper.scaleY(30) - Helper.scaleY(Helper.headerRow1Height)) / 2 + Helper.scaleY(Helper.headerRow1Offsety)),
+		height = Helper.scaleY(30),
+		halign = "center",
+		cellBGColor = Color["row_background"],
+		titleColor = Color["row_title"],
+	},
+	folderTextProperties = {
+		font = Helper.titleFont,
+		fontsize = Helper.standardFontSize,
+		height = Helper.subHeaderHeight,
+		cellBGColor = Color["row_background"],
+		titleColor = { r = 128, g = 128, b = 128, a = 100 }
+	},
+	planTextProperties = {
+		height = math.floor(Helper.standardTextHeight + Helper.scaleY(1) * 2),
+		y = math.floor(Helper.scaleY(1)),
+	},
+	inactiveColor = { r = 128, g = 128, b = 128, a = 100 }
+}
+
+
+local function EscapeGmatch(s)
+    return (s:gsub('[%-%.%+%[%]%(%)%$%^%%%?%*]','%%%1'))
+end
+
+local function ArrayRemove(t, fnKeep)
+    local j, n = 1, #t;
+
+    for i=1,n do
+        if (fnKeep(t, i, j)) then
+            -- Move i's kept value to j's position, if it's not already there.
+            if (i ~= j) then
+                t[j] = t[i];
+                t[i] = nil;
+            end
+            j = j + 1; -- Increment position of where we'll place the next kept value.
+        else
+            t[i] = nil;
+        end
+    end
+
+    return t;
+end
+
+local function ArrayIndexOf(arr, v)
+	if not arr then
+		return nil
+	end
+	for i, m in ipairs(arr) do
+		if m == v then
+			return i
+		end
+	end
+	return nil
+end
+
+-- For debugging --
+local function DebugSettings()
+	local settings = L.getLoadSettings(L.params.settingKey)
+	DebugError(string.format("{\n  folder_enabled = %s,\n  folder_delimiter = %s,\n  folder_flatten_single_item = %s,\n  folder_fullname = %s,\n  item_fullname = %s }",
+		tostring(settings.folder_enabled),
+		tostring(settings.folder_delimiter),
+		tostring(settings.folder_flatten_single_item),
+		tostring(settings.folder_fullname),
+		tostring(settings.item_fullname)
+	))
+end
+
+-- For debugging --
+local function SerializeTable(val, name, skipnewlines, depth)
+    skipnewlines = skipnewlines or false
+    depth = depth or 0
+
+    local tmp = string.rep(" ", depth)
+
+    if name then tmp = tmp .. name .. " = " end
+
+    if type(val) == "table" then
+        tmp = tmp .. "{" .. (not skipnewlines and "\n" or "")
+
+        for k, v in pairs(val) do
+            tmp =  tmp .. SerializeTable(v, k, skipnewlines, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
+        end
+
+        tmp = tmp .. string.rep(" ", depth) .. "}"
+    elseif type(val) == "number" then
+        tmp = tmp .. tostring(val)
+    elseif type(val) == "string" then
+        tmp = tmp .. string.format("%q", val)
+    elseif type(val) == "boolean" then
+        tmp = tmp .. (val and "true" or "false")
+    else
+        tmp = tmp .. "\"[inserializeable datatype:" .. type(val) .. "]\""
+    end
+
+    return tmp
+end
+
+
+local function init()
+	L.playerID = ConvertStringTo64Bit(tostring(C.GetPlayerID()))
+	L.filter = { station = { macros = {} }, station_loadout = {} }
+	L.settings = {}
+	L.params = {}
+	L.expandedFolders = {}
+	L.selectedRow = nil
+	L.topRow = nil
+end
+
+function L.createStationTitleBarButton(row, sc_menu, contextLayer)
+	row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = sc_menu.titleData.height }):setText(ReadText(1811143915, 1), { halign = "center" })
+	row[2].handlers.onClick = function() L.buttonStationTitleLoad(sc_menu, contextLayer) end
+end
+
+function L.createRefreshStationTitleBarButton(sc_menu, contextLayer)
+	local desc = Helper.createButton(Helper.createTextInfo(ReadText(1811143915, 1), "center", Helper.standardFont, Helper.standardFontSize, 255, 255, 255, 100), nil, true, true, 0, 0, 0, sc_menu.titleData.height, nil, nil, nil, "")
+	Helper.setCellContent(sc_menu, sc_menu.titlebartable, desc, 1, 2, nil, "button", nil, function() L.buttonStationTitleLoad(sc_menu, contextLayer) end)
+end
+
+function L.createStationLoadoutTitleBarButton(row, sc_menu, contextLayer)
+	row[2]:setColSpan(6):createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = sc_menu.titleData.height }):setText(ReadText(1811143915, 22), { halign = "center" })
+	row[2].handlers.onClick = function() L.buttonStationLoadoutTitleLoad(sc_menu, contextLayer) end
+end
+
+function L.buttonStationTitleLoad(sc_menu, contextLayer)
+	if sc_menu.contextMode and (sc_menu.contextMode.mode == "loadCP") then
+		sc_menu.closeContextMenu()
+	else
+		sc_menu.displayContextFrame("loadCP", sc_menu.titleData.width * config.loadWidthMultiplier, sc_menu.titleData.offsetX + (sc_menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
+		L.params.settingKey = "station"
+		L.params.x = sc_menu.contextMode.x
+		L.params.y = sc_menu.contextMode.y
+		L.params.width = sc_menu.contextMode.width
+		L.params.height = config.stationLoadHeight
+		L.params.itemsList = sc_menu.constructionplans
+		L.params.header = ReadText(1811143915, 2)
+		L.params.optionItemNameText = ReadText(1811143915, 9)
+		L.params.onSelection = function(id) sc_menu.dropdownLoad(nil, id) end
+		L.params.onDeletion = function(id) sc_menu.dropdownRemovedCP(nil, id) end
+		L.params.addToSettingsTable = L.createCPModulesFilter
+		L.params.itemFilter = L.filterItemByModules
+		L.params.contextLayer = contextLayer
+		L.params.closeContextMenu = sc_menu.closeContextMenu
+		L.params.contextMode = sc_menu.contextMode
+		L.params.setContextFrame = function(f) sc_menu.contextFrame = f end
+		L.params.menu = sc_menu
+		L.createLoadContext(true)
+	end
+end
+
+function L.buttonStationLoadoutTitleLoad(sc_menu, contextLayer)
+	if sc_menu.contextMode and (sc_menu.contextMode.mode == "loadCL") then
+		sc_menu.closeContextMenu()
+	else
+		sc_menu.displayContextFrame("loadCL", sc_menu.titleData.width * config.loadWidthMultiplier, sc_menu.titleData.offsetX + (sc_menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
+		L.params.settingKey = "station_loadout"
+		L.params.x = sc_menu.contextMode.x
+		L.params.y = sc_menu.contextMode.y
+		L.params.width = sc_menu.contextMode.width
+		L.params.height = config.stationLoadoutLoadHeight
+		L.params.itemsList = sc_menu.loadouts
+		L.params.header = "Select Loadout"
+		L.params.optionItemNameText = ReadText(1811143915, 24)
+		L.params.onSelection = function(id)
+			sc_menu.closeContextMenu()
+			sc_menu.dropdownLoadout(nil, id)
+		end
+		L.params.onDeletion = function(id) sc_menu.dropdownRemovedLoadout(nil, id) end
+		L.params.contextLayer = contextLayer
+		L.params.closeContextMenu = sc_menu.closeContextMenu
+		L.params.contextMode = sc_menu.contextMode
+		L.params.setContextFrame = function(f) sc_menu.contextFrame = f end
+		L.params.menu = sc_menu
+		L.createLoadContext(true)
+	end
+end
+
+function L.createLoadContext(first)
+	L.settings = L.getLoadSettings(L.params.settingKey)
+	local listRoot = L.prepareBrowserStructure(L.params.itemsList)
+
+	Helper.removeAllWidgetScripts(L.params.menu, L.params.contextLayer)
+
+	local contextFrame = Helper.createFrameHandle(L.params.menu, {
+		layer = L.params.contextLayer,
+		standardButtons = {},
+		width = L.params.width,
+		x = L.params.x,
+		y = L.params.y,
+		autoFrameHeight = true,
+	})
+	contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
+
+	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
+	local browserWidth = L.params.width - config.loadSettingsWidth - Helper.borderSize * 2 - config.settingsBrowserSeparation
+	local browserX = config.loadSettingsWidth + Helper.borderSize + config.settingsBrowserSeparation
+
+	-- Create item list --
+	local ltable = contextFrame:addTable(config.maxFolders + 1, { wraparound = true, tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = L.params.height - Helper.standardButtonHeight, x = browserX, width = browserWidth })
+	for column = 1, config.maxFolders do
+		ltable:setColWidth(column, smallColWidth, false)
+	end
+	L.ltable = ltable
+	local row = ltable:addRow(false, { fixed = true })
+	row[1]:setColSpan(config.maxFolders + 1):createText(L.params.header, config.browserHeaderTextProperties)
+
+	L.addFolderToList(ltable, listRoot, 1)
+
+	ltable:setTopRow(L.topRow)
+	ltable:setSelectedRow(L.selectedRow)
+
+	-- Create list buttons --
+	local tableColumns = 4
+	local btable = contextFrame:addTable(tableColumns, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = L.params.height - Helper.standardButtonHeight, x = browserX, width = browserWidth })
+	L.btable = btable
+	local row = btable:addRow(true, { fixed = true })
+	row[tableColumns-2]:createButton({ active = L.isRowValidForLoad }):setText(ReadText(1811143915, 3), { halign = "center" })
+	row[tableColumns-2].handlers.onClick = L.buttonLoadItem
+	row[tableColumns-1]:createButton({ active = L.isRowValidForDeletion }):setText(ReadText(1811143915, 4), { halign = "center" })
+	row[tableColumns-1].handlers.onClick = L.buttonDeleteItem
+	row[tableColumns]:createButton({  }):setText(ReadText(1811143915, 5), { halign = "center" })
+	row[tableColumns].handlers.onClick = L.params.closeContextMenu
+
+	-- Create expand/collapse all buttons --
+	local etable = contextFrame:addTable(2, { tabOrder = 5, x = browserX, y = config.browserHeaderTextProperties.y, width = smallColWidth * 2 })
+	local row = etable:addRow(true, { })
+	row[1]:createButton({ mouseOverText = ReadText(1811143915, 20), active = L.settings.folder_enabled }):setText("+", { halign = "center" })
+	row[1].handlers.onClick = function() L.buttonExpandAll(listRoot) end
+	row[2]:createButton({ mouseOverText = ReadText(1811143915, 21), active = L.settings.folder_enabled }):setText("-", { halign = "center" })
+	row[2].handlers.onClick = L.buttonCollapseAll
+
+	-- Create settings list --
+	local stable = contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = L.params.height, x = Helper.borderSize, width = config.loadSettingsWidth - Helper.borderSize * 2 })
+	stable:setColWidth(1, config.loadSettingsWidth * 0.7, false)
+	local row = stable:addRow(false, { fixed = true })
+	row[1]:setColSpan(2):createText(ReadText(1811143915, 6), config.browserHeaderTextProperties)
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:createText(ReadText(1811143915, 7), { })
+	row[2]:createCheckBox(L.settings.folder_enabled, { width = smallColWidth })
+	row[2].handlers.onClick = L.folderEnabledToggled
+
+	stable:addEmptyRow(Helper.standardTextHeight)
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:createText(ReadText(1811143915, 8), { })
+	local delimiterEditBoxText = L.settings.folder_delimiter:gsub(" ", "(space)") -- Replace spaces with '(space)' so that it is easier to read
+	row[2]:createEditBox({ scaling = true }):setText(delimiterEditBoxText, { })
+	row[2].handlers.onEditBoxDeactivated = L.folderDelimiterEdit
+	row[2].properties.mouseOverText = ReadText(1811143915, 12)
+	row[2].properties.active = L.settings.folder_enabled
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:createText(L.params.optionItemNameText, { })
+	row[2]:createCheckBox(L.settings.item_fullname, { width = smallColWidth })
+	row[2].handlers.onClick = L.itemFullnameToggled
+	row[2].properties.active = L.settings.folder_enabled
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:createText(ReadText(1811143915, 10), { })
+	row[2]:createCheckBox(L.settings.folder_fullname, { width = smallColWidth })
+	row[2].handlers.onClick = L.folderFullnameToggled
+	row[2].properties.active = L.settings.folder_enabled
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:createText(ReadText(1811143915, 11), { })
+	row[2]:createCheckBox(L.settings.folder_flatten_single_item, { width = smallColWidth })
+	row[2].handlers.onClick = L.folderFlattenSingleItemToggled
+	row[2].properties.mouseOverText = ReadText(1811143915, 14)
+	row[2].properties.active = L.settings.folder_enabled
+
+	-- Search bar --
+	local row = stable:addRow(false, { fixed = true })
+	row[1]:setColSpan(2):createText(ReadText(1811143915, 15), config.browserHeaderTextProperties)
+
+	local row = stable:addRow(true, { fixed = true })
+	local editBox = row[1]:createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(L.filter[L.params.settingKey].search, { })
+	row[1].handlers.onEditBoxDeactivated = L.searchItemEdit
+	row[2]:createButton({  }):setText(ReadText(1811143915, 16), { halign = "center" })
+	row[2].handlers.onClick = function () L.searchItemEdit(nil, "", true) end
+	if first then
+		-- This will cause the editbox to be automatically activated --
+		L.params.contextMode.nameEditBox = editBox
+	end
+
+	if L.params.addToSettingsTable then
+		L.params.addToSettingsTable(stable)
+	end
+
+	contextFrame:display()
+end
+
+function L.createCPModulesFilter(stable)
+	local row = stable:addRow(false, { fixed = true })
+	row[1]:setColSpan(2):createText(ReadText(1811143915, 17), config.browserHeaderTextProperties)
+	row[1].properties.mouseOverText = ReadText(1811143915, 23)
+
+	local addSeparation = L.addModulesToFilter(stable, ReadText(1811143915, 18), true)
+	if addSeparation then
+		stable:addEmptyRow(Helper.standardTextHeight)
+	end
+	L.addModulesToFilter(stable, ReadText(1811143915, 19), false)
+end
+
+function L.prepareBrowserStructure(itemList)
+	-- First we build the folder structure --
+	local root = { type = "folder", name = "root", folders = {}, folders_arr = {}, items = {} }
+	for _, item in ipairs(itemList) do
+		if not L.filterItem(item) then
+			goto continue
+		end
+		local cwd = root
+		-- iterate through item folders --
+		local nextMatch = string.gmatch(item.name, "[^" .. EscapeGmatch(L.settings.folder_delimiter) .. "]+")
+		local folder = nextMatch()
+		local name = item.name
+		local levelsLeft = L.settings.folder_enabled and config.maxFolders or 0
+		local folderPath = ""
+		while 1==1 do
+			-- Check if this is the item name --
+			local next = nextMatch()
+			if not next then
+				name = folder
+				break
+			end
+			levelsLeft = levelsLeft -1
+			if levelsLeft <= 0 then
+				-- Make the rest of the actual item name, the displayed name --
+				name = item.name:sub(folderPath:len())
+				break
+			end
+			-- Otherwise, path to folder --
+			folderPath = folderPath .. "/" .. folder
+			local target = cwd.folders[folder]
+			if not target then
+				target = { type = "folder", name = folder, fullname = folderPath, folders = {}, folders_arr = {}, items = {} }
+				cwd.folders[folder] = target
+				table.insert(cwd.folders_arr, target)
+			end
+			cwd = target
+			folder = next
+		end
+		-- Inser item to final folder --
+		table.insert(cwd.items, { type = "item", name = name, active = item.active or (item.preset and true or false), deleteable = item.deleteable, item = item })
+		::continue::
+	end
+
+	if L.settings.folder_flatten_single_item then
+		L.undentSingleItems(root)
+	end
+
+	-- Now we sort all folders --
+	L.sortFolder(root)
+
+	return root
+end
+
+function L.filterItem(item)
+	local search = L.filter[L.params.settingKey].search
+	if search and search ~= "" then
+		local searchMatch = item.name:lower():find(search:lower())
+		if not searchMatch then
+			return false
+		end
+	end
+	if L.params.itemFilter and (not L.params.itemFilter(item)) then
+		return false
+	end
+	return true
+end
+
+function L.filterItemByModules(item)
+	local selectedMacros = L.filter[L.params.settingKey].macros
+	if selectedMacros and #selectedMacros > 0 then
+		local hasmacros = Helper.textArrayHelper(selectedMacros, function (numtexts, texts) return C.CheckConstructionPlanForMacros(item.id, texts, numtexts) end)
+		if not hasmacros then
+			return false
+		end
+	end
+	return true
+end
+
+function L.undentSingleItems(folder, parent)
+	local canDelete = true
+	local atLeastOneSubFolder = false
+	-- recursive --
+	ArrayRemove(folder.folders_arr, function(t, i, j)
+		local subfolder = folder.folders_arr[i];
+		local keepSubFolder = L.undentSingleItems(subfolder, folder)
+		canDelete = canDelete and not keepSubFolder
+		atLeastOneSubFolder = atLeastOneSubFolder or keepSubFolder
+		return keepSubFolder
+	end);
+
+	-- move item to parent if there is only one --
+	local itemCount = #folder.items
+	if itemCount == 1 and not atLeastOneSubFolder and parent then
+		local item = folder.items[1]
+
+		table.insert(parent.items, item)
+		table.remove(folder.items, 1)
+
+		item.name = folder.name .. L.settings.folder_delimiter .. item.name
+	elseif itemCount > 1 then
+		canDelete = false
+	end
+	return not canDelete
+end
+
+function L.sortFolder(folder)
+	table.sort(folder.items, function (a, b) return a.name < b.name end)
+	table.sort(folder.folders_arr, function (a, b) return a.name < b.name end)
+	for _, innerFolder in ipairs(folder.folders_arr) do
+		L.sortFolder(innerFolder)
+	end
+end
+
+function L.addFolderToList(ltable, root, column)
+	for _, folder in ipairs(root.folders_arr) do
+		local row = ltable:addRow(folder, {  })
+		local isextended = L.expandedFolders[config.folderIdFormat:format(L.params.settingKey, folder.fullname)]
+		row[column]:createButton({ helpOverlayID = folder.fullname, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
+		row[column].handlers.onClick = function () return L.buttonExtendListEntry(folder.fullname, row.index) end
+		local text = L.settings.folder_fullname and folder.fullname or folder.name
+		row[column + 1]:setColSpan(config.maxFolders - column + 1):createText(text, config.folderTextProperties)
+		if isextended then
+			L.addFolderToList(ltable, folder, column + 1)
+		end
+	end
+
+	for _, item in ipairs(root.items) do
+		local row = ltable:addRow(item, {  })
+		local text = L.settings.item_fullname and item.item.name or item.name
+		if not item.active then
+			text = Helper.convertColorToText(config.inactiveColor) .. text
+		end
+		row[column]:setColSpan(config.maxFolders - column + 2):createText(text, config.planTextProperties)
+		row[column].properties.mouseOverText = item.item.mouseovertext
+	end
+end
+
+function L.addModulesToFilter(table, buttonText, checked)
+	local atLeastOneAdded = false;
+	local selectedMacros = L.filter[L.params.settingKey].macros
+	for _, module in ipairs(GetLibrary("moduletypes_production")) do
+		local macro = module.id
+		if (checked and ArrayIndexOf(selectedMacros, macro) ~= nil) or (not checked and ArrayIndexOf(selectedMacros, macro) == nil) then
+			local row = table:addRow(true, { })
+			local name = GetMacroData(macro, "name")
+			row[1]:createText(name, { })
+			row[2]:createButton({  }):setText(buttonText, { halign = "center" })
+			row[2].handlers.onClick = function () L.filterMacroToggled(macro, not checked) end
+			atLeastOneAdded = true
+		end
+	end
+	return atLeastOneAdded
+end
+
+function L.isRowValidForLoad()
+	return L.selectedEntry and L.selectedEntry.active
+end
+
+function L.isRowValidForDeletion()
+	return L.selectedEntry and L.selectedEntry.deleteable
+end
+
+function L.buttonDeleteItem()
+	if L.isRowValidForDeletion then
+		L.params.onDeletion(L.selectedEntry.item.id)
+	end
+end
+
+function L.buttonLoadItem()
+	if L.isRowValidForLoad then
+		L.params.onSelection(L.selectedEntry.item.id)
+	end
+end
+
+function L.refreshLoadFrame()
+	L.topRow = GetTopRow(L.params.menu.contexttable)
+	L.createLoadContext(false)
+end
+
+function L.buttonExtendListEntry(index, row)
+	local key = config.folderIdFormat:format(L.params.settingKey, index)
+	L.expandedFolders[key] = not L.expandedFolders[key]
+	L.selectedRow = row
+	L.refreshLoadFrame()
+end
+
+function L.buttonExpandAll(listRoot)
+	L.expandAll(listRoot)
+	L.refreshLoadFrame()
+end
+
+function L.expandAll(root)
+	for _,folder in ipairs(root.folders_arr) do
+		L.expandedFolders[config.folderIdFormat:format(L.params.settingKey, folder.fullname)] = true
+		L.expandAll(folder)
+	end
+end
+
+function L.buttonCollapseAll()
+	for k,_ in pairs(L.expandedFolders) do
+		L.expandedFolders[k] = false
+	end
+	L.refreshLoadFrame()
+end
+
+function L.folderEnabledToggled(_, checked)
+	L.setLoadSetting(L.params.settingKey, "folder_enabled", checked)
+	L.refreshLoadFrame()
+end
+
+function L.itemFullnameToggled(_, checked)
+	L.setLoadSetting(L.params.settingKey, "item_fullname", checked)
+	L.refreshLoadFrame()
+end
+
+function L.folderFullnameToggled(_, checked)
+	L.setLoadSetting(L.params.settingKey, "folder_fullname", checked)
+	L.refreshLoadFrame()
+end
+
+function L.folderFlattenSingleItemToggled(_, checked)
+	L.setLoadSetting(L.params.settingKey, "folder_flatten_single_item", checked)
+	L.refreshLoadFrame()
+end
+
+function L.folderDelimiterEdit(_, text, textchanged)
+	if not textchanged then
+		return
+	end
+
+	text = text:gsub("(space)", " ")
+	if text:len() > 1 then
+		text = text:sub(1, 1)
+	end
+	L.setLoadSetting(L.params.settingKey, "folder_delimiter", text)
+	L.refreshLoadFrame()
+end
+
+function L.searchItemEdit(_, text, textchanged)
+	if not textchanged then
+		return
+	end
+
+	L.filter[L.params.settingKey].search = text
+	L.refreshLoadFrame()
+end
+
+function L.filterMacroToggled(macro, checked)
+	local selectedMacros = L.filter[L.params.settingKey].macros
+	if checked then
+		table.insert(selectedMacros, macro)
+	else
+		local index = ArrayIndexOf(selectedMacros, macro)
+		if index then
+			table.remove(selectedMacros, index)
+		end
+	end
+	L.refreshLoadFrame()
+end
+
+function L.getLoadSettings(configKey)
+	local s = GetNPCBlackboard(L.playerID, config.settingsIdFormat:format(configKey))
+	if not s then
+		return {
+			folder_enabled = false,
+			folder_delimiter = " ",
+			folder_flatten_single_item = false,
+			folder_fullname = false,
+			item_fullname = true
+		}
+	end
+	return {
+		folder_enabled = s.folder_enabled == 1,
+		folder_delimiter = (not s.folder_delimiter or s.folder_delimiter == "") and " " or s.folder_delimiter,
+		folder_flatten_single_item = s.folder_flatten_single_item == 1,
+		folder_fullname = s.folder_fullname == 1,
+		item_fullname = s.item_fullname == 1
+	}
+end
+
+function L.setLoadSetting(configKey, key, value)
+	local settings = L.getLoadSettings(configKey)
+	settings[key] = value
+	SetNPCBlackboard(L.playerID, config.settingsIdFormat:format(configKey), settings)
+end
+
+function L.onRowChanged(uitable, rowdata)
+	if L.ltable and uitable == L.ltable.id then
+		L.selectedEntry = rowdata
+		return true
+	end
+	return false
+end
+
+function L.onSelectElement(uitable)
+	if uitable == L.ltable.id then
+		L.buttonLoadItem()
+	end
+end
+
+init()
+
+return L
