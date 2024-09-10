@@ -9,20 +9,22 @@
 		<t id="4">Delete</t>
 		<t id="5">Cancel</t>
 		<t id="6">Settings</t>
-		<t id="7">Enable folders</t>
-		<t id="8">Folder delimiter</t>
-		<t id="9">Display full item name</t>
-		<t id="10">Display full folder name</t>
-		<t id="11">Flatten one-item folders</t>
-		<t id="12">The character that the browser should split item names by to create folders. Only one character allowed.</t>
-		<t id="14">Folder with only one item will be removed, and the item moved to the parent folder.</t>
+		<t id="7">Enable groups</t>
+		<t id="8">Group delimiter</t>
+		<t id="9">Display full plan name</t>
+		<t id="10">Display full group name</t>
+		<t id="11">Flatten one-item group</t>
+		<t id="12">The character that is used to split names by to create groups. Only one character allowed.</t>
+		<t id="14">Groups with only one item will be removed, and the item moved to the parent group.</t>
 		<t id="15">Search</t>
 		<t id="16">Clear</t>
 		<t id="17">Module filter</t>
 		<t id="18">Remove</t>
 		<t id="19">Add</t>
-		<t id="20">Expand all folders</t>
-		<t id="21">Collapse all folders</t>
+		<t id="20">Expand all groups</t>
+		<t id="21">Collapse all groups</t>
 		<t id="22">Select Loadout</t>
+		<t id="23">Add modules to filter construction plans by those that include this module. List contains only modules known to the player (this is a technical limitation).</t>
+		<t id="24">Display full loadout name</t>
 	</page>
 </language>

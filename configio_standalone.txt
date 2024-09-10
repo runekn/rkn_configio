@@ -361,6 +361,7 @@ function rkn_menu.buttonStationTitleLoad()
 		sc_menu.contextMode.height = rkn_config.stationLoadHeight
 		sc_menu.contextMode.itemsList = sc_menu.constructionplans
 		sc_menu.contextMode.header = ReadText(1811143915, 2)
+		sc_menu.contextMode.optionItemNameText = ReadText(1811143915, 9)
 		sc_menu.contextMode.onSelection = function(id) sc_menu.dropdownLoad(nil, id) end
 		sc_menu.contextMode.onDeletion = function(id) sc_menu.dropdownRemovedCP(nil, id) end
 		sc_menu.contextMode.addToSettingsTable = rkn_menu.createCPModulesFilter
@@ -378,6 +379,7 @@ function rkn_menu.buttonStationLoadoutTitleLoad()
 		sc_menu.contextMode.height = rkn_config.stationLoadoutLoadHeight
 		sc_menu.contextMode.itemsList = sc_menu.loadouts
 		sc_menu.contextMode.header = "Select Loadout"
+		sc_menu.contextMode.optionItemNameText = ReadText(1811143915, 24)
 		sc_menu.contextMode.onSelection = function(id)
 			sc_menu.closeContextMenu()
 			sc_menu.dropdownLoadout(nil, id)
@@ -451,7 +453,7 @@ function rkn_menu.createLoadContext(first)
 	row[1]:createText(ReadText(1811143915, 7), { })
 	row[2]:createCheckBox(rkn_menu.settings.folder_enabled, { width = smallColWidth })
 	row[2].handlers.onClick = rkn_menu.folderEnabledToggled
-	
+
 	stable:addEmptyRow(Helper.standardTextHeight)
 
 	local row = stable:addRow(true, { fixed = true })
@@ -463,7 +465,7 @@ function rkn_menu.createLoadContext(first)
 	row[2].properties.active = rkn_menu.settings.folder_enabled
 
 	local row = stable:addRow(true, { fixed = true })
-	row[1]:createText(ReadText(1811143915, 9), { })
+	row[1]:createText(sc_menu.contextMode.optionItemNameText, { })
 	row[2]:createCheckBox(rkn_menu.settings.item_fullname, { width = smallColWidth })
 	row[2].handlers.onClick = rkn_menu.itemFullnameToggled
 	row[2].properties.active = rkn_menu.settings.folder_enabled
