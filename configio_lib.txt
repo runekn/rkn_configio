@@ -195,6 +195,8 @@ function L.buttonStationLoadoutTitleLoad(sc_menu, contextLayer)
 		L.params.contextMode = sc_menu.contextMode
 		L.params.setContextFrame = function(f) sc_menu.contextFrame = f end
 		L.params.menu = sc_menu
+		L.params.addToSettingsTable = nil
+		L.params.itemFilter = nil
 		L.createLoadContext(true)
 	end
 end
@@ -222,6 +224,8 @@ function L.buttonShipLoadoutTitleLoad(sc_menu, contextLayer)
 		L.params.contextMode = sc_menu.contextMode
 		L.params.setContextFrame = function(f) sc_menu.contextFrame = f end
 		L.params.menu = sc_menu
+		L.params.addToSettingsTable = nil
+		L.params.itemFilter = nil
 		L.createLoadContext(true)
 	end
 end
