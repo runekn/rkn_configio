@@ -124,6 +124,7 @@ local function init()
 	L.expandedFolders = {}
 	L.selectedRow = nil
 	L.topRow = nil
+	L.allProductionModules = L.getAllProductionModules()
 end
 
 function L.createStationTitleBarButton(row, sc_menu, contextLayer)
@@ -497,18 +498,42 @@ end
 function L.addModulesToFilter(table, buttonText, checked)
 	local atLeastOneAdded = false;
 	local selectedMacros = L.filter[L.params.settingKey].macros
-	for _, module in ipairs(GetLibrary("moduletypes_production")) do
-		local macro = module.id
+	for _, module in ipairs(L.allProductionModules) do
+		local macro = module.macro
 		if (checked and ArrayIndexOf(selectedMacros, macro) ~= nil) or (not checked and ArrayIndexOf(selectedMacros, macro) == nil) then
 			local row = table:addRow(true, { })
-			local name = GetMacroData(macro, "name")
-			row[1]:createText(name, { })
+			row[1]:createText(module.name, { })
 			row[2]:createButton({  }):setText(buttonText, { halign = "center" })
 			row[2].handlers.onClick = function () L.filterMacroToggled(macro, not checked) end
 			atLeastOneAdded = true
 		end
 	end
 	return atLeastOneAdded
+end
+
+function L.getAllProductionModules()
+	-- uint32_t GetNumWares(const char* tags, bool research, const char* licenceownerid, const char* exclusiontags);
+	-- uint32_t GetWares(const char** result, uint32_t resultlen, const char* tags, bool research, const char* licenceownerid, const char* exclusiontags);
+	local modulewares = {}
+    local tag = "module"
+    local numwares = C.GetNumWares(tag, false, nil, "noplayerblueprint")
+    local wares = ffi.new("const char*[?]", numwares)
+    numwares = C.GetWares(wares, numwares, tag, false, nil, "noplayerblueprint")
+    for j = 0, numwares - 1 do
+        local locware = ffi.string(wares[j])
+        local name, macro = GetWareData(locware, "name", "component")
+		local moduletype = GetMacroData(macro, "infolibrary")
+
+		if moduletype == "moduletypes_production" then
+			local entry = { name = name, macro = macro }
+			entry.name = name
+			entry.macro = macro
+			table.insert(modulewares, entry)
+		end
+    end
+	
+	table.sort(modulewares, function (a, b) return a.name < b.name end)
+	return modulewares
 end
 
 function L.isRowValidForLoad()

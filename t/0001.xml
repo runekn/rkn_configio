@@ -24,7 +24,7 @@
 		<t id="20">Expand all groups</t>
 		<t id="21">Collapse all groups</t>
 		<t id="22">Select Loadout</t>
-		<t id="23">Add modules to filter construction plans by those that include this module. List contains only modules known to the player (this is a technical limitation).</t>
+		<t id="23">Add modules to filter construction plans by those that include this module.</t>
 		<t id="24">Display full loadout name</t>
 	</page>
 </language>
