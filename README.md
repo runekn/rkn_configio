@@ -1,11 +1,11 @@
-# Improved Station Load
+# Improved Configuration Load
 
 ## Description
-Replaces the simple dropdown to load station stations with a bigger and more feature-rich dialog.
+Replaces the simple dropdown to load stations or loadouts with a bigger and more feature-rich dialog.
 
 * Wider dialog: allowing for displaying of much longer names without cutting off.
-* Folders: Organise your stations by including a delimiter character in the name, which this new dialog will use create a folder structure. You can thereby organize stations by mods, factions, production type, etc.
-* Search: Filter your stations by a search string, allowing you to quickly find what you are looking for.
+* Folders: Organise your presets by including a delimiter character in the name, which this new dialog will use create a folder structure. You can thereby organize stations by mods, factions, production type, etc.
+* Search: Filter your presets by a search string, allowing you to quickly find what you are looking for.
 * Production module filter: Filter stations by what production modules are included.
 
 ## Requirements
@@ -16,7 +16,7 @@ Replaces the simple dropdown to load station stations with a bigger and more fea
 
 This mod is save compatible. You can add it to an existing save, and remove it without errors.
 
-This mod is NOT compatible with other mods that changes the station designer UI.
+This mod is NOT compatible with other mods that changes the station or ship designer UI (I am unaware of any mod that does).
 
 ## Thanks to
 * netUpb/fikrethos
