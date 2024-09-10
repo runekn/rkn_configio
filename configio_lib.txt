@@ -118,7 +118,7 @@ end
 
 local function init()
 	L.playerID = ConvertStringTo64Bit(tostring(C.GetPlayerID()))
-	L.filter = { station = { macros = {} }, station_loadout = {} }
+	L.filter = { station = { macros = {} }, station_loadout = {}, ship_loadout = {} }
 	L.settings = {}
 	L.params = {}
 	L.expandedFolders = {}
@@ -139,6 +139,11 @@ end
 function L.createStationLoadoutTitleBarButton(row, sc_menu, contextLayer)
 	row[2]:setColSpan(6):createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = sc_menu.titleData.height }):setText(ReadText(1811143915, 22), { halign = "center" })
 	row[2].handlers.onClick = function() L.buttonStationLoadoutTitleLoad(sc_menu, contextLayer) end
+end
+
+function L.createShipTitleBarButton(row, sc_menu, contextLayer, active)
+	row[3]:createButton({ active = (not sc_menu.isReadOnly) and active and ((sc_menu.object ~= 0) or (sc_menu.macro ~= "")) and (next(sc_menu.loadouts) ~= nil), height = sc_menu.titleData.height, width = sc_menu.titleData.dropdownWidth + sc_menu.titleData.height + Helper.borderSize, mouseOverText = (sc_menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setText(ReadText(1001, 7905), { halign = "center" })
+	row[3].handlers.onClick = function() L.buttonShipLoadoutTitleLoad(sc_menu, contextLayer) end
 end
 
 function L.buttonStationTitleLoad(sc_menu, contextLayer)
@@ -173,6 +178,33 @@ function L.buttonStationLoadoutTitleLoad(sc_menu, contextLayer)
 	else
 		sc_menu.displayContextFrame("loadCL", sc_menu.titleData.width * config.loadWidthMultiplier, sc_menu.titleData.offsetX + (sc_menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
 		L.params.settingKey = "station_loadout"
+		L.params.x = sc_menu.contextMode.x
+		L.params.y = sc_menu.contextMode.y
+		L.params.width = sc_menu.contextMode.width
+		L.params.height = config.stationLoadoutLoadHeight
+		L.params.itemsList = sc_menu.loadouts
+		L.params.header = "Select Loadout"
+		L.params.optionItemNameText = ReadText(1811143915, 24)
+		L.params.onSelection = function(id)
+			sc_menu.closeContextMenu()
+			sc_menu.dropdownLoadout(nil, id)
+		end
+		L.params.onDeletion = function(id) sc_menu.dropdownRemovedLoadout(nil, id) end
+		L.params.contextLayer = contextLayer
+		L.params.closeContextMenu = sc_menu.closeContextMenu
+		L.params.contextMode = sc_menu.contextMode
+		L.params.setContextFrame = function(f) sc_menu.contextFrame = f end
+		L.params.menu = sc_menu
+		L.createLoadContext(true)
+	end
+end
+
+function L.buttonShipLoadoutTitleLoad(sc_menu, contextLayer)
+	if sc_menu.contextMode and (sc_menu.contextMode.mode == "loadCL") then
+		sc_menu.closeContextMenu()
+	else
+		sc_menu.displayContextFrame("loadCL", sc_menu.titleData.width * config.loadWidthMultiplier, sc_menu.titleData.offsetX + (sc_menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
+		L.params.settingKey = "ship_loadout"
 		L.params.x = sc_menu.contextMode.x
 		L.params.y = sc_menu.contextMode.y
 		L.params.width = sc_menu.contextMode.width

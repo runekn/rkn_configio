@@ -6,24 +6,22 @@ local Lib = require("extensions.sn_mod_support_apis.lua_library")
 local ConfigioLib = require("extensions.rkn_configio.configio_lib")
 
 local rkn_menu = {}
-local sc_menu = {}
+local menu = {}
 
 local config = {
 	contextLayer = 2
 }
 
 local function init()
-	sc_menu = Lib.Get_Egosoft_Menu("StationConfigurationMenu")
-	sc_menu.createTitleBar = rkn_menu.createTitleBar
-	sc_menu.refreshTitleBar = rkn_menu.refreshTitleBar
-	sc_menu.onRowChanged = rkn_menu.onRowChanged
-	sc_menu.onSelectElement = rkn_menu.onSelectElement
+	menu = Lib.Get_Egosoft_Menu("StationConfigurationMenu")
+	menu.createTitleBar = rkn_menu.createTitleBar
+	menu.refreshTitleBar = rkn_menu.refreshTitleBar
+	menu.onRowChanged = rkn_menu.onRowChanged
+	menu.onSelectElement = rkn_menu.onSelectElement
 end
 
 -- Overriden function --
 function rkn_menu.createTitleBar(frame)
-	local menu = sc_menu
-
 	menu.updateConstructionPlans()
 	menu.getImportablePlans()
 
@@ -114,8 +112,6 @@ end
 
 -- Overriden function --
 function rkn_menu.refreshTitleBar()
-	local menu = sc_menu
-
 	local text = {
 		alignment = "center",
 		fontname = Helper.standardFont,
@@ -172,8 +168,6 @@ end
 
 -- Overriden function --
 function rkn_menu.onRowChanged(row, rowdata, uitable, modified, input, source)
-	local menu = sc_menu
-
 	-- Runekn's Changes Start Here! --
 	if ConfigioLib.onRowChanged(uitable, rowdata) then
         return
@@ -205,8 +199,6 @@ end
 
 -- Overriden function --
 function rkn_menu.onSelectElement(uitable, modified, row)
-	local menu = sc_menu
-
 	if uitable == menu.plantable then
 		if menu.holomap ~= 0 then
 			if (source ~= "auto") or (menu.selectedModule == nil) then

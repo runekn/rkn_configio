@@ -17,10 +17,12 @@ local function init()
 
 	if compat == true then
 		DebugError("Improved Config I/O: Loading in High Compatibility Mode")
-		require('extensions.rkn_configio.configio_uix')
+		require('extensions.rkn_configio.station_config_uix')
+		require('extensions.rkn_configio.ship_config_uix')
 	else
 		DebugError("Improved Config I/O: Loading in Stand Alone Mode")
 		require('extensions.rkn_configio.station_config_standalone')
+		require('extensions.rkn_configio.ship_config_standalone')
 	end
 end
 
