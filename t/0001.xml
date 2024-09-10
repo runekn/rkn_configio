@@ -13,9 +13,9 @@
 		<t id="8">Folder delimiter</t>
 		<t id="9">Display full item name</t>
 		<t id="10">Display full folder name</t>
-		<t id="11">Single item folder</t>
+		<t id="11">Flatten one-item folders</t>
 		<t id="12">The character that the browser should split item names by to create folders. Only one character allowed.</t>
-		<t id="14">Allow folders that only contain one item.</t>
+		<t id="14">Folder with only one item will be removed, and the item moved to the parent folder.</t>
 		<t id="15">Search</t>
 		<t id="16">Clear</t>
 		<t id="17">Module filter</t>

@@ -91,10 +91,10 @@ end
 -- For debugging --
 local function DebugSettings()
 	local settings = rkn_menu.getLoadSettings(sc_menu.contextMode.settingKey)
-	DebugError(string.format("{\n  folder_enabled = %s,\n  folder_delimiter = %s,\n  folder_single_item = %s,\n  folder_fullname = %s,\n  item_fullname = %s }",
+	DebugError(string.format("{\n  folder_enabled = %s,\n  folder_delimiter = %s,\n  folder_flatten_single_item = %s,\n  folder_fullname = %s,\n  item_fullname = %s }",
 		tostring(settings.folder_enabled),
 		tostring(settings.folder_delimiter),
-		tostring(settings.folder_single_item),
+		tostring(settings.folder_flatten_single_item),
 		tostring(settings.folder_fullname),
 		tostring(settings.item_fullname)
 	))
@@ -476,8 +476,8 @@ function rkn_menu.createLoadContext(first)
 
 	local row = stable:addRow(true, { fixed = true })
 	row[1]:createText(ReadText(1811143915, 11), { })
-	row[2]:createCheckBox(rkn_menu.settings.folder_single_item, { width = smallColWidth })
-	row[2].handlers.onClick = rkn_menu.folderSingleItemToggled
+	row[2]:createCheckBox(rkn_menu.settings.folder_flatten_single_item, { width = smallColWidth })
+	row[2].handlers.onClick = rkn_menu.folderFlattenSingleItemToggled
 	row[2].properties.mouseOverText = ReadText(1811143915, 14)
 	row[2].properties.active = rkn_menu.settings.folder_enabled
 
@@ -556,7 +556,7 @@ function rkn_menu.prepareBrowserStructure(itemList)
 		::continue::
 	end
 
-	if not rkn_menu.settings.folder_single_item then
+	if rkn_menu.settings.folder_flatten_single_item then
 		rkn_menu.undentSingleItems(root)
 	end
 
@@ -734,8 +734,8 @@ function rkn_menu.folderFullnameToggled(_, checked)
 	rkn_menu.refreshLoadFrame()
 end
 
-function rkn_menu.folderSingleItemToggled(_, checked)
-	rkn_menu.setLoadSetting(sc_menu.contextMode.settingKey, "folder_single_item", checked)
+function rkn_menu.folderFlattenSingleItemToggled(_, checked)
+	rkn_menu.setLoadSetting(sc_menu.contextMode.settingKey, "folder_flatten_single_item", checked)
 	rkn_menu.refreshLoadFrame()
 end
 
@@ -780,7 +780,7 @@ function rkn_menu.getLoadSettings(configKey)
 		return {
 			folder_enabled = false,
 			folder_delimiter = " ",
-			folder_single_item = false,
+			folder_flatten_single_item = false,
 			folder_fullname = false,
 			item_fullname = true
 		}
@@ -788,7 +788,7 @@ function rkn_menu.getLoadSettings(configKey)
 	return {
 		folder_enabled = s.folder_enabled == 1,
 		folder_delimiter = (not s.folder_delimiter or s.folder_delimiter == "") and " " or s.folder_delimiter,
-		folder_single_item = s.folder_single_item == 1,
+		folder_flatten_single_item = s.folder_flatten_single_item == 1,
 		folder_fullname = s.folder_fullname == 1,
 		item_fullname = s.item_fullname == 1
 	}
