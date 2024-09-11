@@ -99,17 +99,17 @@ function rkn_menu.createTitleBar(frame)
 		row[1].handlers.onEditBoxDeactivated = menu.editboxNameUpdateText
 		-- load
 		------- Runekn's Changes Start Here! ----------
-		--local loadoutOptions = {}
-		--if next(menu.loadouts) then
-		--	for _, loadout in ipairs(menu.loadouts) do
-		--		table.insert(loadoutOptions, { id = loadout.id, text = loadout.name, icon = "", displayremoveoption = loadout.deleteable, active = loadout.active, mouseovertext = loadout.mouseovertext })
-		--	end
-		--end
+		local loadoutOptions = {}
+		if next(menu.loadouts) then
+			for _, loadout in ipairs(menu.loadouts) do
+				table.insert(loadoutOptions, { id = loadout.id, text = loadout.name, icon = "", displayremoveoption = loadout.deleteable, active = loadout.active, mouseovertext = loadout.mouseovertext })
+			end
+		end
 		--row[2]:setColSpan(6):createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), optionWidth = menu.titleData.dropdownWidth + 6 * (menu.titleData.height + Helper.borderSize) }):setTextProperties(config.dropDownTextProperties)
 		--row[2].handlers.onDropDownConfirmed = menu.dropdownLoadout
 		--row[2].handlers.onDropDownRemoved = menu.dropdownRemovedLoadout
 
-		ConfigioLib.createStationLoadoutTitleBarButton(row, menu, config.contextLayer)
+		ConfigioLib.createStationLoadoutTitleBarButton(row, menu, config, loadoutOptions)
 		------- Runekn's Changes Stop Here! ----------
 		-- save
 		row[8]:createButton({ helpOverlayID = "save_loadout", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = ReadText(1026, 7905) }):setIcon("menu_save")
@@ -150,7 +150,7 @@ function rkn_menu.refreshTitleBar()
 		--local desc = Helper.createDropDown(loadOptions, "", text, nil, true, true, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize)
 		--Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, nil, menu.dropdownLoad, menu.dropdownRemovedCP)
 
-		ConfigioLib.createRefreshStationTitleBarButton(menu, config.contextLayer, text, loadOptions)
+		ConfigioLib.createRefreshStationTitleBarButton(menu, config, text, loadOptions)
 		------- Runekn's Changes Stop Here! ----------
 		-- save
 		local desc = Helper.createButton(nil, Helper.createButtonIcon("menu_save", nil, 255, 255, 255, 100), true, true, 0, 0, 0, menu.titleData.height, nil, nil, nil, ReadText(1026, 7901))

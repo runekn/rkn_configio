@@ -7,6 +7,7 @@ Replaces the simple dropdown to load stations or loadouts with a bigger and more
 * Folders: Organise your presets by including a delimiter character in the name, which this new dialog will use create a folder structure. You can thereby organize stations by mods, factions, production type, etc.
 * Search: Filter your presets by a search string, allowing you to quickly find what you are looking for.
 * Production module filter: Filter stations by what production modules are included.
+* Disable mod by menu: Don't like the new dialog for a specific menu (station plans, module loadout, ship loadout)? You can disable them individually.
 
 ## Requirements
 
@@ -16,7 +17,7 @@ Replaces the simple dropdown to load stations or loadouts with a bigger and more
 
 This mod is save compatible. You can add it to an existing save, and remove it without errors.
 
-This mod is NOT compatible with other mods that changes the station or ship designer UI (I am unaware of any mod that does).
+This mod is NOT guaranteed to be compatible with other mods that make changes to the station or ship designer UI.
 
 ## Thanks to
 * netUpb/fikrethos

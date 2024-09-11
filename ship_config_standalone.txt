@@ -118,7 +118,7 @@ function rkn_menu.createTitleBar(frame)
 		--row[3].handlers.onDropDownConfirmed = menu.dropdownLoadout
 		--row[3].handlers.onDropDownRemoved = menu.dropdownLoadoutRemoved
 
-		ConfigioLib.createShipTitleBarButton(row, menu, config.contextLayer, active)
+		ConfigioLib.createShipTitleBarButton(row, menu, config, active, loadoutOptions)
 		-- Runekn's Changes Stop Here! --
 		-- save
 		row[4]:createButton({ active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")), height = menu.titleData.height, mouseOverText = ReadText(1026, 7905), helpOverlayID = "shipconfig_saveloadout", helpOverlayText = " ", helpOverlayHighlightOnly = true, uiTriggerID = "shipconfig_saveloadout" }):setIcon("menu_save")
