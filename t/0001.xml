@@ -30,5 +30,7 @@
 		<t id="26">Enable for station plans</t>
 		<t id="27">Enable for station loadouts</t>
 		<t id="28">Enable for ship loadouts</t>
+		<t id="29">Enable for ship selection</t>
+		<t id="30">Select Ship</t>
 	</page>
 </language>

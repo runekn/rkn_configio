@@ -7,6 +7,7 @@ local L = {}
 local config = {
 	stationKey = "station",
 	stationLoadoutKey = "station_loadout",
+	shipKey = "ship",
 	shipLoadoutKey = "ship_loadout",
 	folderIdFormat = "rkn_configio.folder.%s.%s",
 	settingsBlackboardId = "$RKN_ConfigioSettings",
@@ -123,7 +124,7 @@ end
 
 local function init()
 	L.playerID = ConvertStringTo64Bit(tostring(C.GetPlayerID()))
-	L.filter = { station = { macros = {} }, station_loadout = {}, ship_loadout = {} }
+	L.filter = { [config.stationKey] = { macros = {} }, [config.stationLoadoutKey] = {}, [config.shipLoadoutKey] = {}, [config.shipKey] = {} }
 	L.settings = {}
 	L.params = {}
 	L.expandedFolders = {}
@@ -132,10 +133,8 @@ local function init()
 	L.allProductionModules = L.getAllProductionModules()
 
 	-- Set settings for extension options menu on game start --
-	if not GetNPCBlackboard(L.playerID, config.settingsBlackboardId) then
-		local settings = L.getLoadSettings()
-		SetNPCBlackboard(L.playerID, config.settingsBlackboardId, settings)
-	end
+	local settings = L.getLoadSettings()
+	SetNPCBlackboard(L.playerID, config.settingsBlackboardId, settings)
 
 end
 
@@ -177,7 +176,22 @@ function L.createRefreshStationLoadoutTitleBarButton(menu, text, loadoutOptions)
 	end
 end
 
-function L.createShipTitleBarButton(row, menu, sc_config, active, loadoutOptions)
+function L.createShipTitleBarButton(row, menu, sc_config, shipOptions, curShipOption, dropDownIconProperties)
+	if L.isModEnabledForType(config.shipKey) then
+		local dropdownDummy = { properties = { text = {}, icon = {} } }
+		local text = curShipOption and curShipOption.text or ReadText(1811143915, 30)
+		row[2]:createButton({ active = (not menu.isReadOnly) and (menu.class ~= ""), height = menu.titleData.height }):setText(text, { halign = "left" })
+		row[2].handlers.onClick = function() L.buttonShipTitleLoad(menu, shipOptions, sc_config.contextLayer) end
+		return dropdownDummy
+	else
+		local dropdown = row[2]:createDropDown(shipOptions, { startOption = curShipOption, active = (not menu.isReadOnly) and (menu.class ~= ""), optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, helpOverlayID = "shipconfig_shipoptions", helpOverlayText = " ", helpOverlayHighlightOnly = true }):setTextProperties(sc_config.dropDownTextProperties):setIconProperties(dropDownIconProperties)
+		row[2].properties.text.halign = "left"
+		row[2].handlers.onDropDownConfirmed = menu.dropdownShip
+		return dropdown
+	end
+end
+
+function L.createShipLoadoutTitleBarButton(row, menu, sc_config, active, loadoutOptions)
 	if L.isModEnabledForType(config.shipLoadoutKey) then
 		row[3]:createButton({ active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), height = menu.titleData.height, width = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setText(ReadText(1001, 7905), { halign = "center" })
 		row[3].handlers.onClick = function() L.buttonShipLoadoutTitleLoad(menu, sc_config.contextLayer) end
@@ -197,23 +211,26 @@ function L.buttonStationTitleLoad(menu, contextLayer)
 		menu.closeContextMenu()
 	else
 		menu.displayContextFrame("loadCP", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
-		L.params.settingKey = config.stationKey
-		L.params.x = menu.contextMode.x
-		L.params.y = menu.contextMode.y
-		L.params.width = menu.contextMode.width
-		L.params.height = config.stationLoadHeight
-		L.params.itemsList = menu.constructionplans
-		L.params.header = ReadText(1811143915, 2)
-		L.params.optionItemNameText = ReadText(1811143915, 9)
-		L.params.onSelection = function(id) menu.dropdownLoad(nil, id) end
-		L.params.onDeletion = function(id) menu.dropdownRemovedCP(nil, id) end
-		L.params.addToSettingsTable = L.createCPModulesFilter
-		L.params.itemFilter = L.filterItemByModules
-		L.params.contextLayer = contextLayer
-		L.params.closeContextMenu = menu.closeContextMenu
-		L.params.contextMode = menu.contextMode
-		L.params.setContextFrame = function(f) menu.contextFrame = f end
-		L.params.menu = menu
+		L.params = {
+			settingKey = config.stationKey,
+			x = menu.contextMode.x,
+			y = menu.contextMode.y,
+			width = menu.contextMode.width,
+			height = config.stationLoadHeight,
+			itemsList = menu.constructionplans,
+			header = ReadText(1811143915, 2),
+			optionItemNameText = ReadText(1811143915, 9),
+			onSelection = function(id) menu.dropdownLoad(nil, id) end,
+			onDeletion = function(id) menu.dropdownRemovedCP(nil, id) end,
+			addToSettingsTable = L.createCPModulesFilter,
+			itemFilter = L.filterItemByModules,
+			contextLayer = contextLayer,
+			closeContextMenu = menu.closeContextMenu,
+			contextMode = menu.contextMode,
+			setContextFrame = function(f) menu.contextFrame = f end,
+			menu = menu,
+			isItemActive = function(item) return item.active end
+		}
 		L.createLoadContext(true)
 	end
 end
@@ -223,29 +240,65 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 		menu.closeContextMenu()
 	else
 		menu.displayContextFrame("loadCL", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
-		L.params.settingKey = config.stationLoadoutKey
-		L.params.x = menu.contextMode.x
-		L.params.y = menu.contextMode.y
-		L.params.width = menu.contextMode.width
-		L.params.height = config.stationLoadoutLoadHeight
-		L.params.itemsList = menu.loadouts
-		L.params.header = ReadText(1811143915, 22)
-		L.params.optionItemNameText = ReadText(1811143915, 24)
-		L.params.onSelection = function(id)
-			menu.closeContextMenu()
-			menu.dropdownLoadout(nil, id)
-		end
-		L.params.onDeletion = function(id)
-			menu.closeContextMenu()
-			menu.dropdownRemovedLoadout(nil, id)
-		end
-		L.params.contextLayer = contextLayer
-		L.params.closeContextMenu = menu.closeContextMenu
-		L.params.contextMode = menu.contextMode
-		L.params.setContextFrame = function(f) menu.contextFrame = f end
-		L.params.menu = menu
-		L.params.addToSettingsTable = nil
-		L.params.itemFilter = nil
+		L.params = {
+			settingKey = config.stationLoadoutKey,
+			x = menu.contextMode.x,
+			y = menu.contextMode.y,
+			width = menu.contextMode.width,
+			height = config.stationLoadoutLoadHeight,
+			itemsList = menu.loadouts,
+			header = ReadText(1811143915, 22),
+			optionItemNameText = ReadText(1811143915, 24),
+			onSelection = function(id)
+				menu.closeContextMenu()
+				menu.dropdownLoadout(nil, id)
+			end,
+			onDeletion = function(id)
+				menu.closeContextMenu()
+				menu.dropdownRemovedLoadout(nil, id)
+			end,
+			contextLayer = contextLayer,
+			closeContextMenu = menu.closeContextMenu,
+			contextMode = menu.contextMode,
+			setContextFrame = function(f) menu.contextFrame = f end,
+			menu = menu,
+			addToSettingsTable = nil,
+			itemFilter = nil,
+			isItemActive = function(item) return item.active or (item.preset and true or false)  end
+		}
+		L.createLoadContext(true)
+	end
+end
+
+function L.buttonShipTitleLoad(menu, shipOptions, contextLayer)
+	if menu.contextMode and (menu.contextMode.mode == "loadCS") then
+		menu.closeContextMenu()
+	else
+		menu.displayContextFrame("loadCS", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		L.params = {
+			settingKey = config.shipKey,
+			x = menu.contextMode.x,
+			y = menu.contextMode.y,
+			width = menu.contextMode.width,
+			height = config.stationLoadHeight,
+			itemsList = shipOptions,
+			header = ReadText(1811143915, 22),
+			optionItemNameText = ReadText(1811143915, 24),
+			onSelection = function(id)
+				menu.closeContextMenu()
+				menu.dropdownShip(nil, id)
+			end,
+			contextLayer = contextLayer,
+			closeContextMenu = menu.closeContextMenu,
+			contextMode = menu.contextMode,
+			setContextFrame = function(f) menu.contextFrame = f end,
+			menu = menu,
+			addToSettingsTable = nil,
+			itemFilter = nil,
+			isItemActive = function(item) return true end,
+			disableSettings = true
+		}
+		DebugError(SerializeTable(shipOptions))
 		L.createLoadContext(true)
 	end
 end
@@ -255,29 +308,30 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 		menu.closeContextMenu()
 	else
 		menu.displayContextFrame("loadCL", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
-		L.params.settingKey = config.shipLoadoutKey
-		L.params.x = menu.contextMode.x
-		L.params.y = menu.contextMode.y
-		L.params.width = menu.contextMode.width
-		L.params.height = config.stationLoadoutLoadHeight
-		L.params.itemsList = menu.loadouts
-		L.params.header = ReadText(1811143915, 22)
-		L.params.optionItemNameText = ReadText(1811143915, 24)
-		L.params.onSelection = function(id)
-			menu.closeContextMenu()
-			menu.dropdownLoadout(nil, id)
-		end
-		L.params.onDeletion = function(id)
-			menu.closeContextMenu()
-			menu.dropdownLoadoutRemoved(nil, id)
-		end
-		L.params.contextLayer = contextLayer
-		L.params.closeContextMenu = menu.closeContextMenu
-		L.params.contextMode = menu.contextMode
-		L.params.setContextFrame = function(f) menu.contextFrame = f end
-		L.params.menu = menu
-		L.params.addToSettingsTable = nil
-		L.params.itemFilter = nil
+		L.params = {
+			settingKey = config.shipLoadoutKey,
+			x = menu.contextMode.x,
+			y = menu.contextMode.y,
+			width = menu.contextMode.width,
+			height = config.stationLoadoutLoadHeight,
+			itemsList = menu.loadouts,
+			header = ReadText(1811143915, 22),
+			optionItemNameText = ReadText(1811143915, 24),
+			onSelection = function(id)
+				menu.closeContextMenu()
+				menu.dropdownLoadout(nil, id)
+			end,
+			onDeletion = function(id)
+				menu.closeContextMenu()
+				menu.dropdownLoadoutRemoved(nil, id)
+			end,
+			contextLayer = contextLayer,
+			closeContextMenu = menu.closeContextMenu,
+			contextMode = menu.contextMode,
+			setContextFrame = function(f) menu.contextFrame = f end,
+			menu = menu,
+			isItemActive = function(item) return item.active or (item.preset and true or false)  end
+		}
 		L.createLoadContext(true)
 	end
 end
@@ -340,42 +394,44 @@ function L.createLoadContext(first)
 	-- Create settings list --
 	local stable = contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = L.params.height, x = Helper.borderSize, width = config.loadSettingsWidth - Helper.borderSize * 2 })
 	stable:setColWidth(1, config.loadSettingsWidth * 0.7, false)
-	local row = stable:addRow(false, { fixed = true })
-	row[1]:setColSpan(2):createText(ReadText(1811143915, 6), config.browserHeaderTextProperties)
+	if not L.params.disableSettings then
+		local row = stable:addRow(false, { fixed = true })
+		row[1]:setColSpan(2):createText(ReadText(1811143915, 6), config.browserHeaderTextProperties)
 
-	local row = stable:addRow(true, { fixed = true })
-	row[1]:createText(ReadText(1811143915, 7), { })
-	row[2]:createCheckBox(L.settings.folder_enabled, { width = smallColWidth })
-	row[2].handlers.onClick = L.folderEnabledToggled
+		local row = stable:addRow(true, { fixed = true })
+		row[1]:createText(ReadText(1811143915, 7), { })
+		row[2]:createCheckBox(L.settings.folder_enabled, { width = smallColWidth })
+		row[2].handlers.onClick = L.folderEnabledToggled
 
-	stable:addEmptyRow(Helper.standardTextHeight)
+		stable:addEmptyRow(Helper.standardTextHeight)
 
-	local row = stable:addRow(true, { fixed = true })
-	row[1]:createText(ReadText(1811143915, 8), { })
-	local delimiterEditBoxText = L.settings.folder_delimiter:gsub(" ", "(space)") -- Replace spaces with '(space)' so that it is easier to read
-	row[2]:createEditBox({ scaling = true }):setText(delimiterEditBoxText, { })
-	row[2].handlers.onEditBoxDeactivated = L.folderDelimiterEdit
-	row[2].properties.mouseOverText = ReadText(1811143915, 12)
-	row[2].properties.active = L.settings.folder_enabled
+		local row = stable:addRow(true, { fixed = true })
+		row[1]:createText(ReadText(1811143915, 8), { })
+		local delimiterEditBoxText = L.settings.folder_delimiter:gsub(" ", "(space)") -- Replace spaces with '(space)' so that it is easier to read
+		row[2]:createEditBox({ scaling = true }):setText(delimiterEditBoxText, { })
+		row[2].handlers.onEditBoxDeactivated = L.folderDelimiterEdit
+		row[2].properties.mouseOverText = ReadText(1811143915, 12)
+		row[2].properties.active = L.settings.folder_enabled
 
-	local row = stable:addRow(true, { fixed = true })
-	row[1]:createText(L.params.optionItemNameText, { })
-	row[2]:createCheckBox(L.settings.item_fullname, { width = smallColWidth })
-	row[2].handlers.onClick = L.itemFullnameToggled
-	row[2].properties.active = L.settings.folder_enabled
+		local row = stable:addRow(true, { fixed = true })
+		row[1]:createText(L.params.optionItemNameText, { })
+		row[2]:createCheckBox(L.settings.item_fullname, { width = smallColWidth })
+		row[2].handlers.onClick = L.itemFullnameToggled
+		row[2].properties.active = L.settings.folder_enabled
 
-	local row = stable:addRow(true, { fixed = true })
-	row[1]:createText(ReadText(1811143915, 10), { })
-	row[2]:createCheckBox(L.settings.folder_fullname, { width = smallColWidth })
-	row[2].handlers.onClick = L.folderFullnameToggled
-	row[2].properties.active = L.settings.folder_enabled
+		local row = stable:addRow(true, { fixed = true })
+		row[1]:createText(ReadText(1811143915, 10), { })
+		row[2]:createCheckBox(L.settings.folder_fullname, { width = smallColWidth })
+		row[2].handlers.onClick = L.folderFullnameToggled
+		row[2].properties.active = L.settings.folder_enabled
 
-	local row = stable:addRow(true, { fixed = true })
-	row[1]:createText(ReadText(1811143915, 11), { })
-	row[2]:createCheckBox(L.settings.folder_flatten_single_item, { width = smallColWidth })
-	row[2].handlers.onClick = L.folderFlattenSingleItemToggled
-	row[2].properties.mouseOverText = ReadText(1811143915, 14)
-	row[2].properties.active = L.settings.folder_enabled
+		local row = stable:addRow(true, { fixed = true })
+		row[1]:createText(ReadText(1811143915, 11), { })
+		row[2]:createCheckBox(L.settings.folder_flatten_single_item, { width = smallColWidth })
+		row[2].handlers.onClick = L.folderFlattenSingleItemToggled
+		row[2].properties.mouseOverText = ReadText(1811143915, 14)
+		row[2].properties.active = L.settings.folder_enabled
+	end
 
 	-- Search bar --
 	local row = stable:addRow(false, { fixed = true })
@@ -449,7 +505,7 @@ function L.prepareBrowserStructure(itemList)
 			folder = next
 		end
 		-- Inser item to final folder --
-		table.insert(cwd.items, { type = "item", name = name, active = item.active or (item.preset and true or false), deleteable = item.deleteable, item = item })
+		table.insert(cwd.items, { type = "item", name = name, active = L.params.isItemActive(item), deleteable = item.deleteable, item = item })
 		::continue::
 	end
 
@@ -706,6 +762,7 @@ function L.getLoadSettings()
 	local allDefault = {
 		[config.stationKey] = ShallowCopy(default),
 		[config.stationLoadoutKey] = ShallowCopy(default),
+		[config.shipKey] = ShallowCopy(default),
 		[config.shipLoadoutKey] = ShallowCopy(default)
 	}
 	if not L.playerID then
@@ -718,6 +775,7 @@ function L.getLoadSettings()
 	local r = {
 		[config.stationKey] = L.convertLoadSettings(all[config.stationKey], default),
 		[config.stationLoadoutKey] = L.convertLoadSettings(all[config.stationLoadoutKey], default),
+		[config.shipKey] = L.convertLoadSettings(all[config.shipKey], default),
 		[config.shipLoadoutKey] = L.convertLoadSettings(all[config.shipLoadoutKey], default)
 	}
 	return r

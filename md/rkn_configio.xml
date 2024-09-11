@@ -6,8 +6,6 @@
 				<event_ui_triggered screen="'Lua_Loader'" control="'Ready'" />
 			</conditions>
 			<actions>
-				<!--<raise_lua_event name="'Lua_Loader.Load'" param="'extensions.kuertee_ui_extensions.ui.kuertee_menu_map'"/>
-				<raise_lua_event name="'Lua_Loader.Load'" param="'extensions.kuertee_ui_extensions.ui.kuertee_menu_docked'"/>-->
 				<raise_lua_event name="'Lua_Loader.Load'" param="'extensions.rkn_configio.ui_initializer'"/>
 			</actions>
 		</cue>
@@ -60,6 +58,17 @@
 					param = "table[
 						$id = 'station_loadout',
 						$checked = $settings.$station_loadout.$enabled,
+						$col = 2,
+						$width = 'Helper.standardButtonHeight', $height = 'Helper.standardButtonHeight',
+						$onClick = OnSMOCheckboxChange
+					]"/>
+				<signal_cue_instantly cue="md.Simple_Menu_API.Add_Row"/>
+				<signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[$col=1, $text={1811143915, 29}]" comment="Reactive as default for carriers"/>
+				<signal_cue_instantly
+					cue = "md.Simple_Menu_API.Make_CheckBox"
+					param = "table[
+						$id = 'ship',
+						$checked = $settings.$ship.$enabled,
 						$col = 2,
 						$width = 'Helper.standardButtonHeight', $height = 'Helper.standardButtonHeight',
 						$onClick = OnSMOCheckboxChange

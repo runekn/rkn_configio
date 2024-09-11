@@ -96,9 +96,14 @@ function rkn_menu.createTitleBar(frame)
 			scaling = false,
 		}
 
-		local dropdown = row[2]:createDropDown(shipOptions, { startOption = curShipOption, active = (not menu.isReadOnly) and (menu.class ~= ""), optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, helpOverlayID = "shipconfig_shipoptions", helpOverlayText = " ", helpOverlayHighlightOnly = true }):setTextProperties(config.dropDownTextProperties):setIconProperties(dropDownIconProperties)
-		row[2].properties.text.halign = "left"
-		row[2].handlers.onDropDownConfirmed = menu.dropdownShip
+		---- Runekn's Changes Start Here! ----
+		--local dropdown = row[2]:createDropDown(shipOptions, { startOption = curShipOption, active = (not menu.isReadOnly) and (menu.class ~= ""), optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, helpOverlayID = "shipconfig_shipoptions", helpOverlayText = " ", helpOverlayHighlightOnly = true }):setTextProperties(config.dropDownTextProperties):setIconProperties(dropDownIconProperties)
+		--row[2].properties.text.halign = "left"
+		--row[2].handlers.onDropDownConfirmed = menu.dropdownShip
+
+		DebugError(tostring(shipOptions))
+		local dropdown = ConfigioLib.createShipTitleBarButton(row, menu, config, shipOptions, curShipOption, dropDownIconProperties)
+		---- Runekn's Changes Stop Here! ----
 		local active = true
 		if (menu.mode == "purchase") and (menu.macro ~= "") and (not menu.validLicence) then
 			active = false
@@ -113,13 +118,13 @@ function rkn_menu.createTitleBar(frame)
 		end
 
 		-- loadout
-		-- Runekn's Changes Start Here! --
+		---- Runekn's Changes Start Here! ----
 		--row[3]:createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setTextProperties(config.dropDownTextProperties)
 		--row[3].handlers.onDropDownConfirmed = menu.dropdownLoadout
 		--row[3].handlers.onDropDownRemoved = menu.dropdownLoadoutRemoved
 
-		ConfigioLib.createShipTitleBarButton(row, menu, config, active, loadoutOptions)
-		-- Runekn's Changes Stop Here! --
+		ConfigioLib.createShipLoadoutTitleBarButton(row, menu, config, active, loadoutOptions)
+		---- Runekn's Changes Stop Here! ----
 		-- save
 		row[4]:createButton({ active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")), height = menu.titleData.height, mouseOverText = ReadText(1026, 7905), helpOverlayID = "shipconfig_saveloadout", helpOverlayText = " ", helpOverlayHighlightOnly = true, uiTriggerID = "shipconfig_saveloadout" }):setIcon("menu_save")
 		row[4].handlers.onClick = menu.buttonTitleSave
