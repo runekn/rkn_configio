@@ -267,7 +267,10 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 			menu.closeContextMenu()
 			menu.dropdownLoadout(nil, id)
 		end
-		L.params.onDeletion = function(id) menu.dropdownRemovedLoadout(nil, id) end
+		L.params.onDeletion = function(id)
+			menu.closeContextMenu()
+			menu.dropdownLoadoutRemoved(nil, id)
+		end
 		L.params.contextLayer = contextLayer
 		L.params.closeContextMenu = menu.closeContextMenu
 		L.params.contextMode = menu.contextMode
