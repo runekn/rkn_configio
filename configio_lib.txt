@@ -90,19 +90,6 @@ local function ShallowCopy(orig)
     return copy
 end
 
-
--- For debugging --
-local function DebugSettings()
-	local settings = L.getLoadSettings()[L.params.settingKey]
-	DebugError(string.format("{\n  folder_enabled = %s,\n  folder_delimiter = %s,\n  folder_flatten_single_item = %s,\n  folder_fullname = %s,\n  item_fullname = %s }",
-		tostring(settings.folder_enabled),
-		tostring(settings.folder_delimiter),
-		tostring(settings.folder_flatten_single_item),
-		tostring(settings.folder_fullname),
-		tostring(settings.item_fullname)
-	))
-end
-
 -- For debugging --
 local function SerializeTable(val, name, skipnewlines, depth)
     skipnewlines = skipnewlines or false
@@ -242,7 +229,7 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 		L.params.width = menu.contextMode.width
 		L.params.height = config.stationLoadoutLoadHeight
 		L.params.itemsList = menu.loadouts
-		L.params.header = "Select Loadout"
+		L.params.header = ReadText(1811143915, 22)
 		L.params.optionItemNameText = ReadText(1811143915, 24)
 		L.params.onSelection = function(id)
 			menu.closeContextMenu()
@@ -274,7 +261,7 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 		L.params.width = menu.contextMode.width
 		L.params.height = config.stationLoadoutLoadHeight
 		L.params.itemsList = menu.loadouts
-		L.params.header = "Select Loadout"
+		L.params.header = ReadText(1811143915, 22)
 		L.params.optionItemNameText = ReadText(1811143915, 24)
 		L.params.onSelection = function(id)
 			menu.closeContextMenu()
@@ -306,6 +293,7 @@ function L.createLoadContext(first)
 		y = L.params.y,
 		autoFrameHeight = true,
 	})
+	L.params.setContextFrame(contextFrame)
 	contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
 
 	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
