@@ -1,3 +1,5 @@
+-- /ui/addons/ego_detailmonitor/menu_ship_configuration.lua
+
 -- ffi setup 
 local ffi = require("ffi")
 local C = ffi.C

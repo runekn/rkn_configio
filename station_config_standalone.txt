@@ -1,3 +1,5 @@
+-- /ui/addons/ego_detailmonitor/menu_station_configuration.lua
+
 -- ffi setup 
 local ffi = require("ffi")
 local C = ffi.C
@@ -9,7 +11,15 @@ local rkn_menu = {}
 local menu = {}
 
 local config = {
-	contextLayer = 2
+	contextLayer = 2,
+	dropDownTextProperties = {
+		halign = "center",
+		font = Helper.standardFont,
+		fontsize = Helper.scaleFont(Helper.standardFont, Helper.standardFontSize),
+		color = Color["text_normal"],
+		x = 0,
+		y = 0
+	},
 }
 
 local function init()
@@ -42,17 +52,17 @@ function rkn_menu.createTitleBar(frame)
 		row[1]:createEditBox({ scaling = true }):setText(ffi.string(C.GetComponentName(menu.container)), { halign = "center", font = Helper.headerRow1Font, fontsize = Helper.headerRow1FontSize })
 		row[1].handlers.onEditBoxDeactivated = menu.editboxNameUpdateText
 		-- load
+		local loadOptions = {}
+		for _, plan in ipairs(menu.constructionplans) do
+			table.insert(loadOptions, { id = plan.id, text = plan.name, icon = "", displayremoveoption = plan.deleteable, active = plan.active, mouseovertext = plan.mouseovertext })
+		end
+		table.sort(loadOptions, function (a, b) return a.text < b.text end)
 		------- Runekn's Changes Start Here! ----------
-		--local loadOptions = {}
-		--for _, plan in ipairs(menu.constructionplans) do
-		--	table.insert(loadOptions, { id = plan.id, text = plan.name, icon = "", displayremoveoption = plan.deleteable, active = plan.active, mouseovertext = plan.mouseovertext })
-		--end
-		--table.sort(loadOptions, function (a, b) return a.text < b.text end)
 		--row[2]:createDropDown(loadOptions, { textOverride = ReadText(1001, 7904), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize }):setTextProperties(config.dropDownTextProperties)
 		--row[2].handlers.onDropDownConfirmed = menu.dropdownLoad
 		--row[2].handlers.onDropDownRemoved = menu.dropdownRemovedCP
 
-		ConfigioLib.createStationTitleBarButton(row, menu, config.contextLayer)
+		ConfigioLib.createStationTitleBarButton(row, menu, config, loadOptions)
 		------- Runekn's Changes Stop Here! ----------
 		-- save
 		row[3]:createButton({ helpOverlayID = "save_constructionplan", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = ReadText(1026, 7901) }):setIcon("menu_save")
@@ -125,12 +135,12 @@ function rkn_menu.refreshTitleBar()
 	menu.getImportablePlans()
 
 	if not menu.loadoutMode then
-		--text.override = ReadText(1001, 7904)
-		--local loadOptions = {}
-		--for _, plan in ipairs(menu.constructionplans) do
-			--table.insert(loadOptions, { id = plan.id, text = plan.name, icon = "", displayremoveoption = plan.deleteable, active = plan.active, mouseovertext = plan.mouseovertext })
-		--end
-		--table.sort(loadOptions, function (a, b) return a.text < b.text end)
+		text.override = ReadText(1001, 7904)
+		local loadOptions = {}
+		for _, plan in ipairs(menu.constructionplans) do
+			table.insert(loadOptions, { id = plan.id, text = plan.name, icon = "", displayremoveoption = plan.deleteable, active = plan.active, mouseovertext = plan.mouseovertext })
+		end
+		table.sort(loadOptions, function (a, b) return a.text < b.text end)
 
 		-- editbox
 		local desc = Helper.createEditBox(Helper.createTextInfo(ffi.string(C.GetComponentName(menu.container)), "center", Helper.headerRow1Font, Helper.scaleFont(Helper.headerRow1Font, Helper.headerRow1FontSize), 255, 255, 255, 100), true, 0, 0, 0, 0, nil, nil, false)
@@ -140,7 +150,7 @@ function rkn_menu.refreshTitleBar()
 		--local desc = Helper.createDropDown(loadOptions, "", text, nil, true, true, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize)
 		--Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, nil, menu.dropdownLoad, menu.dropdownRemovedCP)
 
-		ConfigioLib.createRefreshStationTitleBarButton(sc_menu, config.contextLayer)
+		ConfigioLib.createRefreshStationTitleBarButton(menu, config.contextLayer, text, loadOptions)
 		------- Runekn's Changes Stop Here! ----------
 		-- save
 		local desc = Helper.createButton(nil, Helper.createButtonIcon("menu_save", nil, 255, 255, 255, 100), true, true, 0, 0, 0, menu.titleData.height, nil, nil, nil, ReadText(1026, 7901))

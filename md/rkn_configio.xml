@@ -20,5 +20,71 @@
 				<reset_cue cue="this" />
 			</actions>
 		</cue>
+
+		<cue name="StartSMO" instantiate="true">
+			<conditions>
+				<event_cue_signalled cue="md.Simple_Menu_Options.Reloaded"/>
+			</conditions>
+			<actions>
+				<signal_cue_instantly cue="md.Simple_Menu_API.Register_Options_Menu"
+					param="table[
+						$id = 'rkn_configio_extension_options_menu',
+						$columns = 2,
+						$title = {1811143915, 25},
+						$onOpen = BuildOptionsMenu
+					]" />
+				<cancel_cue cue="this" />
+			</actions>
+		</cue>
+		<cue name="BuildOptionsMenu" instantiate="true">
+			<conditions>
+				<event_cue_signalled />
+			</conditions>
+			<actions>
+				<set_value name="$settings" exact="player.entity.$RKN_ConfigioSettings" />
+				<signal_cue_instantly cue="md.Simple_Menu_API.Add_Row"/>
+				<signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[$col=1, $text={1811143915, 26}]" comment="Reactive as default for carriers"/>
+				<signal_cue_instantly
+					cue = "md.Simple_Menu_API.Make_CheckBox"
+					param = "table[
+						$id = 'station',
+						$checked = $settings.$station.$enabled,
+						$col = 2,
+						$width = 'Helper.standardButtonHeight', $height = 'Helper.standardButtonHeight',
+						$onClick = OnSMOCheckboxChange
+					]"/>
+				<signal_cue_instantly cue="md.Simple_Menu_API.Add_Row"/>
+				<signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[$col=1, $text={1811143915, 27}]" comment="Reactive as default for carriers"/>
+				<signal_cue_instantly
+					cue = "md.Simple_Menu_API.Make_CheckBox"
+					param = "table[
+						$id = 'station_loadout',
+						$checked = $settings.$station_loadout.$enabled,
+						$col = 2,
+						$width = 'Helper.standardButtonHeight', $height = 'Helper.standardButtonHeight',
+						$onClick = OnSMOCheckboxChange
+					]"/>
+				<signal_cue_instantly cue="md.Simple_Menu_API.Add_Row"/>
+				<signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[$col=1, $text={1811143915, 28}]" comment="Reactive as default for carriers"/>
+				<signal_cue_instantly
+					cue = "md.Simple_Menu_API.Make_CheckBox"
+					param = "table[
+						$id = 'ship_loadout',
+						$checked = $settings.$ship_loadout.$enabled,
+						$col = 2,
+						$width = 'Helper.standardButtonHeight', $height = 'Helper.standardButtonHeight',
+						$onClick = OnSMOCheckboxChange
+					]"/>
+			</actions>
+		</cue>
+		<cue name="OnSMOCheckboxChange" instantiate="true">
+			<conditions>
+				<event_cue_signalled />
+			</conditions>
+			<actions>
+				<set_value name="player.entity.$RKN_ConfigioSettings.{'$' + event.param.$id}.$enabled" exact="event.param.$checked" />
+				<cancel_cue cue = "this" />
+			</actions>
+		</cue>
 	</cues>
 </mdscript>

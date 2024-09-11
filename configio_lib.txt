@@ -6,7 +6,7 @@ local L = {}
 
 local config = {
 	folderIdFormat = "rkn_configio.folder.%s.%s",
-	settingsIdFormat = "rkn_configio.settings.%s",
+	settingsBlackboardId = "$RKN_ConfigioSettings",
 	loadWidthMultiplier = 0.8,
 	maxFolders = 6,
 	stationLoadHeight = 0.5 * Helper.viewHeight,
@@ -75,7 +75,7 @@ end
 
 -- For debugging --
 local function DebugSettings()
-	local settings = L.getLoadSettings(L.params.settingKey)
+	local settings = L.getLoadSettings()[L.params.settingKey]
 	DebugError(string.format("{\n  folder_enabled = %s,\n  folder_delimiter = %s,\n  folder_flatten_single_item = %s,\n  folder_fullname = %s,\n  item_fullname = %s }",
 		tostring(settings.folder_enabled),
 		tostring(settings.folder_delimiter),
@@ -125,106 +125,128 @@ local function init()
 	L.selectedRow = nil
 	L.topRow = nil
 	L.allProductionModules = L.getAllProductionModules()
+
+	-- Set settings for extension options menu on game start --
+	if not GetNPCBlackboard(L.playerID, config.settingsBlackboardId) then
+		local settings L.getLoadSettings()
+		SetNPCBlackboard(L.playerID, config.settingsBlackboardId, settings)
+	end
+
 end
 
-function L.createStationTitleBarButton(row, sc_menu, contextLayer)
-	row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = sc_menu.titleData.height }):setText(ReadText(1811143915, 1), { halign = "center" })
-	row[2].handlers.onClick = function() L.buttonStationTitleLoad(sc_menu, contextLayer) end
-end
-
-function L.createRefreshStationTitleBarButton(sc_menu, contextLayer)
-	local desc = Helper.createButton(Helper.createTextInfo(ReadText(1811143915, 1), "center", Helper.standardFont, Helper.standardFontSize, 255, 255, 255, 100), nil, true, true, 0, 0, 0, sc_menu.titleData.height, nil, nil, nil, "")
-	Helper.setCellContent(sc_menu, sc_menu.titlebartable, desc, 1, 2, nil, "button", nil, function() L.buttonStationTitleLoad(sc_menu, contextLayer) end)
-end
-
-function L.createStationLoadoutTitleBarButton(row, sc_menu, contextLayer)
-	row[2]:setColSpan(6):createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = sc_menu.titleData.height }):setText(ReadText(1811143915, 22), { halign = "center" })
-	row[2].handlers.onClick = function() L.buttonStationLoadoutTitleLoad(sc_menu, contextLayer) end
-end
-
-function L.createShipTitleBarButton(row, sc_menu, contextLayer, active)
-	row[3]:createButton({ active = (not sc_menu.isReadOnly) and active and ((sc_menu.object ~= 0) or (sc_menu.macro ~= "")) and (next(sc_menu.loadouts) ~= nil), height = sc_menu.titleData.height, width = sc_menu.titleData.dropdownWidth + sc_menu.titleData.height + Helper.borderSize, mouseOverText = (sc_menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setText(ReadText(1001, 7905), { halign = "center" })
-	row[3].handlers.onClick = function() L.buttonShipLoadoutTitleLoad(sc_menu, contextLayer) end
-end
-
-function L.buttonStationTitleLoad(sc_menu, contextLayer)
-	if sc_menu.contextMode and (sc_menu.contextMode.mode == "loadCP") then
-		sc_menu.closeContextMenu()
+function L.createStationTitleBarButton(row, menu, sc_config, loadOptions)
+	if L.isModEnabledForType("station") then
+		row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(1811143915, 1), { halign = "center" })
+		row[2].handlers.onClick = function() L.buttonStationTitleLoad(menu, sc_config.contextLayer) end
 	else
-		sc_menu.displayContextFrame("loadCP", sc_menu.titleData.width * config.loadWidthMultiplier, sc_menu.titleData.offsetX + (sc_menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
+		row[2]:createDropDown(loadOptions, { textOverride = ReadText(1001, 7904), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize }):setTextProperties(sc_config.dropDownTextProperties)
+		row[2].handlers.onDropDownConfirmed = menu.dropdownLoad
+		row[2].handlers.onDropDownRemoved = menu.dropdownRemovedCP
+	end
+end
+
+function L.createRefreshStationTitleBarButton(menu, contextLayer, text, loadOptions)
+	if L.isModEnabledForType("station") then
+		local desc = Helper.createButton(Helper.createTextInfo(ReadText(1811143915, 1), "center", Helper.standardFont, Helper.standardFontSize, 255, 255, 255, 100), nil, true, true, 0, 0, 0, menu.titleData.height, nil, nil, nil, "")
+		Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "button", nil, function() L.buttonStationTitleLoad(menu, contextLayer) end)
+	else
+		local desc = Helper.createDropDown(loadOptions, "", text, nil, true, true, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize)
+		Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, nil, menu.dropdownLoad, menu.dropdownRemovedCP)
+	end
+end
+
+function L.createStationLoadoutTitleBarButton(row, menu, contextLayer)
+	row[2]:setColSpan(6):createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(1811143915, 22), { halign = "center" })
+	row[2].handlers.onClick = function() L.buttonStationLoadoutTitleLoad(menu, contextLayer) end
+end
+
+function L.createShipTitleBarButton(row, menu, contextLayer, active)
+	row[3]:createButton({ active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), height = menu.titleData.height, width = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setText(ReadText(1001, 7905), { halign = "center" })
+	row[3].handlers.onClick = function() L.buttonShipLoadoutTitleLoad(menu, contextLayer) end
+end
+
+function L.isModEnabledForType(type)
+	return L.getLoadSettings()[type].enabled
+end
+
+function L.buttonStationTitleLoad(menu, contextLayer)
+	if menu.contextMode and (menu.contextMode.mode == "loadCP") then
+		menu.closeContextMenu()
+	else
+		menu.displayContextFrame("loadCP", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
 		L.params.settingKey = "station"
-		L.params.x = sc_menu.contextMode.x
-		L.params.y = sc_menu.contextMode.y
-		L.params.width = sc_menu.contextMode.width
+		L.params.x = menu.contextMode.x
+		L.params.y = menu.contextMode.y
+		L.params.width = menu.contextMode.width
 		L.params.height = config.stationLoadHeight
-		L.params.itemsList = sc_menu.constructionplans
+		L.params.itemsList = menu.constructionplans
 		L.params.header = ReadText(1811143915, 2)
 		L.params.optionItemNameText = ReadText(1811143915, 9)
-		L.params.onSelection = function(id) sc_menu.dropdownLoad(nil, id) end
-		L.params.onDeletion = function(id) sc_menu.dropdownRemovedCP(nil, id) end
+		L.params.onSelection = function(id) menu.dropdownLoad(nil, id) end
+		L.params.onDeletion = function(id) menu.dropdownRemovedCP(nil, id) end
 		L.params.addToSettingsTable = L.createCPModulesFilter
 		L.params.itemFilter = L.filterItemByModules
 		L.params.contextLayer = contextLayer
-		L.params.closeContextMenu = sc_menu.closeContextMenu
-		L.params.contextMode = sc_menu.contextMode
-		L.params.setContextFrame = function(f) sc_menu.contextFrame = f end
-		L.params.menu = sc_menu
+		L.params.closeContextMenu = menu.closeContextMenu
+		L.params.contextMode = menu.contextMode
+		L.params.setContextFrame = function(f) menu.contextFrame = f end
+		L.params.menu = menu
 		L.createLoadContext(true)
 	end
 end
 
-function L.buttonStationLoadoutTitleLoad(sc_menu, contextLayer)
-	if sc_menu.contextMode and (sc_menu.contextMode.mode == "loadCL") then
-		sc_menu.closeContextMenu()
+function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
+	if menu.contextMode and (menu.contextMode.mode == "loadCL") then
+		menu.closeContextMenu()
 	else
-		sc_menu.displayContextFrame("loadCL", sc_menu.titleData.width * config.loadWidthMultiplier, sc_menu.titleData.offsetX + (sc_menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
+		menu.displayContextFrame("loadCL", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
 		L.params.settingKey = "station_loadout"
-		L.params.x = sc_menu.contextMode.x
-		L.params.y = sc_menu.contextMode.y
-		L.params.width = sc_menu.contextMode.width
+		L.params.x = menu.contextMode.x
+		L.params.y = menu.contextMode.y
+		L.params.width = menu.contextMode.width
 		L.params.height = config.stationLoadoutLoadHeight
-		L.params.itemsList = sc_menu.loadouts
+		L.params.itemsList = menu.loadouts
 		L.params.header = "Select Loadout"
 		L.params.optionItemNameText = ReadText(1811143915, 24)
 		L.params.onSelection = function(id)
-			sc_menu.closeContextMenu()
-			sc_menu.dropdownLoadout(nil, id)
+			menu.closeContextMenu()
+			menu.dropdownLoadout(nil, id)
 		end
-		L.params.onDeletion = function(id) sc_menu.dropdownRemovedLoadout(nil, id) end
+		L.params.onDeletion = function(id) menu.dropdownRemovedLoadout(nil, id) end
 		L.params.contextLayer = contextLayer
-		L.params.closeContextMenu = sc_menu.closeContextMenu
-		L.params.contextMode = sc_menu.contextMode
-		L.params.setContextFrame = function(f) sc_menu.contextFrame = f end
-		L.params.menu = sc_menu
+		L.params.closeContextMenu = menu.closeContextMenu
+		L.params.contextMode = menu.contextMode
+		L.params.setContextFrame = function(f) menu.contextFrame = f end
+		L.params.menu = menu
 		L.params.addToSettingsTable = nil
 		L.params.itemFilter = nil
 		L.createLoadContext(true)
 	end
 end
 
-function L.buttonShipLoadoutTitleLoad(sc_menu, contextLayer)
-	if sc_menu.contextMode and (sc_menu.contextMode.mode == "loadCL") then
-		sc_menu.closeContextMenu()
+function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
+	if menu.contextMode and (menu.contextMode.mode == "loadCL") then
+		menu.closeContextMenu()
 	else
-		sc_menu.displayContextFrame("loadCL", sc_menu.titleData.width * config.loadWidthMultiplier, sc_menu.titleData.offsetX + (sc_menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), sc_menu.titleData.offsetY + sc_menu.titleData.height + Helper.borderSize)
+		menu.displayContextFrame("loadCL", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
 		L.params.settingKey = "ship_loadout"
-		L.params.x = sc_menu.contextMode.x
-		L.params.y = sc_menu.contextMode.y
-		L.params.width = sc_menu.contextMode.width
+		L.params.x = menu.contextMode.x
+		L.params.y = menu.contextMode.y
+		L.params.width = menu.contextMode.width
 		L.params.height = config.stationLoadoutLoadHeight
-		L.params.itemsList = sc_menu.loadouts
+		L.params.itemsList = menu.loadouts
 		L.params.header = "Select Loadout"
 		L.params.optionItemNameText = ReadText(1811143915, 24)
 		L.params.onSelection = function(id)
-			sc_menu.closeContextMenu()
-			sc_menu.dropdownLoadout(nil, id)
+			menu.closeContextMenu()
+			menu.dropdownLoadout(nil, id)
 		end
-		L.params.onDeletion = function(id) sc_menu.dropdownRemovedLoadout(nil, id) end
+		L.params.onDeletion = function(id) menu.dropdownRemovedLoadout(nil, id) end
 		L.params.contextLayer = contextLayer
-		L.params.closeContextMenu = sc_menu.closeContextMenu
-		L.params.contextMode = sc_menu.contextMode
-		L.params.setContextFrame = function(f) sc_menu.contextFrame = f end
-		L.params.menu = sc_menu
+		L.params.closeContextMenu = menu.closeContextMenu
+		L.params.contextMode = menu.contextMode
+		L.params.setContextFrame = function(f) menu.contextFrame = f end
+		L.params.menu = menu
 		L.params.addToSettingsTable = nil
 		L.params.itemFilter = nil
 		L.createLoadContext(true)
@@ -232,7 +254,7 @@ function L.buttonShipLoadoutTitleLoad(sc_menu, contextLayer)
 end
 
 function L.createLoadContext(first)
-	L.settings = L.getLoadSettings(L.params.settingKey)
+	L.settings = L.getLoadSettings()[L.params.settingKey]
 	local listRoot = L.prepareBrowserStructure(L.params.itemsList)
 
 	Helper.removeAllWidgetScripts(L.params.menu, L.params.contextLayer)
@@ -642,30 +664,52 @@ function L.filterMacroToggled(macro, checked)
 	L.refreshLoadFrame()
 end
 
-function L.getLoadSettings(configKey)
-	local s = GetNPCBlackboard(L.playerID, config.settingsIdFormat:format(configKey))
-	if not s then
-		return {
-			folder_enabled = false,
-			folder_delimiter = " ",
-			folder_flatten_single_item = false,
-			folder_fullname = false,
-			item_fullname = true
-		}
+function L.getLoadSettings()
+	local default = {
+		folder_enabled = false,
+		folder_delimiter = " ",
+		folder_flatten_single_item = false,
+		folder_fullname = false,
+		item_fullname = true,
+		enabled = true,
+	}
+	local allDefault = {
+		station = {table.unpack(default)},
+		station_loadout = {table.unpack(default)},
+		ship_loadout = {table.unpack(default)}
+	}
+	if not L.playerID then
+		return allDefault
+	end
+	local all = GetNPCBlackboard(L.playerID, config.settingsBlackboardId)
+	if not all then
+		return allDefault
 	end
 	return {
-		folder_enabled = s.folder_enabled == 1,
-		folder_delimiter = (not s.folder_delimiter or s.folder_delimiter == "") and " " or s.folder_delimiter,
-		folder_flatten_single_item = s.folder_flatten_single_item == 1,
-		folder_fullname = s.folder_fullname == 1,
-		item_fullname = s.item_fullname == 1
+		station = L.convertLoadSettings(all.station, default),
+		station_loadout = L.convertLoadSettings(all.station_loadout, default),
+		ship_loadout = L.convertLoadSettings(all.ship_loadout, default)
+	}
+end
+
+function L.convertLoadSettings(s, default)
+	if not s then
+		return default
+	end
+	return {
+		folder_enabled = s.folder_enabled == nil and default.folder_enabled or s.folder_enabled == 1,
+		folder_delimiter = (s.folder_delimiter == nil or s.folder_delimiter == "") and default.folder_delimiter or s.folder_delimiter,
+		folder_flatten_single_item = s.folder_flatten_single_item == nil and default.folder_flatten_single_item or s.folder_flatten_single_item == 1,
+		folder_fullname = s.folder_fullname == nil and default.folder_fullname or s.folder_fullname == 1,
+		item_fullname = s.item_fullname == nil and default.item_fullname or s.item_fullname == 1,
+		enabled = s.enabled == nil and default.enabled or s.enabled == 1,
 	}
 end
 
 function L.setLoadSetting(configKey, key, value)
-	local settings = L.getLoadSettings(configKey)
-	settings[key] = value
-	SetNPCBlackboard(L.playerID, config.settingsIdFormat:format(configKey), settings)
+	local settings = L.getLoadSettings()
+	settings[configKey][key] = value
+	SetNPCBlackboard(L.playerID, config.settingsBlackboardId, settings)
 end
 
 function L.onRowChanged(uitable, rowdata)
