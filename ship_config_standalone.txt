@@ -101,7 +101,6 @@ function rkn_menu.createTitleBar(frame)
 		--row[2].properties.text.halign = "left"
 		--row[2].handlers.onDropDownConfirmed = menu.dropdownShip
 
-		DebugError(tostring(shipOptions))
 		local dropdown = ConfigioLib.createShipTitleBarButton(row, menu, config, shipOptions, curShipOption, dropDownIconProperties)
 		---- Runekn's Changes Stop Here! ----
 		local active = true

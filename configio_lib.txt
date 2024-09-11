@@ -124,18 +124,18 @@ end
 
 local function init()
 	L.playerID = ConvertStringTo64Bit(tostring(C.GetPlayerID()))
-	L.filter = { [config.stationKey] = { macros = {} }, [config.stationLoadoutKey] = {}, [config.shipLoadoutKey] = {}, [config.shipKey] = {} }
+	L.filter = { [config.stationKey] = { macros = {} }, [config.stationLoadoutKey] = {}, [config.shipLoadoutKey] = {}, [config.shipKey] = { races = {} } }
 	L.settings = {}
 	L.params = {}
 	L.expandedFolders = {}
 	L.selectedRow = nil
 	L.topRow = nil
 	L.allProductionModules = L.getAllProductionModules()
+	L.allRaces = L.getAllRaces()
 
 	-- Set settings for extension options menu on game start --
 	local settings = L.getLoadSettings()
 	SetNPCBlackboard(L.playerID, config.settingsBlackboardId, settings)
-
 end
 
 function L.createStationTitleBarButton(row, menu, sc_config, loadOptions)
@@ -177,10 +177,24 @@ function L.createRefreshStationLoadoutTitleBarButton(menu, text, loadoutOptions)
 end
 
 function L.createShipTitleBarButton(row, menu, sc_config, shipOptions, curShipOption, dropDownIconProperties)
-	if L.isModEnabledForType(config.shipKey) then
-		local dropdownDummy = { properties = { text = {}, icon = {} } }
-		local text = curShipOption and curShipOption.text or ReadText(1811143915, 30)
-		row[2]:createButton({ active = (not menu.isReadOnly) and (menu.class ~= ""), height = menu.titleData.height }):setText(text, { halign = "left" })
+	if L.isModEnabledForType(config.shipKey) and menu.mode ~= "upgrade" then
+		local dropdownDummy = { properties = { text = { }, icon = {} } }
+		local text = ReadText(1811143915, 30)
+		local mouseOverText = ""
+		if menu.macro and menu.macro ~= "" then
+			for _,o in ipairs(shipOptions) do
+				if o.id == menu.macro then
+					text = o.text
+					mouseOverText = o.mouseovertext
+					break
+				end
+			end
+		end
+		if (menu.mode == "purchase") and (menu.macro ~= "") and (not menu.validLicence) then
+			local haslicence, icon, overridecolor, mouseovertext = menu.checkLicence(menu.macro, true)
+			text = Helper.convertColorToText(overridecolor) .. text
+		end
+		row[2]:createButton({ active = (not menu.isReadOnly) and (menu.class ~= ""), height = menu.titleData.height, mouseOverText = mouseOverText }):setText(text, { halign = "center"  })
 		row[2].handlers.onClick = function() L.buttonShipTitleLoad(menu, shipOptions, sc_config.contextLayer) end
 		return dropdownDummy
 	else
@@ -280,10 +294,9 @@ function L.buttonShipTitleLoad(menu, shipOptions, contextLayer)
 			x = menu.contextMode.x,
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
-			height = config.stationLoadHeight,
+			height = config.stationLoadoutLoadHeight,
 			itemsList = shipOptions,
-			header = ReadText(1811143915, 22),
-			optionItemNameText = ReadText(1811143915, 24),
+			header = ReadText(1811143915, 30),
 			onSelection = function(id)
 				menu.closeContextMenu()
 				menu.dropdownShip(nil, id)
@@ -293,12 +306,12 @@ function L.buttonShipTitleLoad(menu, shipOptions, contextLayer)
 			contextMode = menu.contextMode,
 			setContextFrame = function(f) menu.contextFrame = f end,
 			menu = menu,
-			addToSettingsTable = nil,
-			itemFilter = nil,
-			isItemActive = function(item) return true end,
-			disableSettings = true
+			--addToSettingsTable = L.createShipRacesFilter,
+			--itemFilter = L.filterItemByRace,
+			isItemActive = function(_) return true end,
+			disableSettings = true,
+			overrideItemText = function(item) return Helper.convertColorToText(item.item.overridecolor) .. item.item.text end
 		}
-		DebugError(SerializeTable(shipOptions))
 		L.createLoadContext(true)
 	end
 end
@@ -466,6 +479,17 @@ function L.createCPModulesFilter(stable)
 	L.addModulesToFilter(stable, ReadText(1811143915, 19), false)
 end
 
+function L.createShipRacesFilter(stable)
+	local row = stable:addRow(false, { fixed = true })
+	row[1]:setColSpan(2):createText(ReadText(1811143915, 31), config.browserHeaderTextProperties)
+
+	local addSeparation = L.addRacesToFilter(stable, ReadText(1811143915, 18), true)
+	if addSeparation then
+		stable:addEmptyRow(Helper.standardTextHeight)
+	end
+	L.addRacesToFilter(stable, ReadText(1811143915, 19), false)
+end
+
 function L.prepareBrowserStructure(itemList)
 	-- First we build the folder structure --
 	local root = { type = "folder", name = "root", folders = {}, folders_arr = {}, items = {} }
@@ -544,6 +568,43 @@ function L.filterItemByModules(item)
 	return true
 end
 
+function L.filterItemByRace(item)
+	local makerraces = GetMacroData(item.id, "makerraces")
+	local selectedRaces = L.filter[L.params.settingKey].races
+	if selectedRaces and #selectedRaces > 0 then
+		for _,r in ipairs(makerraces) do
+			if not selectedRaces[r] then
+				return false
+			end
+		end
+		return true
+	end
+	return true
+	--[[local selectedRaces = L.filter[L.params.settingKey].races
+	DebugError(SerializeTable(selectedRaces))
+	if selectedRaces and next(selectedRaces) ~= nil then
+		local macroname, ware = GetMacroData(item.id, "name", "ware")
+		if ware then
+			local factions = {}
+			local n = C.GetNumWareBlueprintOwners(ware)
+			local buf = ffi.new("const char*[?]", n)
+			n = C.GetWareBlueprintOwners(buf, n, ware)
+
+			for i = 0, n - 1 do
+				local faction = ffi.string(buf[i])
+				factions[faction] = true
+			end
+
+			for k,_ in pairs(selectedRaces) do
+				if not factions[k] then
+					return false
+				end
+			end
+		end
+	end
+	return true--]]
+end
+
 function L.undentSingleItems(folder, parent)
 	local canDelete = true
 	local atLeastOneSubFolder = false
@@ -598,6 +659,9 @@ function L.addFolderToList(ltable, root, column)
 		if not item.active then
 			text = Helper.convertColorToText(config.inactiveColor) .. text
 		end
+		if L.params.overrideItemText then
+			text = L.params.overrideItemText(item)
+		end
 		row[column]:setColSpan(config.maxFolders - column + 2):createText(text, config.planTextProperties)
 		row[column].properties.mouseOverText = item.item.mouseovertext
 	end
@@ -634,14 +698,65 @@ function L.getAllProductionModules()
 
 		if moduletype == "moduletypes_production" then
 			local entry = { name = name, macro = macro }
-			entry.name = name
-			entry.macro = macro
 			table.insert(modulewares, entry)
 		end
     end
 	
 	table.sort(modulewares, function (a, b) return a.name < b.name end)
 	return modulewares
+end
+
+function L.addRacesToFilter(table, buttonText, checked)
+	local atLeastOneAdded = false;
+	local selectedRaces = L.filter[L.params.settingKey].races
+	for _, race in ipairs(L.allRaces) do
+		if (checked and selectedRaces[race.id] ~= nil) or (not checked and selectedRaces[race.id] == nil) then
+			local row = table:addRow(true, { })
+			row[1]:createText(race.name, { })
+			row[2]:createButton({  }):setText(buttonText, { halign = "center" })
+			row[2].handlers.onClick = function () L.filterRaceToggled(race.id, not checked) end
+			atLeastOneAdded = true
+		end
+	end
+	return atLeastOneAdded
+end
+
+function L.getAllRaces()
+	-- uint32_t GetNumWares(const char* tags, bool research, const char* licenceownerid, const char* exclusiontags);
+	-- uint32_t GetWares(const char** result, uint32_t resultlen, const char* tags, bool research, const char* licenceownerid, const char* exclusiontags);
+	--[[local races = {}
+    local tag = "ship"
+    local numwares = C.GetNumWares(tag, false, nil, "noplayerblueprint")
+    local wares = ffi.new("const char*[?]", numwares)
+    numwares = C.GetWares(wares, numwares, tag, false, nil, "noplayerblueprint")
+    for j = 0, numwares - 1 do
+        local locware = ffi.string(wares[j])
+        local macro = GetWareData(locware, "component")
+		local makerrace, makerracename = GetMacroData(macro, "makerraceid", "makerracename")
+		local entry = { name = makerracename, id = makerrace }
+		table.insert(races, entry)
+    end
+	
+	table.sort(races, function (a, b) return a.name < b.name end)
+	DebugError(SerializeTable(races))
+	return races--]]
+
+	local skip = { khaak = true, drone = true }
+	local races = {}
+	local n = C.GetNumAllRaces()
+	local buf = ffi.new("RaceInfo[?]", n)
+	n = C.GetAllRaces(buf, n)
+	for i = 0, n - 1 do
+		local entry = {}
+		entry.id = ffi.string(buf[i].id)
+		entry.name = ffi.string(buf[i].name)
+
+		if not skip[entry.id] then
+			table.insert(races, entry)
+		end
+	end
+	table.sort(races, function (a, b) return a.name < b.name end)
+	return races
 end
 
 function L.isRowValidForLoad()
@@ -746,6 +861,16 @@ function L.filterMacroToggled(macro, checked)
 		if index then
 			table.remove(selectedMacros, index)
 		end
+	end
+	L.refreshLoadFrame()
+end
+
+function L.filterRaceToggled(id, checked)
+	local selectedRaces = L.filter[L.params.settingKey].races
+	if checked then
+		selectedRaces[id] = true
+	else
+		selectedRaces[id] = nil
 	end
 	L.refreshLoadFrame()
 end

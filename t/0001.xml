@@ -32,5 +32,7 @@
 		<t id="28">Enable for ship loadouts</t>
 		<t id="29">Enable for ship selection</t>
 		<t id="30">Select Ship</t>
+		<t id="31">Race filter</t>
+		<t id="32">Type filter</t>
 	</page>
 </language>
