@@ -306,8 +306,8 @@ function L.buttonShipTitleLoad(menu, shipOptions, contextLayer)
 			contextMode = menu.contextMode,
 			setContextFrame = function(f) menu.contextFrame = f end,
 			menu = menu,
-			--addToSettingsTable = L.createShipRacesFilter,
-			--itemFilter = L.filterItemByRace,
+			addToSettingsTable = L.createShipRacesFilter,
+			itemFilter = L.filterItemByRace,
 			isItemActive = function(_) return true end,
 			disableSettings = true,
 			overrideItemText = function(item) return Helper.convertColorToText(item.item.overridecolor) .. item.item.text end
@@ -371,7 +371,7 @@ function L.createLoadContext(first)
 	local browserX = config.loadSettingsWidth + Helper.borderSize + config.settingsBrowserSeparation
 
 	-- Create item list --
-	local ltable = contextFrame:addTable(config.maxFolders + 1, { wraparound = true, tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = L.params.height, x = browserX, width = browserWidth })
+	local ltable = contextFrame:addTable(config.maxFolders + 1, { wraparound = true, tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = L.params.height - Helper.standardButtonHeight, x = browserX, width = browserWidth })
 	for column = 1, config.maxFolders do
 		ltable:setColWidth(column, smallColWidth, false)
 	end
@@ -569,40 +569,27 @@ function L.filterItemByModules(item)
 end
 
 function L.filterItemByRace(item)
-	local makerraces = GetMacroData(item.id, "makerraces")
+	local makerraces = GetMacroData(item.id, "makerraceid")
 	local selectedRaces = L.filter[L.params.settingKey].races
-	if selectedRaces and #selectedRaces > 0 then
-		for _,r in ipairs(makerraces) do
-			if not selectedRaces[r] then
+	if selectedRaces and next(selectedRaces) ~= nil then
+		for k,_ in pairs(selectedRaces) do
+			local f = false
+			if #makerraces == 0 then
+				f = k == "other"
+			else
+				for _,r in ipairs(makerraces) do
+					if r == k then
+						f = true
+						break
+					end
+				end
+			end
+			if not f then
 				return false
 			end
 		end
-		return true
 	end
 	return true
-	--[[local selectedRaces = L.filter[L.params.settingKey].races
-	DebugError(SerializeTable(selectedRaces))
-	if selectedRaces and next(selectedRaces) ~= nil then
-		local macroname, ware = GetMacroData(item.id, "name", "ware")
-		if ware then
-			local factions = {}
-			local n = C.GetNumWareBlueprintOwners(ware)
-			local buf = ffi.new("const char*[?]", n)
-			n = C.GetWareBlueprintOwners(buf, n, ware)
-
-			for i = 0, n - 1 do
-				local faction = ffi.string(buf[i])
-				factions[faction] = true
-			end
-
-			for k,_ in pairs(selectedRaces) do
-				if not factions[k] then
-					return false
-				end
-			end
-		end
-	end
-	return true--]]
 end
 
 function L.undentSingleItems(folder, parent)
@@ -756,6 +743,7 @@ function L.getAllRaces()
 		end
 	end
 	table.sort(races, function (a, b) return a.name < b.name end)
+	table.insert(races, { name = "Other", id = "other" })
 	return races
 end
 
