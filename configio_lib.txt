@@ -572,22 +572,21 @@ function L.filterItemByRace(item)
 	local makerraces = GetMacroData(item.id, "makerraceid")
 	local selectedRaces = L.filter[L.params.settingKey].races
 	if selectedRaces and next(selectedRaces) ~= nil then
+		local f = false
 		for k,_ in pairs(selectedRaces) do
-			local f = false
 			if #makerraces == 0 then
-				f = k == "other"
+				if k == "other" then
+					return true
+				end
 			else
 				for _,r in ipairs(makerraces) do
-					if r == k then
-						f = true
-						break
+					if r == k or (r == "xenon" and k == "other") then
+						return true
 					end
 				end
 			end
-			if not f then
-				return false
-			end
 		end
+		return false
 	end
 	return true
 end
@@ -709,26 +708,7 @@ function L.addRacesToFilter(table, buttonText, checked)
 end
 
 function L.getAllRaces()
-	-- uint32_t GetNumWares(const char* tags, bool research, const char* licenceownerid, const char* exclusiontags);
-	-- uint32_t GetWares(const char** result, uint32_t resultlen, const char* tags, bool research, const char* licenceownerid, const char* exclusiontags);
-	--[[local races = {}
-    local tag = "ship"
-    local numwares = C.GetNumWares(tag, false, nil, "noplayerblueprint")
-    local wares = ffi.new("const char*[?]", numwares)
-    numwares = C.GetWares(wares, numwares, tag, false, nil, "noplayerblueprint")
-    for j = 0, numwares - 1 do
-        local locware = ffi.string(wares[j])
-        local macro = GetWareData(locware, "component")
-		local makerrace, makerracename = GetMacroData(macro, "makerraceid", "makerracename")
-		local entry = { name = makerracename, id = makerrace }
-		table.insert(races, entry)
-    end
-	
-	table.sort(races, function (a, b) return a.name < b.name end)
-	DebugError(SerializeTable(races))
-	return races--]]
-
-	local skip = { khaak = true, drone = true }
+	local skip = { khaak = true, drone = true, xenon = true }
 	local races = {}
 	local n = C.GetNumAllRaces()
 	local buf = ffi.new("RaceInfo[?]", n)
