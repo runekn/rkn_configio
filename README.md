@@ -20,7 +20,7 @@ Let's say you have three station plans:
  
 If we enable groups, and set the delimiter to slash '/', then the list will reorganize into the follwing structure:
  ```
- - [-] ARG								<-- collapsible group
+ - [-] ARG				<-- collapsible group
  -     [-] EnergyCells		
  -         The First			<-- station plan
  -         The Second			
