@@ -1,4 +1,4 @@
-# Improved Configuration Load
+# Expanded Configuration Loader
 
 ## Description
 Replaces the simple dropdown to load stations, ships, or loadouts with a bigger and more feature-rich dialog.

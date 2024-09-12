@@ -3,24 +3,24 @@ local ffi = require("ffi")
 local C = ffi.C
 
 local function init()
-	--DebugError("Improved Config I/O: extension_check Init")
+	--DebugError("Expanded Config I/O: extension_check Init")
 
 	--local extensions = GetExtensionList()
 	local compat = false
     --for _,extension in ipairs(extensions) do
         --if extension.id == "kuerteeUIExtensionsAndHUD" and tonumber(extension.version) >= 2.06 and extension.enabled == true then
-          --  DebugError("Reactive Docking: Found UIX")
+          --  DebugError("Expanded Config I/O: Found UIX")
 			--			compat = true
 			--			break
         --end
     --end
 
 	if compat == true then
-		DebugError("Improved Config I/O: Loading in High Compatibility Mode")
+		DebugError("Expanded Config I/O: Loading in High Compatibility Mode")
 		require('extensions.rkn_configio.station_config_uix')
 		require('extensions.rkn_configio.ship_config_uix')
 	else
-		DebugError("Improved Config I/O: Loading in Stand Alone Mode")
+		DebugError("Expanded Config I/O: Loading in Stand Alone Mode")
 		require('extensions.rkn_configio.station_config_standalone')
 		require('extensions.rkn_configio.ship_config_standalone')
 	end
