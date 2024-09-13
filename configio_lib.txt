@@ -860,7 +860,7 @@ end
 function L.getLoadSettings()
 	local default = {
 		folder_enabled = false,
-		folder_delimiter = " ",
+		folder_delimiter = "/",
 		folder_flatten_single_item = false,
 		folder_fullname = false,
 		item_fullname = true,
