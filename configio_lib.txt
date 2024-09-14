@@ -92,7 +92,7 @@ local function ShallowCopy(orig)
 end
 
 -- For debugging --
-local function SerializeTable(val, name, skipnewlines, depth)
+function L.SerializeTable(val, name, skipnewlines, depth)
     skipnewlines = skipnewlines or false
     depth = depth or 0
 
@@ -104,7 +104,7 @@ local function SerializeTable(val, name, skipnewlines, depth)
         tmp = tmp .. "{" .. (not skipnewlines and "\n" or "")
 
         for k, v in pairs(val) do
-            tmp =  tmp .. SerializeTable(v, k, skipnewlines, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
+            tmp =  tmp .. L.SerializeTable(v, k, skipnewlines, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
         end
 
         tmp = tmp .. string.rep(" ", depth) .. "}"
@@ -234,8 +234,8 @@ function L.buttonStationTitleLoad(menu, contextLayer)
 			itemsList = menu.constructionplans,
 			header = ReadText(1811143915, 2),
 			optionItemNameText = ReadText(1811143915, 9),
-			onSelection = function(id) menu.dropdownLoad(nil, id) end,
-			onDeletion = function(id) menu.dropdownRemovedCP(nil, id) end,
+			onSelection = function(item) menu.dropdownLoad(nil, item.id) end,
+			onDeletion = function(item) menu.dropdownRemovedCP(nil, item.id) end,
 			addToSettingsTable = L.createCPModulesFilter,
 			itemFilter = L.filterItemByModules,
 			contextLayer = contextLayer,
@@ -260,16 +260,16 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
 			height = config.stationLoadoutLoadHeight,
-			itemsList = menu.loadouts,
+			itemsList = L.addCustomAutoPresets(config.stationLoadoutKey, menu.loadouts),
 			header = ReadText(1811143915, 22),
 			optionItemNameText = ReadText(1811143915, 24),
-			onSelection = function(id)
+			onSelection = function(item) -- TODO: return item
 				menu.closeContextMenu()
-				menu.dropdownLoadout(nil, id)
+				menu.onLoadoutLoad(menu, item)
 			end,
-			onDeletion = function(id)
+			onDeletion = function(item)
 				menu.closeContextMenu()
-				menu.dropdownRemovedLoadout(nil, id)
+				menu.onLoadoutRemoved(menu.dropdownRemovedLoadout, item.id)
 			end,
 			contextLayer = contextLayer,
 			closeContextMenu = menu.closeContextMenu,
@@ -278,7 +278,8 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 			menu = menu,
 			addToSettingsTable = nil,
 			itemFilter = nil,
-			isItemActive = function(item) return item.active or (item.preset and true or false)  end
+			isItemActive = function(item) return item.active or (item.preset and true or false) end,
+			overrideItemText = nil -- TODO: color for auto presets
 		}
 		L.createLoadContext(true)
 	end
@@ -297,9 +298,9 @@ function L.buttonShipTitleLoad(menu, shipOptions, contextLayer)
 			height = config.stationLoadoutLoadHeight,
 			itemsList = shipOptions,
 			header = ReadText(1811143915, 30),
-			onSelection = function(id)
+			onSelection = function(item)
 				menu.closeContextMenu()
-				menu.dropdownShip(nil, id)
+				menu.dropdownShip(nil, item.id)
 			end,
 			contextLayer = contextLayer,
 			closeContextMenu = menu.closeContextMenu,
@@ -327,23 +328,24 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
 			height = config.stationLoadoutLoadHeight,
-			itemsList = menu.loadouts,
+			itemsList = L.addCustomAutoPresets(config.shipLoadoutKey, menu.loadouts),
 			header = ReadText(1811143915, 22),
 			optionItemNameText = ReadText(1811143915, 24),
-			onSelection = function(id)
+			onSelection = function(item)
 				menu.closeContextMenu()
-				menu.dropdownLoadout(nil, id)
+				menu.onLoadoutLoad(menu, item)
 			end,
-			onDeletion = function(id)
+			onDeletion = function(item)
 				menu.closeContextMenu()
-				menu.dropdownLoadoutRemoved(nil, id)
+				menu.onLoadoutRemoved(menu.dropdownLoadoutRemoved, item.id)
 			end,
 			contextLayer = contextLayer,
 			closeContextMenu = menu.closeContextMenu,
 			contextMode = menu.contextMode,
 			setContextFrame = function(f) menu.contextFrame = f end,
 			menu = menu,
-			isItemActive = function(item) return item.active or (item.preset and true or false)  end
+			isItemActive = function(item) return item.active or (item.preset and true or false) end,
+			overrideItemText = nil -- TODO: color for auto presets
 		}
 		L.createLoadContext(true)
 	end
@@ -746,13 +748,13 @@ end
 
 function L.buttonDeleteItem()
 	if L.isRowValidForDeletion then
-		L.params.onDeletion(L.selectedEntry.item.id)
+		L.params.onDeletion(L.selectedEntry.item)
 	end
 end
 
 function L.buttonLoadItem()
 	if L.isRowValidForLoad then
-		L.params.onSelection(L.selectedEntry.item.id)
+		L.params.onSelection(L.selectedEntry.item)
 	end
 end
 
@@ -922,6 +924,36 @@ function L.onSelectElement(uitable)
 	if uitable == L.ltable.id then
 		L.buttonLoadItem()
 	end
+end
+
+function L.addCustomAutoPresets(key, loadouts)
+	-- TODO
+	return loadouts
+end
+
+function L.onLoadoutLoad(menu, item)
+	if not item.item.customPreset then
+		menu.dropdownLoadout(_, item.id)
+		return
+	end
+
+	local upgradeplan = {} -- TODO
+
+	menu.getUpgradeData(upgradeplan)
+	if menu.holomap and (menu.holomap ~= 0) then
+		Helper.callLoadoutFunction(menu.constructionplan[menu.loadoutMode].upgradeplan, nil, function (loadout, _) return C.UpdateObjectConfigurationMap(menu.holomap, menu.container, menu.loadoutModule.component, menu.loadoutModule.macro, true, loadout) end)
+	end
+
+	menu.displayMenu()
+end
+
+function L.onLoadoutRemoved(defaultLoad, item)
+	if not item.item.customPreset then
+		defaultLoad(nil, item.id)
+		return
+	end
+
+	-- TODO: remove custom preset
 end
 
 init()
