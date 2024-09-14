@@ -92,7 +92,7 @@ local function ShallowCopy(orig)
 end
 
 -- For debugging --
-function L.SerializeTable(val, name, skipnewlines, depth)
+function SerializeTable(val, name, skipnewlines, depth)
     skipnewlines = skipnewlines or false
     depth = depth or 0
 
@@ -104,7 +104,7 @@ function L.SerializeTable(val, name, skipnewlines, depth)
         tmp = tmp .. "{" .. (not skipnewlines and "\n" or "")
 
         for k, v in pairs(val) do
-            tmp =  tmp .. L.SerializeTable(v, k, skipnewlines, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
+            tmp =  tmp .. SerializeTable(v, k, skipnewlines, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
         end
 
         tmp = tmp .. string.rep(" ", depth) .. "}"
@@ -137,6 +137,15 @@ local function init()
 	local settings = L.getLoadSettings()
 	SetNPCBlackboard(L.playerID, config.settingsBlackboardId, settings)
 end
+
+
+
+
+
+
+
+
+---------- UI HANDLING ------------
 
 function L.createStationTitleBarButton(row, menu, sc_config, loadOptions)
 	if L.isModEnabledForType(config.stationKey) then
@@ -236,16 +245,18 @@ function L.buttonStationTitleLoad(menu, contextLayer)
 			optionItemNameText = ReadText(1811143915, 9),
 			onSelection = function(item) menu.dropdownLoad(nil, item.id) end,
 			onDeletion = function(item) menu.dropdownRemovedCP(nil, item.id) end,
-			addToSettingsTable = L.createCPModulesFilter,
 			itemFilter = L.filterItemByModules,
 			contextLayer = contextLayer,
 			closeContextMenu = menu.closeContextMenu,
 			contextMode = menu.contextMode,
 			setContextFrame = function(f) menu.contextFrame = f end,
 			menu = menu,
-			isItemActive = function(item) return item.active end
+			isItemActive = function(item) return item.active end,
+			frameModules = { L.createSettings, L.createSearchField, L.createCPModulesFilter }
 		}
-		L.createLoadContext(true)
+		L.autoSelectSearch = true
+		L.contextModule = nil
+		L.createLoadContext()
 	end
 end
 
@@ -263,13 +274,13 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 			itemsList = L.addCustomAutoPresets(config.stationLoadoutKey, menu.loadouts),
 			header = ReadText(1811143915, 22),
 			optionItemNameText = ReadText(1811143915, 24),
-			onSelection = function(item) -- TODO: return item
+			onSelection = function(item)
 				menu.closeContextMenu()
-				menu.onLoadoutLoad(menu, item)
+				L.onLoadoutLoad(menu, item)
 			end,
 			onDeletion = function(item)
 				menu.closeContextMenu()
-				menu.onLoadoutRemoved(menu.dropdownRemovedLoadout, item.id)
+				L.onLoadoutRemoved(menu.dropdownRemovedLoadout, item)
 			end,
 			contextLayer = contextLayer,
 			closeContextMenu = menu.closeContextMenu,
@@ -279,9 +290,12 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 			addToSettingsTable = nil,
 			itemFilter = nil,
 			isItemActive = function(item) return item.active or (item.preset and true or false) end,
-			overrideItemText = nil -- TODO: color for auto presets
+			overrideItemText = nil, -- TODO: color for auto presets
+			frameModules = { L.createSettings, L.createSearchField, L.createAutoPresetEditorButton }
 		}
-		L.createLoadContext(true)
+		L.autoSelectSearch = true
+		L.contextModule = nil
+		L.createLoadContext()
 	end
 end
 
@@ -307,13 +321,14 @@ function L.buttonShipTitleLoad(menu, shipOptions, contextLayer)
 			contextMode = menu.contextMode,
 			setContextFrame = function(f) menu.contextFrame = f end,
 			menu = menu,
-			addToSettingsTable = L.createShipRacesFilter,
 			itemFilter = L.filterItemByRace,
 			isItemActive = function(_) return true end,
-			disableSettings = true,
-			overrideItemText = function(item) return Helper.convertColorToText(item.item.overridecolor) .. item.item.text end
+			overrideItemText = function(item) return Helper.convertColorToText(item.item.overridecolor) .. item.item.text end,
+			frameModules = { L.createSearchField, L.createShipRacesFilter }
 		}
-		L.createLoadContext(true)
+		L.autoSelectSearch = true
+		L.contextModule = nil
+		L.createLoadContext()
 	end
 end
 
@@ -333,11 +348,11 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 			optionItemNameText = ReadText(1811143915, 24),
 			onSelection = function(item)
 				menu.closeContextMenu()
-				menu.onLoadoutLoad(menu, item)
+				L.onLoadoutLoad(menu, item)
 			end,
 			onDeletion = function(item)
 				menu.closeContextMenu()
-				menu.onLoadoutRemoved(menu.dropdownLoadoutRemoved, item.id)
+				L.onLoadoutRemoved(menu.dropdownLoadoutRemoved, item)
 			end,
 			contextLayer = contextLayer,
 			closeContextMenu = menu.closeContextMenu,
@@ -345,13 +360,16 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 			setContextFrame = function(f) menu.contextFrame = f end,
 			menu = menu,
 			isItemActive = function(item) return item.active or (item.preset and true or false) end,
-			overrideItemText = nil -- TODO: color for auto presets
+			overrideItemText = nil, -- TODO: color for auto presets
+			frameModules = { L.createSettings, L.createSearchField }
 		}
-		L.createLoadContext(true)
+		L.autoSelectSearch = true
+		L.contextModule = nil
+		L.createLoadContext()
 	end
 end
 
-function L.createLoadContext(first)
+function L.createLoadContext()
 	L.settings = L.getLoadSettings()[L.params.settingKey]
 	local listRoot = L.prepareBrowserStructure(L.params.itemsList)
 
@@ -409,51 +427,112 @@ function L.createLoadContext(first)
 	-- Create settings list --
 	local stable = contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = L.params.height, x = Helper.borderSize, width = config.loadSettingsWidth - Helper.borderSize * 2 })
 	stable:setColWidth(1, config.loadSettingsWidth * 0.7, false)
-	if not L.params.disableSettings then
-		local row = stable:addRow(false, { fixed = true })
-		row[1]:setColSpan(2):createText(ReadText(1811143915, 6), config.browserHeaderTextProperties)
 
-		local row = stable:addRow(true, { fixed = true })
-		row[1]:createText(ReadText(1811143915, 7), { })
-		row[2]:createCheckBox(L.settings.folder_enabled, { width = smallColWidth })
-		row[2].handlers.onClick = L.folderEnabledToggled
-
-		stable:addEmptyRow(Helper.standardTextHeight)
-
-		local row = stable:addRow(true, { fixed = true })
-		row[1]:createText(ReadText(1811143915, 8), { })
-		local delimiterEditBoxText = L.settings.folder_delimiter:gsub(" ", "(space)") -- Replace spaces with '(space)' so that it is easier to read
-		row[2]:createEditBox({ scaling = true }):setText(delimiterEditBoxText, { })
-		row[2].handlers.onEditBoxDeactivated = L.folderDelimiterEdit
-		row[2].properties.mouseOverText = ReadText(1811143915, 12)
-		row[2].properties.active = L.settings.folder_enabled
-
-		local row = stable:addRow(true, { fixed = true })
-		row[1]:createText(L.params.optionItemNameText, { })
-		row[2]:createCheckBox(L.settings.item_fullname, { width = smallColWidth })
-		row[2].handlers.onClick = L.itemFullnameToggled
-		row[2].properties.active = L.settings.folder_enabled
-
-		local row = stable:addRow(true, { fixed = true })
-		row[1]:createText(ReadText(1811143915, 10), { })
-		row[2]:createCheckBox(L.settings.folder_fullname, { width = smallColWidth })
-		row[2].handlers.onClick = L.folderFullnameToggled
-		row[2].properties.active = L.settings.folder_enabled
-
-		local row = stable:addRow(true, { fixed = true })
-		row[1]:createText(ReadText(1811143915, 11), { })
-		row[2]:createCheckBox(L.settings.folder_flatten_single_item, { width = smallColWidth })
-		row[2].handlers.onClick = L.folderFlattenSingleItemToggled
-		row[2].properties.mouseOverText = ReadText(1811143915, 14)
-		row[2].properties.active = L.settings.folder_enabled
-
-		local row = stable:addRow(true, { fixed = true })
-		row[1]:createText(ReadText(1811143915, 33), { })
-		row[2]:createCheckBox(L.settings.item_hide_inactive, { width = smallColWidth })
-		row[2].handlers.onClick = L.itemHideInactiveToggled
-		row[2].properties.active = L.settings.folder_enabled
+	for _, frameModule in ipairs(L.params.frameModules) do
+		frameModule(stable)
 	end
 
+	contextFrame:display()
+end
+
+function L.addFolderToList(ltable, root, column)
+	for _, folder in ipairs(root.folders_arr) do
+		local row = ltable:addRow(folder, {  })
+		local isextended = L.expandedFolders[config.folderIdFormat:format(L.params.settingKey, folder.fullname)]
+		row[column]:createButton({ helpOverlayID = folder.fullname, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
+		row[column].handlers.onClick = function () return L.buttonExtendListEntry(folder.fullname, row.index) end
+		local text = L.settings.folder_fullname and folder.fullname or folder.name
+		row[column + 1]:setColSpan(config.maxFolders - column + 1):createText(text, config.folderTextProperties)
+		if isextended then
+			L.addFolderToList(ltable, folder, column + 1)
+		end
+	end
+
+	for _, item in ipairs(root.items) do
+		local row = ltable:addRow(item, {  })
+		local text = L.settings.item_fullname and item.item.name or item.name
+		if not item.active then
+			text = Helper.convertColorToText(config.inactiveColor) .. text
+		end
+		if L.params.overrideItemText then
+			text = L.params.overrideItemText(item)
+		end
+		row[column]:setColSpan(config.maxFolders - column + 2):createText(text, config.planTextProperties)
+		row[column].properties.mouseOverText = item.item.mouseovertext
+	end
+end
+
+function L.createSettings(stable)
+	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
+
+	local row = stable:addRow(false, { fixed = true })
+	row[1]:setColSpan(2):createText(ReadText(1811143915, 6), config.browserHeaderTextProperties)
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:createText(ReadText(1811143915, 7), { })
+	row[2]:createCheckBox(L.settings.folder_enabled, { width = smallColWidth })
+	row[2].handlers.onClick = function(_, checked)
+		L.setLoadSetting(L.params.settingKey, "folder_enabled", checked)
+		L.refreshLoadFrame()
+	end
+
+	stable:addEmptyRow(Helper.standardTextHeight)
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:createText(ReadText(1811143915, 8), { })
+	local delimiterEditBoxText = L.settings.folder_delimiter:gsub(" ", "(space)") -- Replace spaces with '(space)' so that it is easier to read
+	row[2]:createEditBox({ scaling = true }):setText(delimiterEditBoxText, { })
+	row[2].handlers.onEditBoxDeactivated = function(_, text, textchanged)
+		if textchanged then
+			text = text:gsub("(space)", " ")
+			if text:len() > 1 then
+				text = text:sub(1, 1)
+			end
+			L.setLoadSetting(L.params.settingKey, "folder_delimiter", text)
+			L.refreshLoadFrame()
+		end
+	end
+	row[2].properties.mouseOverText = ReadText(1811143915, 12)
+	row[2].properties.active = L.settings.folder_enabled
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:createText(L.params.optionItemNameText, { })
+	row[2]:createCheckBox(L.settings.item_fullname, { width = smallColWidth })
+	row[2].handlers.onClick = function(_, checked)
+		L.setLoadSetting(L.params.settingKey, "item_fullname", checked)
+		L.refreshLoadFrame()
+	end
+	row[2].properties.active = L.settings.folder_enabled
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:createText(ReadText(1811143915, 10), { })
+	row[2]:createCheckBox(L.settings.folder_fullname, { width = smallColWidth })
+	row[2].handlers.onClick = function(_, checked)
+		L.setLoadSetting(L.params.settingKey, "folder_fullname", checked)
+		L.refreshLoadFrame()
+	end
+	row[2].properties.active = L.settings.folder_enabled
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:createText(ReadText(1811143915, 11), { })
+	row[2]:createCheckBox(L.settings.folder_flatten_single_item, { width = smallColWidth })
+	row[2].handlers.onClick = function(_, checked)
+		L.setLoadSetting(L.params.settingKey, "folder_flatten_single_item", checked)
+		L.refreshLoadFrame()
+	end
+	row[2].properties.mouseOverText = ReadText(1811143915, 14)
+	row[2].properties.active = L.settings.folder_enabled
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:createText(ReadText(1811143915, 33), { })
+	row[2]:createCheckBox(L.settings.item_hide_inactive, { width = smallColWidth })
+	row[2].handlers.onClick = function(_, checked)
+		L.setLoadSetting(L.params.settingKey, "item_hide_inactive", checked)
+		L.refreshLoadFrame()
+	end
+end
+
+function L.createSearchField(stable)
 	-- Search bar --
 	local row = stable:addRow(false, { fixed = true })
 	row[1]:setColSpan(2):createText(ReadText(1811143915, 15), config.browserHeaderTextProperties)
@@ -463,16 +542,10 @@ function L.createLoadContext(first)
 	row[1].handlers.onEditBoxDeactivated = L.searchItemEdit
 	row[2]:createButton({  }):setText(ReadText(1811143915, 16), { halign = "center" })
 	row[2].handlers.onClick = function () L.searchItemEdit(nil, "", true) end
-	if first then
+	if L.autoSelectSearch then
 		-- This will cause the editbox to be automatically activated --
 		L.params.contextMode.nameEditBox = editBox
 	end
-
-	if L.params.addToSettingsTable then
-		L.params.addToSettingsTable(stable)
-	end
-
-	contextFrame:display()
 end
 
 function L.createCPModulesFilter(stable)
@@ -487,6 +560,22 @@ function L.createCPModulesFilter(stable)
 	L.addModulesToFilter(stable, ReadText(1811143915, 19), false)
 end
 
+function L.addModulesToFilter(table, buttonText, checked)
+	local atLeastOneAdded = false;
+	local selectedMacros = L.filter[L.params.settingKey].macros
+	for _, module in ipairs(L.allProductionModules) do
+		local macro = module.macro
+		if (checked and ArrayIndexOf(selectedMacros, macro) ~= nil) or (not checked and ArrayIndexOf(selectedMacros, macro) == nil) then
+			local row = table:addRow(true, { })
+			row[1]:createText(module.name, { })
+			row[2]:createButton({  }):setText(buttonText, { halign = "center" })
+			row[2].handlers.onClick = function () L.filterMacroToggled(macro, not checked) end
+			atLeastOneAdded = true
+		end
+	end
+	return atLeastOneAdded
+end
+
 function L.createShipRacesFilter(stable)
 	local row = stable:addRow(false, { fixed = true })
 	row[1]:setColSpan(2):createText(ReadText(1811143915, 31), config.browserHeaderTextProperties)
@@ -497,6 +586,156 @@ function L.createShipRacesFilter(stable)
 	end
 	L.addRacesToFilter(stable, ReadText(1811143915, 19), false)
 end
+
+function L.addRacesToFilter(table, buttonText, checked)
+	local atLeastOneAdded = false;
+	local selectedRaces = L.filter[L.params.settingKey].races
+	for _, race in ipairs(L.allRaces) do
+		if (checked and selectedRaces[race.id] ~= nil) or (not checked and selectedRaces[race.id] == nil) then
+			local row = table:addRow(true, { })
+			row[1]:createText(race.name, { })
+			row[2]:createButton({  }):setText(buttonText, { halign = "center" })
+			row[2].handlers.onClick = function () L.filterRaceToggled(race.id, not checked) end
+			atLeastOneAdded = true
+		end
+	end
+	return atLeastOneAdded
+end
+
+function L.createAutoPresetEditorButton(stable)
+
+end
+
+function L.isRowValidForLoad()
+	return L.selectedEntry and L.selectedEntry.active
+end
+
+function L.isRowValidForDeletion()
+	return L.selectedEntry and L.selectedEntry.deleteable
+end
+
+function L.buttonDeleteItem()
+	if L.isRowValidForDeletion then
+		L.params.onDeletion(L.selectedEntry.item)
+	end
+end
+
+function L.buttonLoadItem()
+	if L.isRowValidForLoad then
+		L.params.onSelection(L.selectedEntry.item)
+	end
+end
+
+function L.refreshLoadFrame()
+	L.topRow = GetTopRow(L.params.menu.contexttable)
+	L.autoSelectSearch = false
+	L.createLoadContext()
+end
+
+function L.buttonExtendListEntry(index, row)
+	local key = config.folderIdFormat:format(L.params.settingKey, index)
+	L.expandedFolders[key] = not L.expandedFolders[key]
+	L.selectedRow = row
+	L.refreshLoadFrame()
+end
+
+function L.buttonExpandAll(listRoot)
+	L.expandAll(listRoot)
+	L.refreshLoadFrame()
+end
+
+function L.expandAll(root)
+	for _,folder in ipairs(root.folders_arr) do
+		L.expandedFolders[config.folderIdFormat:format(L.params.settingKey, folder.fullname)] = true
+		L.expandAll(folder)
+	end
+end
+
+function L.buttonCollapseAll()
+	for k,_ in pairs(L.expandedFolders) do
+		L.expandedFolders[k] = false
+	end
+	L.refreshLoadFrame()
+end
+
+function L.searchItemEdit(_, text, textchanged)
+	if not textchanged then
+		return
+	end
+
+	L.filter[L.params.settingKey].search = text
+	L.refreshLoadFrame()
+end
+
+function L.filterMacroToggled(macro, checked)
+	local selectedMacros = L.filter[L.params.settingKey].macros
+	if checked then
+		table.insert(selectedMacros, macro)
+	else
+		local index = ArrayIndexOf(selectedMacros, macro)
+		if index then
+			table.remove(selectedMacros, index)
+		end
+	end
+	L.refreshLoadFrame()
+end
+
+function L.filterRaceToggled(id, checked)
+	local selectedRaces = L.filter[L.params.settingKey].races
+	if checked then
+		selectedRaces[id] = true
+	else
+		selectedRaces[id] = nil
+	end
+	L.refreshLoadFrame()
+end
+
+function L.onRowChanged(uitable, rowdata)
+	if L.ltable and uitable == L.ltable.id then
+		L.selectedEntry = rowdata
+		return true
+	end
+	return false
+end
+
+function L.onSelectElement(uitable)
+	if uitable == L.ltable.id then
+		L.buttonLoadItem()
+	end
+end
+
+function L.onLoadoutLoad(menu, item)
+	if not item.customPreset then
+		menu.dropdownLoadout(_, item.id)
+		return
+	end
+
+	local upgradeplan = {} -- TODO
+
+	menu.getUpgradeData(upgradeplan)
+	if menu.holomap and (menu.holomap ~= 0) then
+		Helper.callLoadoutFunction(menu.constructionplan[menu.loadoutMode].upgradeplan, nil, function (loadout, _) return C.UpdateObjectConfigurationMap(menu.holomap, menu.container, menu.loadoutModule.component, menu.loadoutModule.macro, true, loadout) end)
+	end
+
+	menu.displayMenu()
+end
+
+function L.onLoadoutRemoved(defaultLoad, item)
+	if not item.customPreset then
+		defaultLoad(nil, item.id)
+		return
+	end
+
+	-- TODO: remove custom preset
+end
+
+
+
+
+
+
+
+------- LOGICAL --------
 
 function L.prepareBrowserStructure(itemList)
 	-- First we build the folder structure --
@@ -637,49 +876,6 @@ function L.sortFolder(folder)
 	end
 end
 
-function L.addFolderToList(ltable, root, column)
-	for _, folder in ipairs(root.folders_arr) do
-		local row = ltable:addRow(folder, {  })
-		local isextended = L.expandedFolders[config.folderIdFormat:format(L.params.settingKey, folder.fullname)]
-		row[column]:createButton({ helpOverlayID = folder.fullname, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
-		row[column].handlers.onClick = function () return L.buttonExtendListEntry(folder.fullname, row.index) end
-		local text = L.settings.folder_fullname and folder.fullname or folder.name
-		row[column + 1]:setColSpan(config.maxFolders - column + 1):createText(text, config.folderTextProperties)
-		if isextended then
-			L.addFolderToList(ltable, folder, column + 1)
-		end
-	end
-
-	for _, item in ipairs(root.items) do
-		local row = ltable:addRow(item, {  })
-		local text = L.settings.item_fullname and item.item.name or item.name
-		if not item.active then
-			text = Helper.convertColorToText(config.inactiveColor) .. text
-		end
-		if L.params.overrideItemText then
-			text = L.params.overrideItemText(item)
-		end
-		row[column]:setColSpan(config.maxFolders - column + 2):createText(text, config.planTextProperties)
-		row[column].properties.mouseOverText = item.item.mouseovertext
-	end
-end
-
-function L.addModulesToFilter(table, buttonText, checked)
-	local atLeastOneAdded = false;
-	local selectedMacros = L.filter[L.params.settingKey].macros
-	for _, module in ipairs(L.allProductionModules) do
-		local macro = module.macro
-		if (checked and ArrayIndexOf(selectedMacros, macro) ~= nil) or (not checked and ArrayIndexOf(selectedMacros, macro) == nil) then
-			local row = table:addRow(true, { })
-			row[1]:createText(module.name, { })
-			row[2]:createButton({  }):setText(buttonText, { halign = "center" })
-			row[2].handlers.onClick = function () L.filterMacroToggled(macro, not checked) end
-			atLeastOneAdded = true
-		end
-	end
-	return atLeastOneAdded
-end
-
 function L.getAllProductionModules()
 	-- uint32_t GetNumWares(const char* tags, bool research, const char* licenceownerid, const char* exclusiontags);
 	-- uint32_t GetWares(const char** result, uint32_t resultlen, const char* tags, bool research, const char* licenceownerid, const char* exclusiontags);
@@ -703,21 +899,6 @@ function L.getAllProductionModules()
 	return modulewares
 end
 
-function L.addRacesToFilter(table, buttonText, checked)
-	local atLeastOneAdded = false;
-	local selectedRaces = L.filter[L.params.settingKey].races
-	for _, race in ipairs(L.allRaces) do
-		if (checked and selectedRaces[race.id] ~= nil) or (not checked and selectedRaces[race.id] == nil) then
-			local row = table:addRow(true, { })
-			row[1]:createText(race.name, { })
-			row[2]:createButton({  }):setText(buttonText, { halign = "center" })
-			row[2].handlers.onClick = function () L.filterRaceToggled(race.id, not checked) end
-			atLeastOneAdded = true
-		end
-	end
-	return atLeastOneAdded
-end
-
 function L.getAllRaces()
 	local skip = { khaak = true, drone = true, xenon = true }
 	local races = {}
@@ -736,127 +917,6 @@ function L.getAllRaces()
 	table.sort(races, function (a, b) return a.name < b.name end)
 	table.insert(races, { name = "Other", id = "other" })
 	return races
-end
-
-function L.isRowValidForLoad()
-	return L.selectedEntry and L.selectedEntry.active
-end
-
-function L.isRowValidForDeletion()
-	return L.selectedEntry and L.selectedEntry.deleteable
-end
-
-function L.buttonDeleteItem()
-	if L.isRowValidForDeletion then
-		L.params.onDeletion(L.selectedEntry.item)
-	end
-end
-
-function L.buttonLoadItem()
-	if L.isRowValidForLoad then
-		L.params.onSelection(L.selectedEntry.item)
-	end
-end
-
-function L.refreshLoadFrame()
-	L.topRow = GetTopRow(L.params.menu.contexttable)
-	L.createLoadContext(false)
-end
-
-function L.buttonExtendListEntry(index, row)
-	local key = config.folderIdFormat:format(L.params.settingKey, index)
-	L.expandedFolders[key] = not L.expandedFolders[key]
-	L.selectedRow = row
-	L.refreshLoadFrame()
-end
-
-function L.buttonExpandAll(listRoot)
-	L.expandAll(listRoot)
-	L.refreshLoadFrame()
-end
-
-function L.expandAll(root)
-	for _,folder in ipairs(root.folders_arr) do
-		L.expandedFolders[config.folderIdFormat:format(L.params.settingKey, folder.fullname)] = true
-		L.expandAll(folder)
-	end
-end
-
-function L.buttonCollapseAll()
-	for k,_ in pairs(L.expandedFolders) do
-		L.expandedFolders[k] = false
-	end
-	L.refreshLoadFrame()
-end
-
-function L.folderEnabledToggled(_, checked)
-	L.setLoadSetting(L.params.settingKey, "folder_enabled", checked)
-	L.refreshLoadFrame()
-end
-
-function L.itemFullnameToggled(_, checked)
-	L.setLoadSetting(L.params.settingKey, "item_fullname", checked)
-	L.refreshLoadFrame()
-end
-
-function L.folderFullnameToggled(_, checked)
-	L.setLoadSetting(L.params.settingKey, "folder_fullname", checked)
-	L.refreshLoadFrame()
-end
-
-function L.folderFlattenSingleItemToggled(_, checked)
-	L.setLoadSetting(L.params.settingKey, "folder_flatten_single_item", checked)
-	L.refreshLoadFrame()
-end
-
-function L.itemHideInactiveToggled(_, checked)
-	L.setLoadSetting(L.params.settingKey, "item_hide_inactive", checked)
-	L.refreshLoadFrame()
-end
-
-function L.folderDelimiterEdit(_, text, textchanged)
-	if not textchanged then
-		return
-	end
-
-	text = text:gsub("(space)", " ")
-	if text:len() > 1 then
-		text = text:sub(1, 1)
-	end
-	L.setLoadSetting(L.params.settingKey, "folder_delimiter", text)
-	L.refreshLoadFrame()
-end
-
-function L.searchItemEdit(_, text, textchanged)
-	if not textchanged then
-		return
-	end
-
-	L.filter[L.params.settingKey].search = text
-	L.refreshLoadFrame()
-end
-
-function L.filterMacroToggled(macro, checked)
-	local selectedMacros = L.filter[L.params.settingKey].macros
-	if checked then
-		table.insert(selectedMacros, macro)
-	else
-		local index = ArrayIndexOf(selectedMacros, macro)
-		if index then
-			table.remove(selectedMacros, index)
-		end
-	end
-	L.refreshLoadFrame()
-end
-
-function L.filterRaceToggled(id, checked)
-	local selectedRaces = L.filter[L.params.settingKey].races
-	if checked then
-		selectedRaces[id] = true
-	else
-		selectedRaces[id] = nil
-	end
-	L.refreshLoadFrame()
 end
 
 function L.getLoadSettings()
@@ -912,48 +972,9 @@ function L.setLoadSetting(configKey, key, value)
 	SetNPCBlackboard(L.playerID, config.settingsBlackboardId, settings)
 end
 
-function L.onRowChanged(uitable, rowdata)
-	if L.ltable and uitable == L.ltable.id then
-		L.selectedEntry = rowdata
-		return true
-	end
-	return false
-end
-
-function L.onSelectElement(uitable)
-	if uitable == L.ltable.id then
-		L.buttonLoadItem()
-	end
-end
-
 function L.addCustomAutoPresets(key, loadouts)
 	-- TODO
 	return loadouts
-end
-
-function L.onLoadoutLoad(menu, item)
-	if not item.item.customPreset then
-		menu.dropdownLoadout(_, item.id)
-		return
-	end
-
-	local upgradeplan = {} -- TODO
-
-	menu.getUpgradeData(upgradeplan)
-	if menu.holomap and (menu.holomap ~= 0) then
-		Helper.callLoadoutFunction(menu.constructionplan[menu.loadoutMode].upgradeplan, nil, function (loadout, _) return C.UpdateObjectConfigurationMap(menu.holomap, menu.container, menu.loadoutModule.component, menu.loadoutModule.macro, true, loadout) end)
-	end
-
-	menu.displayMenu()
-end
-
-function L.onLoadoutRemoved(defaultLoad, item)
-	if not item.item.customPreset then
-		defaultLoad(nil, item.id)
-		return
-	end
-
-	-- TODO: remove custom preset
 end
 
 init()
