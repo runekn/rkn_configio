@@ -615,13 +615,13 @@ function L.isRowValidForDeletion()
 end
 
 function L.buttonDeleteItem()
-	if L.isRowValidForDeletion then
+	if L.isRowValidForDeletion() then
 		L.params.onDeletion(L.selectedEntry.item)
 	end
 end
 
 function L.buttonLoadItem()
-	if L.isRowValidForLoad then
+	if L.isRowValidForLoad() then
 		L.params.onSelection(L.selectedEntry.item)
 	end
 end
