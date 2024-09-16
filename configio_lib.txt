@@ -9,6 +9,8 @@ local config = {
 	stationLoadoutKey = "station_loadout",
 	shipKey = "ship",
 	shipLoadoutKey = "ship_loadout",
+	stationPresetEditorKey = "station_preset_editor",
+	shipPresetEditorKey = "ship_preset_editor",
 	folderIdFormat = "rkn_configio.folder.%s.%s",
 	settingsBlackboardId = "$RKN_ConfigioSettings",
 	autoPresetsBlackboardId = "$RKN_ConfigioAutoPresets",
@@ -138,7 +140,7 @@ end
 local function init()
 	L.playerID = ConvertStringTo64Bit(tostring(C.GetPlayerID()))
 
-	L.state = {}
+	L.state = { [config.shipPresetEditorKey] = {}, [config.stationPresetEditorKey] = {} }
 	for _,key in ipairs({config.stationKey, config.stationLoadoutKey, config.shipLoadoutKey, config.shipKey}) do
 		L.state[key] = {
 			filter = {
@@ -197,7 +199,7 @@ end
 
 function L.createStationLoadoutTitleBarButton(row, menu, sc_config, loadoutOptions)
 	if L.isModEnabledForType(config.stationLoadoutKey) then
-		row[2]:setColSpan(4):createButton({ helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(1811143915, 22), { halign = "center" })
+		row[2]:setColSpan(6):createButton({ helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(1811143915, 22), { halign = "center" })
 		row[2].handlers.onClick = function() L.buttonStationLoadoutTitleLoad(menu, sc_config.contextLayer) end
 	else
 		row[2]:setColSpan(6):createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), optionWidth = menu.titleData.dropdownWidth + 6 * (menu.titleData.height + Helper.borderSize) }):setTextProperties(sc_config.dropDownTextProperties)
@@ -300,7 +302,7 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
 			height = config.stationLoadoutLoadHeight,
-			itemsList = function() return L.addCustomAutoPresets(config.stationLoadoutKey, menu.loadouts) end,
+			itemsList = function() return L.addCustomAutoPresets(config.stationPresetEditorKey, menu.loadouts) end,
 			header = ReadText(1811143915, 22),
 			optionItemNameText = ReadText(1811143915, 24),
 			onSelection = function(item)
@@ -325,7 +327,13 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 				end
 				return item.name
 			end,
-			frameModules = { L.createSettings, L.createSearchField }
+			onOpenPresetEditor = function() L.buttonStationLoadoutTitleAutoPresets(menu, contextLayer) end,
+			presetEditorSettingKey = config.stationPresetEditorKey,
+			frameModules = {
+				L.createSettings,
+				L.createSearchField,
+				function(s) L.createAutoPresetEditorButtons(s) end
+			}
 		}
 		L.autoSelectSearch = true
 		L.contextModule = nil
@@ -377,7 +385,7 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
 			height = config.stationLoadoutLoadHeight,
-			itemsList = function() return L.addCustomAutoPresets(config.shipLoadoutKey, menu.loadouts) end,
+			itemsList = function() return L.addCustomAutoPresets(config.shipPresetEditorKey, menu.loadouts) end,
 			header = ReadText(1811143915, 22),
 			optionItemNameText = ReadText(1811143915, 24),
 			onSelection = function(item)
@@ -400,10 +408,12 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 				end
 				return item.name
 			end,
+			onOpenPresetEditor = function() L.buttonShipLoadoutTitleAutoPresets(menu, contextLayer) end,
+			presetEditorSettingKey = config.shipPresetEditorKey,
 			frameModules = {
 				L.createSettings,
 				L.createSearchField,
-				function(s) L.createAutoPresetEditorButtons(s, function() L.buttonShipLoadoutTitleAutoPresets(menu, contextLayer) end) end
+				function(s) L.createAutoPresetEditorButtons(s) end
 			}
 		}
 		L.autoSelectSearch = true
@@ -412,13 +422,13 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 	end
 end
 
-function L.buttonShipLoadoutTitleAutoPresets(menu, contextLayer)
+function L.buttonStationLoadoutTitleAutoPresets(menu, contextLayer)
 	if menu.contextMode and (menu.contextMode.mode == "autoPreset") then
 		menu.closeContextMenu()
 	else
 		menu.displayContextFrame("autoPreset", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
 		L.params = {
-			settingKey = config.shipLoadoutKey,
+			settingKey = config.stationPresetEditorKey,
 			x = menu.contextMode.x,
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
@@ -428,6 +438,30 @@ function L.buttonShipLoadoutTitleAutoPresets(menu, contextLayer)
 			contextMode = menu.contextMode,
 			setContextFrame = function(f) menu.contextFrame = f end,
 			menu = menu,
+			editorShipLoadout = false,
+			onSave = function() L.buttonStationLoadoutTitleLoad(menu, contextLayer) end
+		}
+		L.createAutoPresetEditorContext()
+	end
+end
+
+function L.buttonShipLoadoutTitleAutoPresets(menu, contextLayer)
+	if menu.contextMode and (menu.contextMode.mode == "autoPreset") then
+		menu.closeContextMenu()
+	else
+		menu.displayContextFrame("autoPreset", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		L.params = {
+			settingKey = config.shipPresetEditorKey,
+			x = menu.contextMode.x,
+			y = menu.contextMode.y,
+			width = menu.contextMode.width,
+			height = config.stationLoadoutLoadHeight,
+			contextLayer = contextLayer,
+			closeContextMenu = menu.closeContextMenu,
+			contextMode = menu.contextMode,
+			setContextFrame = function(f) menu.contextFrame = f end,
+			menu = menu,
+			editorShipLoadout = true,
 			onSave = function() L.buttonShipLoadoutTitleLoad(menu, contextLayer) end
 		}
 		L.createAutoPresetEditorContext()
@@ -671,20 +705,20 @@ function L.addRacesToFilter(table, buttonText, checked)
 	return atLeastOneAdded
 end
 
-function L.createAutoPresetEditorButtons(stable, frameCreator)
+function L.createAutoPresetEditorButtons(stable)
 	local row = stable:addRow(false, { fixed = true })
-	row[1]:setColSpan(2):createText("Auto Presets", config.browserHeaderTextProperties)
+	row[1]:setColSpan(2):createText(ReadText(1811143915, 74), config.browserHeaderTextProperties)
 	local row = stable:addRow(true, { fixed = true })
-	row[1]:setColSpan(2):createButton({ }):setText("Open Editor", { halign = "center" })
+	row[1]:setColSpan(2):createButton({ }):setText(ReadText(1811143915, 75), { halign = "center" })
 	row[1].handlers.onClick = function()
-		L.state[L.params.settingKey].presetEditor = nil
-		frameCreator()
+		L.state[L.params.presetEditorSettingKey].presetEditor = nil
+		L.params.onOpenPresetEditor()
 	end
 	local row = stable:addRow(true, { fixed = true })
-	row[1]:setColSpan(2):createButton({ active = function() return L.getSelectedRowCustomAutoPreset() ~= nil end }):setText("Edit Selected in Editor", { halign = "center" })
+	row[1]:setColSpan(2):createButton({ active = function() return L.getSelectedRowCustomAutoPreset() ~= nil end }):setText(ReadText(1811143915, 76), { halign = "center" })
 	row[1].handlers.onClick = function()
-		L.state[L.params.settingKey].presetEditor = L.getSelectedRowCustomAutoPreset()
-		frameCreator()
+		L.state[L.params.presetEditorSettingKey].presetEditor = L.getSelectedRowCustomAutoPreset()
+		L.params.onOpenPresetEditor()
 	end
 end
 
@@ -730,16 +764,16 @@ function L.createAutoPresetEditorContext()
 		L.state[L.params.settingKey].presetEditor = preset
 	end
 
-	local raceOptions = { { id = "any", text = "Any", icon = "", displayremoveoption = false } }
+	local raceOptions = { { id = "any", text = ReadText(1811143915, 34), icon = "", displayremoveoption = false } }
 	for _,race in ipairs(L.allRaces) do
 		if race ~= "other" then
 			table.insert(raceOptions, { id = race.id, text = race.name, icon = "", displayremoveoption = false })
 		end
 	end
 	local valueOptions = {
-		{ id = "low", text = "Low", icon = "", displayremoveoption = false },
-		{ id = "medium", text = "Medium", icon = "", displayremoveoption = false },
-		{ id = "high", text = "High", icon = "", displayremoveoption = false }
+		{ id = "low", text = ReadText(1811143915, 71), icon = "", displayremoveoption = false },
+		{ id = "medium", text = ReadText(1811143915, 72), icon = "", displayremoveoption = false },
+		{ id = "high", text = ReadText(1811143915, 73), icon = "", displayremoveoption = false }
 	}
 	local thrusterOptions = {
 		{ id = "mk1", text = "Mk1", icon = "", displayremoveoption = false },
@@ -770,7 +804,7 @@ function L.createAutoPresetEditorContext()
 
 	local htable = contextFrame:addTable(1, { tabOrder = 6, x = Helper.borderSize, width = L.params.width - Helper.borderSize * 2 })
 	local row = htable:addRow(false, { fixed = true })
-	row[1]:createText("Custom Auto-generated Preset Editor", config.browserHeaderTextProperties) -- TODO: move text to xml
+	row[1]:createText(ReadText(1811143915, 35), config.browserHeaderTextProperties)
 
 	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
 	local optionsWidth = (L.params.width / 2) - Helper.borderSize * 2
@@ -782,106 +816,112 @@ function L.createAutoPresetEditorContext()
 	c1table:setColWidth(5, smallColWidth, false)
 
 	local row = c1table:addRow(false, { fixed = false })
-	row[1]:setColSpan(6):createText("M Turrets", {}) -- TODO: move text to xml
+	row[1]:setColSpan(6):createText(ReadText(1811143915, 36), {})
 	L.createPresetRules(c1table, raceOptions, valueOptions, L.allMTurrets, preset.mturrets)
 
 	local row = c1table:addRow(false, { fixed = false })
-	row[1]:setColSpan(6):createText("L Turrets", {}) -- TODO: move text to xml
+	row[1]:setColSpan(6):createText(ReadText(1811143915, 37), {})
 	L.createPresetRules(c1table, raceOptions, valueOptions, L.allLTurrets, preset.lturrets)
 
-	local row = c1table:addRow(false, { fixed = false })
-	row[1]:setColSpan(6):createText("S Shields", {}) -- TODO: move text to xml
-	L.createPresetRules(c1table, raceOptions, valueOptions, L.allSShields, preset.sshields)
+	if L.params.editorShipLoadout then
+		local row = c1table:addRow(false, { fixed = false })
+		row[1]:setColSpan(6):createText(ReadText(1811143915, 38), {})
+		L.createPresetRules(c1table, raceOptions, valueOptions, L.allSShields, preset.sshields)
+	end
 
 	local row = c1table:addRow(false, { fixed = false })
-	row[1]:setColSpan(6):createText("M Shields", {}) -- TODO: move text to xml
+	row[1]:setColSpan(6):createText(ReadText(1811143915, 39), {})
 	L.createPresetRules(c1table, raceOptions, valueOptions, L.allMShields, preset.mshields)
 
 	local row = c1table:addRow(false, { fixed = false })
-	row[1]:setColSpan(6):createText("L Shields", {}) -- TODO: move text to xml
+	row[1]:setColSpan(6):createText(ReadText(1811143915, 40), {})
 	L.createPresetRules(c1table, raceOptions, valueOptions, L.allLShields, preset.lshields)
 
-	local row = c1table:addRow(false, { fixed = false })
-	row[1]:setColSpan(6):createText("XL Shields", {}) -- TODO: move text to xml
-	L.createPresetRules(c1table, raceOptions, valueOptions, L.allXLShields, preset.xlshields)
+	if L.params.editorShipLoadout then
+		local row = c1table:addRow(false, { fixed = false })
+		row[1]:setColSpan(6):createText(ReadText(1811143915, 41), {})
+		L.createPresetRules(c1table, raceOptions, valueOptions, L.allXLShields, preset.xlshields)
 
-	local row = c1table:addRow(false, { fixed = false })
-	row[1]:setColSpan(6):createText("Engines", {}) -- TODO: move text to xml
-	L.createPresetRules(c1table, raceOptions, valueOptions, L.allEngines, preset.engines)
+		local row = c1table:addRow(false, { fixed = false })
+		row[1]:setColSpan(6):createText(ReadText(1811143915, 42), {})
+		L.createPresetRules(c1table, raceOptions, valueOptions, L.allEngines, preset.engines)
 
-	local row = c1table:addRow(false, { fixed = false })
-	row[1]:setColSpan(6):createText("Weapons", {}) -- TODO: move text to xml
-	L.createPresetRules(c1table, raceOptions, valueOptions, L.allWeapons, preset.weapons)
+		local row = c1table:addRow(false, { fixed = false })
+		row[1]:setColSpan(6):createText(ReadText(1811143915, 43), {})
+		L.createPresetRules(c1table, raceOptions, valueOptions, L.allWeapons, preset.weapons)
 
-	local row = c1table:addRow(false, { fixed = false })
-	row[1]:setColSpan(6):createText("Thrusters", {}) -- TODO: move text to xml
-	L.createPresetRules(c1table, raceOptions, valueOptions, L.allThrusters, preset.thrusters)
+		local row = c1table:addRow(false, { fixed = false })
+		row[1]:setColSpan(6):createText(ReadText(1811143915, 44), {})
+		L.createPresetRules(c1table, raceOptions, valueOptions, L.allThrusters, preset.thrusters)
+	end
 
 
 	local c2table = contextFrame:addTable(3, { tabOrder = 6, x = Helper.borderSize * 2 + (L.params.width / 2), y = config.browserHeaderTextProperties.height + Helper.borderSize * 3, width = optionsWidth })
 	c2table:setColWidth(1, smallColWidth, false)
 
-	local row = c2table:addRow(false, { fixed = false })
-	row[1]:setColSpan(3):createText("Software", {}) -- TODO: move text to xml
-	local row = c2table:addRow(true, { fixed = false })
-	row[2]:createText("Docking Computer", {}) -- TODO: move text to xml
-	row[3]:createDropDown(dockingComputerOptions, { startOption = preset.software.docking.id, height = Helper.standardTextHeight })
-	row[3].handlers.onDropDownConfirmed = function(_, id)
-		preset.software.docking.id = id
-	end
-	local row = c2table:addRow(true, { fixed = false })
-	row[2]:createText("Long Range Scanner", {}) -- TODO: move text to xml
-	row[3]:createDropDown(longRangeScannerOptions, { startOption = preset.software.longrangescanner.id, height = Helper.standardTextHeight })
-	row[3].handlers.onDropDownConfirmed = function(_, id)
-		preset.software.longrangescanner.id = id
-	end
-	local row = c2table:addRow(true, { fixed = false })
-	row[2]:createText("Object Scanner", {}) -- TODO: move text to xml
-	row[3]:createDropDown(objectScannerOptions, { startOption = preset.software.objectscanner.id, height = Helper.standardTextHeight })
-	row[3].handlers.onDropDownConfirmed = function(_, id)
-		preset.software.objectscanner.id = id
-	end
-	local row = c2table:addRow(true, { fixed = false })
-	row[2]:createText("Targeting Computer", {}) -- TODO: move text to xml
-	row[3]:createDropDown(targetingComputerOptions, { startOption = preset.software.targeting.id, height = Helper.standardTextHeight })
-	row[3].handlers.onDropDownConfirmed = function(_, id)
-		preset.software.targeting.id = id
-	end
-	local row = c2table:addRow(true, { fixed = false })
-	row[2]:createText("Trading Computer", {}) -- TODO: move text to xml
-	row[3]:createDropDown(tradingComputerOptions, { startOption = preset.software.trading.id, height = Helper.standardTextHeight })
-	row[3].handlers.onDropDownConfirmed = function(_, id)
-		preset.software.trading.id = id
-	end
+	if L.params.editorShipLoadout then
+		local row = c2table:addRow(false, { fixed = false })
+		row[1]:setColSpan(3):createText(ReadText(1811143915, 45), {})
+		local row = c2table:addRow(true, { fixed = false })
+		row[2]:createText(ReadText(1811143915, 46), {})
+		row[3]:createDropDown(dockingComputerOptions, { startOption = preset.software.docking.id, height = Helper.standardTextHeight })
+		row[3].handlers.onDropDownConfirmed = function(_, id)
+			preset.software.docking.id = id
+		end
+		local row = c2table:addRow(true, { fixed = false })
+		row[2]:createText(ReadText(1811143915, 47), {})
+		row[3]:createDropDown(longRangeScannerOptions, { startOption = preset.software.longrangescanner.id, height = Helper.standardTextHeight })
+		row[3].handlers.onDropDownConfirmed = function(_, id)
+			preset.software.longrangescanner.id = id
+		end
+		local row = c2table:addRow(true, { fixed = false })
+		row[2]:createText(ReadText(1811143915, 48), {})
+		row[3]:createDropDown(objectScannerOptions, { startOption = preset.software.objectscanner.id, height = Helper.standardTextHeight })
+		row[3].handlers.onDropDownConfirmed = function(_, id)
+			preset.software.objectscanner.id = id
+		end
+		local row = c2table:addRow(true, { fixed = false })
+		row[2]:createText(ReadText(1811143915, 49), {})
+		row[3]:createDropDown(targetingComputerOptions, { startOption = preset.software.targeting.id, height = Helper.standardTextHeight })
+		row[3].handlers.onDropDownConfirmed = function(_, id)
+			preset.software.targeting.id = id
+		end
+		local row = c2table:addRow(true, { fixed = false })
+		row[2]:createText(ReadText(1811143915, 50), {})
+		row[3]:createDropDown(tradingComputerOptions, { startOption = preset.software.trading.id, height = Helper.standardTextHeight })
+		row[3].handlers.onDropDownConfirmed = function(_, id)
+			preset.software.trading.id = id
+		end
 
-	local row = c2table:addRow(false, { fixed = false })
-	row[1]:setColSpan(2):createText("Crew", {}) -- TODO: move text to xml
-	L.createPresetPercentageSlider(c2table, "crew", preset.crew, "Crew")
-	L.createPresetPercentageSlider(c2table, "marines", preset.crew, "Marines")
+		local row = c2table:addRow(false, { fixed = false })
+		row[1]:setColSpan(2):createText(ReadText(1811143915, 51), {})
+		L.createPresetPercentageSlider(c2table, "crew", preset.crew, ReadText(1811143915, 52))
+		L.createPresetPercentageSlider(c2table, "marines", preset.crew, ReadText(1811143915, 53))
 
-	local row = c2table:addRow(false, { fixed = false })
-	row[1]:setColSpan(2):createText("Drones", {}) -- TODO: move text to xml
-	L.createPresetPercentageSlider(c2table, "cargo", preset.drones, "Cargo")
-	L.createPresetPercentageSlider(c2table, "mining", preset.drones, "Mining/Gas")
-	L.createPresetPercentageSlider(c2table, "defence", preset.drones, "Defence")
-	L.createPresetPercentageSlider(c2table, "repair", preset.drones, "Repair")
+		local row = c2table:addRow(false, { fixed = false })
+		row[1]:setColSpan(2):createText(ReadText(1811143915, 54), {})
+		L.createPresetPercentageSlider(c2table, "cargo", preset.drones, ReadText(1811143915, 55))
+		L.createPresetPercentageSlider(c2table, "mining", preset.drones, ReadText(1811143915, 56))
+		L.createPresetPercentageSlider(c2table, "defence", preset.drones, ReadText(1811143915, 57))
+		L.createPresetPercentageSlider(c2table, "repair", preset.drones, ReadText(1811143915, 58))
 
-	local row = c2table:addRow(false, { fixed = false })
-	row[1]:setColSpan(2):createText("Deployables", {}) -- TODO: move text to xml
-	L.createPresetPercentageSlider(c2table, "advsatellite", preset.deployables, "Advanced Satellite")
-	L.createPresetPercentageSlider(c2table, "satellite", preset.deployables, "Satellite")
-	L.createPresetPercentageSlider(c2table, "resprobe", preset.deployables, "Resource Probe")
-	L.createPresetPercentageSlider(c2table, "lastower1", preset.deployables, "Laser Tower Mk1")
-	L.createPresetPercentageSlider(c2table, "lastower2", preset.deployables, "Laser Tower Mk2")
-	L.createPresetPercentageSlider(c2table, "ffmine", preset.deployables, "Friend/Foe Mine")
-	L.createPresetPercentageSlider(c2table, "mine", preset.deployables, "Mine")
-	L.createPresetPercentageSlider(c2table, "trackmine", preset.deployables, "Tracking Mine")
+		local row = c2table:addRow(false, { fixed = false })
+		row[1]:setColSpan(2):createText(ReadText(1811143915, 59), {})
+		L.createPresetPercentageSlider(c2table, "advsatellite", preset.deployables, ReadText(1811143915, 60))
+		L.createPresetPercentageSlider(c2table, "satellite", preset.deployables, ReadText(1811143915, 61))
+		L.createPresetPercentageSlider(c2table, "resprobe", preset.deployables, ReadText(1811143915, 62))
+		L.createPresetPercentageSlider(c2table, "lastower1", preset.deployables, ReadText(1811143915, 63))
+		L.createPresetPercentageSlider(c2table, "lastower2", preset.deployables, ReadText(1811143915, 64))
+		L.createPresetPercentageSlider(c2table, "ffmine", preset.deployables, ReadText(1811143915, 65))
+		L.createPresetPercentageSlider(c2table, "mine", preset.deployables, ReadText(1811143915, 66))
+		L.createPresetPercentageSlider(c2table, "trackmine", preset.deployables, ReadText(1811143915, 67))
 
-	local row = c2table:addRow(false, { fixed = false })
-	row[1]:setColSpan(2):createText("Flares", {}) -- TODO: move text to xml
-	L.createPresetPercentageSlider(c2table, "flares", preset.countermeasure, "Flares")
+		local row = c2table:addRow(false, { fixed = false })
+		row[1]:setColSpan(2):createText(ReadText(1811143915, 68), {})
+		L.createPresetPercentageSlider(c2table, "flares", preset.countermeasure, ReadText(1811143915, 68))
 
-	c2table:addEmptyRow(Helper.standardTextHeight)
+		c2table:addEmptyRow(Helper.standardTextHeight)
+	end
 
 	local row = c2table:addRow(true, { fixed = false })
 	row[1]:setColSpan(3):createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(preset.name, { })
@@ -891,12 +931,12 @@ function L.createAutoPresetEditorContext()
 
 	local allPresets = L.getAutoPresets(L.params.settingKey)
 	local row = c2table:addRow(true, { fixed = false })
-	row[1]:setColSpan(2):createButton({ active = function() return L.getAutoPresetByName(allPresets, preset.name) ~= nil end }):setText("Overwrite", { halign = "center" })
+	row[1]:setColSpan(2):createButton({ active = function() return L.getAutoPresetByName(allPresets, preset.name) ~= nil end }):setText(ReadText(1811143915, 70), { halign = "center" })
 	row[1].handlers.onClick = function()
 		L.saveAutoPreset(preset, L.getAutoPresetByName(allPresets, preset.name).id)
 		L.params.onSave()
 	end
-	row[3]:createButton({ active = function() return L.getAutoPresetByName(allPresets, preset.name) == nil end }):setText("Save New", { halign = "center" })
+	row[3]:createButton({ active = function() return L.getAutoPresetByName(allPresets, preset.name) == nil end }):setText(ReadText(1811143915, 69), { halign = "center" })
 	row[3].handlers.onClick = function()
 		L.saveAutoPreset(preset)
 		L.params.onSave()
@@ -947,10 +987,10 @@ function L.createPresetRules(c1table, raceOptions, valueOptions, exactOptions, r
 	-- Create add new rule dropdown
 	local row = c1table:addRow(true, { fixed = false })
 	local addOptions = {
-		{ id = exactKey, text = "Exact module", icon = "", displayremoveoption = false }, -- TODO: move text to xml
-		{ id = autoKey, text = "Auto choose", icon = "", displayremoveoption = false } -- TODO: move text to xml
+		{ id = exactKey, text = ReadText(1811143915, 77), icon = "", displayremoveoption = false },
+		{ id = autoKey, text = ReadText(1811143915, 78), icon = "", displayremoveoption = false }
 	}
-	row[2]:setColSpan(5):createDropDown(addOptions, { height = Helper.standardTextHeight, textOverride = "Add new rule"}) -- TODO: move text to xml
+	row[2]:setColSpan(5):createDropDown(addOptions, { height = Helper.standardTextHeight, textOverride = ReadText(1811143915, 79)})
 	row[2].handlers.onDropDownConfirmed = function(_, id)
 		local rule = { type = id }
 		if id == autoKey then
@@ -965,7 +1005,7 @@ end
 
 function L.createPresetExactRows(c1table, options, rule)
 	local row = c1table:addRow(true, { fixed = false })
-	row[3]:setColSpan(3):createText("Exact", {}) -- TODO: move text to xml
+	row[3]:setColSpan(3):createText(ReadText(1811143915, 80), {})
 	row[6]:createDropDown(options, { startOption = rule.macro, height = Helper.standardTextHeight })
 	row[6].handlers.onDropDownConfirmed = function(_, id)
 		rule.macro = id
@@ -974,13 +1014,13 @@ end
 
 function L.createPresetAutoRows(c1table, raceOptions, valueOptions, rule)
 	local row = c1table:addRow(true, { fixed = false })
-	row[3]:setColSpan(3):createText("Race", {}) -- TODO: move text to xml
+	row[3]:setColSpan(3):createText(ReadText(1811143915, 81), {})
 	row[6]:createDropDown(raceOptions, { startOption = rule.race, height = Helper.standardTextHeight })
 	row[6].handlers.onDropDownConfirmed = function(_, id)
 		rule.race = id
 	end
 	local row = c1table:addRow(true, { fixed = false })
-	row[3]:setColSpan(3):createText("Value", {}) -- TODO: move text to xml
+	row[3]:setColSpan(3):createText(ReadText(1811143915, 82), {})
 	row[6]:createDropDown(valueOptions, { startOption = rule.value, height = Helper.standardTextHeight })
 	row[6].handlers.onDropDownConfirmed = function(_, id)
 		rule.value = id
@@ -1116,7 +1156,6 @@ function L.onStationLoadoutLoad(menu, item)
 	end
 
 	local upgradeplan = L.generateLoadoutUpgradePlan(menu, item.customPreset)
-	L.DebugSplit(L.SerializeTable(upgradeplan))
 
 	menu.getUpgradeData(upgradeplan)
 	if menu.holomap and (menu.holomap ~= 0) then
@@ -1513,7 +1552,7 @@ end
 function L.getAutoPresets(key)
 	local autoPresets = GetNPCBlackboard(L.playerID, config.autoPresetsBlackboardId)
 	if autoPresets then
-		return autoPresets[key]
+		return autoPresets[key] or {}
 	end
 	return {}
 end
@@ -1524,15 +1563,13 @@ function L.saveAutoPreset(preset, id)
 	end
 	local autoPresets = GetNPCBlackboard(L.playerID, config.autoPresetsBlackboardId)
 	if not autoPresets then
-		autoPresets = {
-			[config.stationKey] = { },
-			[config.stationLoadoutKey] = { },
-			[config.shipKey] = {  },
-			[config.shipLoadoutKey] = { },
-			idCounter = 0
-		}
+		autoPresets = { idCounter = 0 }
 	end
 	local autoPresetsForKey = autoPresets[L.params.settingKey]
+	if not autoPresetsForKey then
+		autoPresetsForKey = {}
+		autoPresets[L.params.settingKey] = autoPresetsForKey
+	end
 	if not id then
 		id = autoPresets.idCounter + 1
 		autoPresets.idCounter = id
@@ -1646,52 +1683,54 @@ function L.generateLoadoutUpgradePlan(menu, presetTemplate)
 		end
 	end
 
-	if presetTemplate.software.docking.id ~= "none" then
-		upgradeplan.software[1] = presetTemplate.software.docking.id
+	if L.params.settingKey == config.shipLoadoutKey then
+		if presetTemplate.software.docking.id ~= "none" then
+			upgradeplan.software[1] = presetTemplate.software.docking.id
+		end
+		if presetTemplate.software.longrangescanner.id ~= "none" then
+			upgradeplan.software[3] = presetTemplate.software.longrangescanner.id
+		end
+		if presetTemplate.software.objectscanner.id ~= "none" then
+			upgradeplan.software[4] = presetTemplate.software.objectscanner.id
+		end
+		if presetTemplate.software.targeting.id ~= "none" then
+			upgradeplan.software[5] = presetTemplate.software.targeting.id
+		end
+		if presetTemplate.software.trading.id ~= "none" then
+			upgradeplan.software[6] = presetTemplate.software.trading.id
+		end
+		upgradeplan.software[2] = "software_flightassistmk1"
+		if menu.crew then
+			local crewCapacity = menu.crew.capacity
+			upgradeplan.crew.service = L.getProportionateCount(crewCapacity, presetTemplate.crew.crew)
+			upgradeplan.crew.marine = L.getProportionateCount(crewCapacity, presetTemplate.crew.marines)
+		end
+		local droneCapacity = GetMacroUnitStorageCapacity(menu.macro)
+		if droneCapacity > 0 then
+			upgradeplan.drone.ship_gen_xs_cargodrone_empty_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.cargo)
+			--upgradeplan.drone.ship_gen_s_miningdrone_solid_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.mining)
+			--upgradeplan.drone.ship_gen_s_miningdrone_liquid_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.mining)
+			upgradeplan.drone.ship_gen_s_fightingdrone_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.defence)
+			upgradeplan.drone.ship_gen_xs_repairdrone_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.repair)
+		end
+		local deployCapacity = C.GetMacroDeployableCapacity(menu.macro)
+		if deployCapacity > 0 then
+			upgradeplan.deployable.eq_arg_satellite_02_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.advsatellite)
+			upgradeplan.deployable.eq_arg_satellite_01_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.satellite)
+			upgradeplan.deployable.env_deco_nav_beacon_t1_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.navbeacon)
+			upgradeplan.deployable.eq_arg_resourceprobe_01_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.resprobe)
+			upgradeplan.deployable.ship_gen_xs_lasertower_01_a_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.lastower1)
+			upgradeplan.deployable.ship_gen_s_lasertower_01_a_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.lastower2)
+			upgradeplan.deployable.weapon_gen_mine_03_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.ffmine)
+			upgradeplan.deployable.weapon_gen_mine_01_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.mine)
+			upgradeplan.deployable.weapon_gen_mine_02_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.trackmine)
+		end
+		local counterCapacity = C.GetDefaultCountermeasureStorageCapacity(menu.macro)
+		if counterCapacity > 0 then
+			upgradeplan.countermeasure.countermeasure_flares_01_macro = L.getProportionateCount(counterCapacity, presetTemplate.countermeasure.flares)
+		end
+		--C.GetMacroMissileCapacity(currentmacro)
 	end
-	if presetTemplate.software.longrangescanner.id ~= "none" then
-		upgradeplan.software[3] = presetTemplate.software.longrangescanner.id
-	end
-	if presetTemplate.software.objectscanner.id ~= "none" then
-		upgradeplan.software[4] = presetTemplate.software.objectscanner.id
-	end
-	if presetTemplate.software.targeting.id ~= "none" then
-		upgradeplan.software[5] = presetTemplate.software.targeting.id
-	end
-	if presetTemplate.software.trading.id ~= "none" then
-		upgradeplan.software[6] = presetTemplate.software.trading.id
-	end
-	upgradeplan.software[2] = "software_flightassistmk1"
-	if menu.crew then
-		local crewCapacity = menu.crew.capacity
-		upgradeplan.crew.service = L.getProportionateCount(crewCapacity, presetTemplate.crew.crew)
-		upgradeplan.crew.marine = L.getProportionateCount(crewCapacity, presetTemplate.crew.marines)
-	end
-	local droneCapacity = GetMacroUnitStorageCapacity(menu.macro)
-	if droneCapacity > 0 then
-		upgradeplan.drone.ship_gen_xs_cargodrone_empty_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.cargo)
-		--upgradeplan.drone.ship_gen_s_miningdrone_solid_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.mining)
-		--upgradeplan.drone.ship_gen_s_miningdrone_liquid_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.mining)
-		upgradeplan.drone.ship_gen_s_fightingdrone_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.defence)
-		upgradeplan.drone.ship_gen_xs_repairdrone_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.repair)
-	end
-	local deployCapacity = C.GetMacroDeployableCapacity(menu.macro)
-	if deployCapacity > 0 then
-		upgradeplan.deployable.eq_arg_satellite_02_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.advsatellite)
-		upgradeplan.deployable.eq_arg_satellite_01_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.satellite)
-		upgradeplan.deployable.env_deco_nav_beacon_t1_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.navbeacon)
-		upgradeplan.deployable.eq_arg_resourceprobe_01_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.resprobe)
-		upgradeplan.deployable.ship_gen_xs_lasertower_01_a_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.lastower1)
-		upgradeplan.deployable.ship_gen_s_lasertower_01_a_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.lastower2)
-		upgradeplan.deployable.weapon_gen_mine_03_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.ffmine)
-		upgradeplan.deployable.weapon_gen_mine_01_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.mine)
-		upgradeplan.deployable.weapon_gen_mine_02_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.trackmine)
-	end
-	local counterCapacity = C.GetDefaultCountermeasureStorageCapacity(menu.macro)
-	if counterCapacity > 0 then
-		upgradeplan.countermeasure.countermeasure_flares_01_macro = L.getProportionateCount(counterCapacity, presetTemplate.countermeasure.flares)
-	end
-	--C.GetMacroMissileCapacity(currentmacro)
 
 	return upgradeplan
 end
@@ -1739,9 +1778,13 @@ function L.chooseMacroByAutoRule(menu, possiblemacros, rule)
 	local filteredMacros = {}
 	for _, macro in ipairs(possiblemacros) do
 		local macroRaces, ware = GetMacroData(macro, "makerraceid", "ware")
-		if rule.race or ArrayIndexOf(macroRaces, rule.race) then
-			local tradelicence = GetWareData(ware, "tradelicence")
-			if menu.isplayerowned or (not tradelicence) or tradelicence == "" or HasLicence("player", tradelicence, menu.containerowner) then
+		if rule.race == "any" or ArrayIndexOf(macroRaces, rule.race) then
+			if L.params.settingKey == config.shipLoadoutKey then
+				local tradelicence = GetWareData(ware, "tradelicence")
+				if menu.isplayerowned or (not tradelicence) or tradelicence == "" or HasLicence("player", tradelicence, menu.containerowner) then
+					table.insert(filteredMacros, { macro = macro })
+				end
+			else
 				table.insert(filteredMacros, { macro = macro })
 			end
 		end
