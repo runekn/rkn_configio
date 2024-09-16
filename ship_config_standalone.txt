@@ -71,18 +71,17 @@ function rkn_menu.createTitleBar(frame)
 		row[5]:createButton({ active = function () return (#menu.undoStack > 1) and (menu.undoIndex > 1) end, height = menu.titleData.height, mouseOverText = ReadText(1026, 7904) .. Helper.formatOptionalShortcut(" (%s)", "action", 279) }):setIcon("menu_redo")
 		row[5].handlers.onClick = function () return menu.undoHelper(false) end
 	else
-		local ftable = frame:addTable(8, { tabOrder = 4, height = 0, x = menu.titleData.offsetX, y = menu.titleData.offsetY, scaling = false, reserveScrollBar = false })
+		local ftable = frame:addTable(7, { tabOrder = 4, height = 0, x = menu.titleData.offsetX, y = menu.titleData.offsetY, scaling = false, reserveScrollBar = false })
 		if ((menu.macro == "") and (menu.object == 0)) then
 			ftable.properties.defaultInteractiveObject = true
 		end
 		ftable:setColWidth(1, config.dropdownRatios.class * menu.titleData.dropdownWidth)
 		ftable:setColWidth(2, config.dropdownRatios.ship * menu.titleData.dropdownWidth)
-		ftable:setColWidth(3, menu.titleData.dropdownWidth / 2)
-		ftable:setColWidth(4, menu.titleData.dropdownWidth / 2) -- Runekn: Added this and shifted the remaining columns
+		ftable:setColWidth(3, menu.titleData.dropdownWidth)
+		ftable:setColWidth(4, menu.titleData.height)
 		ftable:setColWidth(5, menu.titleData.height)
 		ftable:setColWidth(6, menu.titleData.height)
 		ftable:setColWidth(7, menu.titleData.height)
-		ftable:setColWidth(8, menu.titleData.height)
 
 		local row = ftable:addRow(true, { fixed = true, bgColor = Color["row_background_blue"] })
 		-- class
@@ -126,17 +125,17 @@ function rkn_menu.createTitleBar(frame)
 		ConfigioLib.createShipLoadoutTitleBarButton(row, menu, config, active, loadoutOptions)
 		---- Runekn's Changes Stop Here! ----
 		-- save
-		row[5]:createButton({ active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")), height = menu.titleData.height, mouseOverText = ReadText(1026, 7905), helpOverlayID = "shipconfig_saveloadout", helpOverlayText = " ", helpOverlayHighlightOnly = true, uiTriggerID = "shipconfig_saveloadout" }):setIcon("menu_save")
-		row[5].handlers.onClick = menu.buttonTitleSave
+		row[4]:createButton({ active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")), height = menu.titleData.height, mouseOverText = ReadText(1026, 7905), helpOverlayID = "shipconfig_saveloadout", helpOverlayText = " ", helpOverlayHighlightOnly = true, uiTriggerID = "shipconfig_saveloadout" }):setIcon("menu_save")
+		row[4].handlers.onClick = menu.buttonTitleSave
 		-- reset camera
-		row[6]:createButton({ active = true, height = menu.titleData.height, mouseOverText = ffi.string(C.ConvertInputString(ReadText(1026, 7911), ReadText(1026, 7902))) }):setIcon("menu_reset_view"):setHotkey("INPUT_STATE_DETAILMONITOR_RESET_VIEW", { displayIcon = false })
-		row[6].handlers.onClick = function () return C.ResetMapPlayerRotation(menu.holomap) end
+		row[5]:createButton({ active = true, height = menu.titleData.height, mouseOverText = ffi.string(C.ConvertInputString(ReadText(1026, 7911), ReadText(1026, 7902))) }):setIcon("menu_reset_view"):setHotkey("INPUT_STATE_DETAILMONITOR_RESET_VIEW", { displayIcon = false })
+		row[5].handlers.onClick = function () return C.ResetMapPlayerRotation(menu.holomap) end
 		-- undo
-		row[7]:createButton({ active = function () return (#menu.undoStack > 1) and (menu.undoIndex < #menu.undoStack) end, height = menu.titleData.height, mouseOverText = ReadText(1026, 7903) .. Helper.formatOptionalShortcut(" (%s)", "action", 278) }):setIcon("menu_undo")
-		row[7].handlers.onClick = function () return menu.undoHelper(true) end
+		row[6]:createButton({ active = function () return (#menu.undoStack > 1) and (menu.undoIndex < #menu.undoStack) end, height = menu.titleData.height, mouseOverText = ReadText(1026, 7903) .. Helper.formatOptionalShortcut(" (%s)", "action", 278) }):setIcon("menu_undo")
+		row[6].handlers.onClick = function () return menu.undoHelper(true) end
 		-- redo
-		row[8]:createButton({ active = function () return (#menu.undoStack > 1) and (menu.undoIndex > 1) end, height = menu.titleData.height, mouseOverText = ReadText(1026, 7904) .. Helper.formatOptionalShortcut(" (%s)", "action", 279) }):setIcon("menu_redo")
-		row[8].handlers.onClick = function () return menu.undoHelper(false) end
+		row[7]:createButton({ active = function () return (#menu.undoStack > 1) and (menu.undoIndex > 1) end, height = menu.titleData.height, mouseOverText = ReadText(1026, 7904) .. Helper.formatOptionalShortcut(" (%s)", "action", 279) }):setIcon("menu_redo")
+		row[7].handlers.onClick = function () return menu.undoHelper(false) end
 	end
 
 	menu.topRows.ship = nil

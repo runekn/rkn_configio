@@ -148,28 +148,6 @@ local function init()
 			expandedFolders = {},
 			selectedRow = nil,
 			topRow = nil,
-			presetEditor = {
-				engines = {},
-				weapons = {},
-				mturrets = {},
-				lturrets = {},
-				sshields = {},
-				mshields = {},
-				lshields = {},
-				xlshields = {},
-				thrusters = {},
-				software = {
-					longrangescanner = { type = "exact", id = "software_scannerlongrangemk1" },
-					objectscanner = { type = "exact", id = "software_scannerobjectmk1" },
-					docking = { type = "exact", id = "none" },
-					trading = { type = "exact", id = "none" },
-					targeting = { type = "exact", id = "none" }
-				},
-				drones = { type = "percentage" },
-				crew = { type = "percentage" },
-				deployables = { type = "percentage" },
-				countermeasure = { type = "percentage" }
-			}
 		}
 	end
 
@@ -221,8 +199,6 @@ function L.createStationLoadoutTitleBarButton(row, menu, sc_config, loadoutOptio
 	if L.isModEnabledForType(config.stationLoadoutKey) then
 		row[2]:setColSpan(4):createButton({ helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(1811143915, 22), { halign = "center" })
 		row[2].handlers.onClick = function() L.buttonStationLoadoutTitleLoad(menu, sc_config.contextLayer) end
-		row[3]:createButton({ helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText("Auto Presets", { halign = "center" })
-		row[3].handlers.onClick = function() L.buttonStationLoadoutTitleLoad(menu, sc_config.contextLayer) end
 	else
 		row[2]:setColSpan(6):createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), optionWidth = menu.titleData.dropdownWidth + 6 * (menu.titleData.height + Helper.borderSize) }):setTextProperties(sc_config.dropDownTextProperties)
 		row[2].handlers.onDropDownConfirmed = menu.dropdownLoadout
@@ -271,8 +247,6 @@ function L.createShipLoadoutTitleBarButton(row, menu, sc_config, active, loadout
 	if L.isModEnabledForType(config.shipLoadoutKey) then
 		row[3]:createButton({ active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), height = menu.titleData.height, width = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setText(ReadText(1001, 7905), { halign = "center" })
 		row[3].handlers.onClick = function() L.buttonShipLoadoutTitleLoad(menu, sc_config.contextLayer) end
-		row[4]:createButton({ helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText("Auto Presets", { halign = "center" })
-		row[4].handlers.onClick = function() L.buttonShipLoadoutTitleAutoPresets(menu, sc_config.contextLayer) end
 	else
 		row[3]:setColSpan(2):createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setTextProperties(sc_config.dropDownTextProperties)
 		row[3].handlers.onDropDownConfirmed = menu.dropdownLoadout
@@ -426,7 +400,11 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 				end
 				return item.name
 			end,
-			frameModules = { L.createSettings, L.createSearchField }
+			frameModules = {
+				L.createSettings,
+				L.createSearchField,
+				function(s) L.createAutoPresetEditorButtons(s, function() L.buttonShipLoadoutTitleAutoPresets(menu, contextLayer) end) end
+			}
 		}
 		L.autoSelectSearch = true
 		L.contextModule = nil
@@ -692,8 +670,25 @@ function L.addRacesToFilter(table, buttonText, checked)
 	return atLeastOneAdded
 end
 
+function L.createAutoPresetEditorButtons(stable, frameCreator)
+	local row = stable:addRow(false, { fixed = true })
+	row[1]:setColSpan(2):createText("Auto Presets", config.browserHeaderTextProperties)
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:setColSpan(2):createButton({ }):setText("Open Editor", { halign = "center" })
+	row[1].handlers.onClick = function()
+		L.state[L.params.settingKey].presetEditor = nil
+		frameCreator()
+	end
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:setColSpan(2):createButton({ active = function() return L.getSelectedRowCustomAutoPreset() ~= nil end }):setText("Edit Selected in Editor", { halign = "center" })
+	row[1].handlers.onClick = function()
+		L.state[L.params.settingKey].presetEditor = L.getSelectedRowCustomAutoPreset()
+		frameCreator()
+	end
+end
+
 function L.createAutoPresetEditorContext()
-	--Helper.removeAllWidgetScripts(L.params.menu, L.params.contextLayer)
+	Helper.removeAllWidgetScripts(L.params.menu, L.params.contextLayer)
 
 	local contextFrame = Helper.createFrameHandle(L.params.menu, {
 		layer = L.params.contextLayer,
@@ -707,6 +702,31 @@ function L.createAutoPresetEditorContext()
 	contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
 
 	local preset = L.state[L.params.settingKey].presetEditor
+	if not preset then
+		preset = {
+			engines = {},
+			weapons = {},
+			mturrets = {},
+			lturrets = {},
+			sshields = {},
+			mshields = {},
+			lshields = {},
+			xlshields = {},
+			thrusters = {},
+			software = {
+				longrangescanner = { type = "exact", id = "software_scannerlongrangemk1" },
+				objectscanner = { type = "exact", id = "software_scannerobjectmk1" },
+				docking = { type = "exact", id = "none" },
+				trading = { type = "exact", id = "none" },
+				targeting = { type = "exact", id = "none" }
+			},
+			drones = { type = "percentage" },
+			crew = { type = "percentage" },
+			deployables = { type = "percentage" },
+			countermeasure = { type = "percentage" }
+		}
+		L.state[L.params.settingKey].presetEditor = preset
+	end
 
 	local raceOptions = { { id = "any", text = "Any", icon = "", displayremoveoption = false } }
 	for _,race in ipairs(L.allRaces) do
@@ -982,6 +1002,10 @@ function L.isRowValidForDeletion()
 	return L.selectedEntry and L.selectedEntry.deleteable
 end
 
+function L.getSelectedRowCustomAutoPreset()
+	return L.selectedEntry and L.selectedEntry.item and L.selectedEntry.item.customPreset
+end
+
 function L.buttonDeleteItem()
 	if L.isRowValidForDeletion() then
 		L.params.onDeletion(L.selectedEntry.item)
@@ -1083,6 +1107,7 @@ function L.onStationLoadoutLoad(menu, item)
 	end
 
 	local upgradeplan = L.generateLoadoutUpgradePlan(menu, item.customPreset)
+	L.DebugSplit(L.SerializeTable(upgradeplan))
 
 	menu.getUpgradeData(upgradeplan)
 	if menu.holomap and (menu.holomap ~= 0) then
