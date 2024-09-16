@@ -427,7 +427,8 @@ function L.buttonShipLoadoutTitleAutoPresets(menu, contextLayer)
 			closeContextMenu = menu.closeContextMenu,
 			contextMode = menu.contextMode,
 			setContextFrame = function(f) menu.contextFrame = f end,
-			menu = menu
+			menu = menu,
+			onSave = function() L.buttonShipLoadoutTitleLoad(menu, contextLayer) end
 		}
 		L.createAutoPresetEditorContext()
 	end
@@ -704,6 +705,7 @@ function L.createAutoPresetEditorContext()
 	local preset = L.state[L.params.settingKey].presetEditor
 	if not preset then
 		preset = {
+			name = "New Auto-Preset",
 			engines = {},
 			weapons = {},
 			mturrets = {},
@@ -886,11 +888,18 @@ function L.createAutoPresetEditorContext()
 	row[1].handlers.onTextChanged = function(_, text, textchanged)
 		preset.name = text
 	end
+
+	local allPresets = L.getAutoPresets(L.params.settingKey)
 	local row = c2table:addRow(true, { fixed = false })
-	row[1]:setColSpan(3):createButton({ }):setText("Save", { halign = "center" })
+	row[1]:setColSpan(2):createButton({ active = function() return L.getAutoPresetByName(allPresets, preset.name) ~= nil end }):setText("Overwrite", { halign = "center" })
 	row[1].handlers.onClick = function()
+		L.saveAutoPreset(preset, L.getAutoPresetByName(allPresets, preset.name).id)
+		L.params.onSave()
+	end
+	row[3]:createButton({ active = function() return L.getAutoPresetByName(allPresets, preset.name) == nil end }):setText("Save New", { halign = "center" })
+	row[3].handlers.onClick = function()
 		L.saveAutoPreset(preset)
-		L.createAutoPresetEditorContext()
+		L.params.onSave()
 	end
 
 	contextFrame:display()
@@ -1482,17 +1491,34 @@ function L.setLoadSetting(configKey, key, value)
 end
 
 function L.addCustomAutoPresets(key, loadouts)
-	local autoPresets = GetNPCBlackboard(L.playerID, config.autoPresetsBlackboardId)
-	if autoPresets and next(autoPresets[key]) ~= nil then
+	local autoPresets = L.getAutoPresets(key)
+	if next(autoPresets) ~= nil then
 		loadouts = ShallowCopy(loadouts)
-		for id, preset in pairs(autoPresets[key]) do
+		for id, preset in pairs(autoPresets) do
 			table.insert(loadouts, { customPreset = preset, id = id, name = preset.name, deleteable = true, active = true })
 		end
 	end
 	return loadouts
 end
 
-function L.saveAutoPreset(preset)
+function L.getAutoPresetByName(autoPresets, name)
+	for id, preset in pairs(autoPresets) do
+		if preset.name == name then
+			return preset
+		end
+	end
+	return nil
+end
+
+function L.getAutoPresets(key)
+	local autoPresets = GetNPCBlackboard(L.playerID, config.autoPresetsBlackboardId)
+	if autoPresets then
+		return autoPresets[key]
+	end
+	return {}
+end
+
+function L.saveAutoPreset(preset, id)
 	if not preset or not preset.name or preset.name == "" then
 		return
 	end
@@ -1507,9 +1533,11 @@ function L.saveAutoPreset(preset)
 		}
 	end
 	local autoPresetsForKey = autoPresets[L.params.settingKey]
-	local id = autoPresets.idCounter + 1
-	autoPresets.idCounter = id
-	preset.id = id
+	if not id then
+		id = autoPresets.idCounter + 1
+		autoPresets.idCounter = id
+		preset.id = id
+	end
 	autoPresetsForKey["rknconfigio_auto_" .. tostring(id)] = preset
 	SetNPCBlackboard(L.playerID, config.autoPresetsBlackboardId, autoPresets)
 end
