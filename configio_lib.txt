@@ -11,6 +11,7 @@ local config = {
 	shipLoadoutKey = "ship_loadout",
 	folderIdFormat = "rkn_configio.folder.%s.%s",
 	settingsBlackboardId = "$RKN_ConfigioSettings",
+	autoPresetsBlackboardId = "$RKN_ConfigioAutoPresets",
 	loadWidthMultiplier = 0.8,
 	maxFolders = 6,
 	stationLoadHeight = 0.5 * Helper.viewHeight,
@@ -38,7 +39,8 @@ local config = {
 		height = math.floor(Helper.standardTextHeight + Helper.scaleY(1) * 2),
 		y = math.floor(Helper.scaleY(1)),
 	},
-	inactiveColor = { r = 128, g = 128, b = 128, a = 100 }
+	inactiveColor = { r = 128, g = 128, b = 128, a = 100 },
+	autoPresetColor = { r = 181, g = 188, b = 255, a = 255 }
 }
 
 
@@ -121,17 +123,66 @@ function SerializeTable(val, name, skipnewlines, depth)
     return tmp
 end
 
+function DebugSplit(s)
+	if s:len() > 8192 then
+		local a = s:sub(1, 8192)
+		local b = s:sub(8192)
+		DebugError(a)
+		DebugSplit(b)
+	else
+		DebugError(s)
+	end
+end
+
 
 local function init()
 	L.playerID = ConvertStringTo64Bit(tostring(C.GetPlayerID()))
-	L.filter = { [config.stationKey] = { macros = {} }, [config.stationLoadoutKey] = {}, [config.shipLoadoutKey] = {}, [config.shipKey] = { races = {} } }
+
+	L.state = {}
+	for _,key in ipairs({config.stationKey, config.stationLoadoutKey, config.shipLoadoutKey, config.shipKey}) do
+		L.state[key] = {
+			filter = {
+				macros = {},
+				races = {}
+			},
+			expandedFolders = {},
+			selectedRow = nil,
+			topRow = nil,
+			presetEditor = {
+				engines = {},
+				weapons = {},
+				mturrets = {},
+				lturrets = {},
+				sshields = {},
+				mshields = {},
+				lshields = {},
+				xlshields = {},
+				thrusters = {},
+				software = {
+					longrangescanner = { type = "exact", id = "software_scannerlongrangemk1" },
+					objectscanner = { type = "exact", id = "software_scannerobjectmk1" },
+					docking = { type = "exact", id = "none" },
+					trading = { type = "exact", id = "none" },
+					targeting = { type = "exact", id = "none" }
+				},
+				drones = { type = "percentage" },
+				crew = { type = "percentage" },
+				deployables = { type = "percentage" },
+				countermeasure = { type = "percentage" }
+			}
+		}
+	end
+
 	L.settings = {}
+	L.autoPresets = {}
 	L.params = {}
-	L.expandedFolders = {}
-	L.selectedRow = nil
-	L.topRow = nil
 	L.allProductionModules = L.getAllProductionModules()
 	L.allRaces = L.getAllRaces()
+	L.allWeapons = L.getAllWeapons()
+	L.allMTurrets, L.allLTurrets = L.getAllTurrets()
+	L.allSShields, L.allMShields, L.allLShields, L.allXLShields = L.getAllShields()
+	L.allEngines = L.getAllEngines()
+	L.allThrusters = L.getAllThrusters()
 
 	-- Set settings for extension options menu on game start --
 	local settings = L.getLoadSettings()
@@ -168,8 +219,10 @@ end
 
 function L.createStationLoadoutTitleBarButton(row, menu, sc_config, loadoutOptions)
 	if L.isModEnabledForType(config.stationLoadoutKey) then
-		row[2]:setColSpan(6):createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(1811143915, 22), { halign = "center" })
+		row[2]:setColSpan(4):createButton({ helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(1811143915, 22), { halign = "center" })
 		row[2].handlers.onClick = function() L.buttonStationLoadoutTitleLoad(menu, sc_config.contextLayer) end
+		row[3]:createButton({ helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText("Auto Presets", { halign = "center" })
+		row[3].handlers.onClick = function() L.buttonStationLoadoutTitleLoad(menu, sc_config.contextLayer) end
 	else
 		row[2]:setColSpan(6):createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), optionWidth = menu.titleData.dropdownWidth + 6 * (menu.titleData.height + Helper.borderSize) }):setTextProperties(sc_config.dropDownTextProperties)
 		row[2].handlers.onDropDownConfirmed = menu.dropdownLoadout
@@ -218,8 +271,10 @@ function L.createShipLoadoutTitleBarButton(row, menu, sc_config, active, loadout
 	if L.isModEnabledForType(config.shipLoadoutKey) then
 		row[3]:createButton({ active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), height = menu.titleData.height, width = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setText(ReadText(1001, 7905), { halign = "center" })
 		row[3].handlers.onClick = function() L.buttonShipLoadoutTitleLoad(menu, sc_config.contextLayer) end
+		row[4]:createButton({ helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText("Auto Presets", { halign = "center" })
+		row[4].handlers.onClick = function() L.buttonShipLoadoutTitleAutoPresets(menu, sc_config.contextLayer) end
 	else
-		row[3]:createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setTextProperties(sc_config.dropDownTextProperties)
+		row[3]:setColSpan(2):createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setTextProperties(sc_config.dropDownTextProperties)
 		row[3].handlers.onDropDownConfirmed = menu.dropdownLoadout
 		row[3].handlers.onDropDownRemoved = menu.dropdownLoadoutRemoved
 	end
@@ -240,7 +295,7 @@ function L.buttonStationTitleLoad(menu, contextLayer)
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
 			height = config.stationLoadHeight,
-			itemsList = menu.constructionplans,
+			itemsList = function() return menu.constructionplans end,
 			header = ReadText(1811143915, 2),
 			optionItemNameText = ReadText(1811143915, 9),
 			onSelection = function(item) menu.dropdownLoad(nil, item.id) end,
@@ -271,12 +326,12 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
 			height = config.stationLoadoutLoadHeight,
-			itemsList = L.addCustomAutoPresets(config.stationLoadoutKey, menu.loadouts),
+			itemsList = function() return L.addCustomAutoPresets(config.stationLoadoutKey, menu.loadouts) end,
 			header = ReadText(1811143915, 22),
 			optionItemNameText = ReadText(1811143915, 24),
 			onSelection = function(item)
 				menu.closeContextMenu()
-				L.onLoadoutLoad(menu, item)
+				L.onStationLoadoutLoad(menu, item)
 			end,
 			onDeletion = function(item)
 				menu.closeContextMenu()
@@ -290,8 +345,13 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 			addToSettingsTable = nil,
 			itemFilter = nil,
 			isItemActive = function(item) return item.active or (item.preset and true or false) end,
-			overrideItemText = nil, -- TODO: color for auto presets
-			frameModules = { L.createSettings, L.createSearchField, L.createAutoPresetEditorButton }
+			overrideItemText = function(item)
+				if item.item.preset or item.item.customPreset then
+					return Helper.convertColorToText(config.autoPresetColor) .. item.name
+				end
+				return item.name
+			end,
+			frameModules = { L.createSettings, L.createSearchField }
 		}
 		L.autoSelectSearch = true
 		L.contextModule = nil
@@ -310,7 +370,7 @@ function L.buttonShipTitleLoad(menu, shipOptions, contextLayer)
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
 			height = config.stationLoadoutLoadHeight,
-			itemsList = shipOptions,
+			itemsList = function() return shipOptions end,
 			header = ReadText(1811143915, 30),
 			onSelection = function(item)
 				menu.closeContextMenu()
@@ -343,12 +403,12 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
 			height = config.stationLoadoutLoadHeight,
-			itemsList = L.addCustomAutoPresets(config.shipLoadoutKey, menu.loadouts),
+			itemsList = function() return L.addCustomAutoPresets(config.shipLoadoutKey, menu.loadouts) end,
 			header = ReadText(1811143915, 22),
 			optionItemNameText = ReadText(1811143915, 24),
 			onSelection = function(item)
 				menu.closeContextMenu()
-				L.onLoadoutLoad(menu, item)
+				L.onShipLoadoutLoad(menu, item)
 			end,
 			onDeletion = function(item)
 				menu.closeContextMenu()
@@ -360,7 +420,12 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 			setContextFrame = function(f) menu.contextFrame = f end,
 			menu = menu,
 			isItemActive = function(item) return item.active or (item.preset and true or false) end,
-			overrideItemText = nil, -- TODO: color for auto presets
+			overrideItemText = function(item)
+				if item.item.preset or item.item.customPreset then
+					return Helper.convertColorToText(config.autoPresetColor) .. item.name
+				end
+				return item.name
+			end,
 			frameModules = { L.createSettings, L.createSearchField }
 		}
 		L.autoSelectSearch = true
@@ -369,9 +434,30 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 	end
 end
 
+function L.buttonShipLoadoutTitleAutoPresets(menu, contextLayer)
+	if menu.contextMode and (menu.contextMode.mode == "autoPreset") then
+		menu.closeContextMenu()
+	else
+		menu.displayContextFrame("autoPreset", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		L.params = {
+			settingKey = config.shipLoadoutKey,
+			x = menu.contextMode.x,
+			y = menu.contextMode.y,
+			width = menu.contextMode.width,
+			height = config.stationLoadoutLoadHeight,
+			contextLayer = contextLayer,
+			closeContextMenu = menu.closeContextMenu,
+			contextMode = menu.contextMode,
+			setContextFrame = function(f) menu.contextFrame = f end,
+			menu = menu
+		}
+		L.createAutoPresetEditorContext()
+	end
+end
+
 function L.createLoadContext()
 	L.settings = L.getLoadSettings()[L.params.settingKey]
-	local listRoot = L.prepareBrowserStructure(L.params.itemsList)
+	local listRoot = L.prepareBrowserStructure(L.params.itemsList())
 
 	Helper.removeAllWidgetScripts(L.params.menu, L.params.contextLayer)
 
@@ -401,8 +487,8 @@ function L.createLoadContext()
 
 	L.addFolderToList(ltable, listRoot, 1)
 
-	ltable:setTopRow(L.topRow)
-	ltable:setSelectedRow(L.selectedRow)
+	ltable:setTopRow(L.state[L.params.settingKey].topRow)
+	ltable:setSelectedRow(L.state[L.params.settingKey].selectedRow)
 
 	-- Create list buttons --
 	local tableColumns = 4
@@ -432,13 +518,17 @@ function L.createLoadContext()
 		frameModule(stable)
 	end
 
+	if L.contextModule ~= nil then
+		L.contextModule(contextFrame, L.params.height + Helper.standardButtonHeight)
+	end
+
 	contextFrame:display()
 end
 
 function L.addFolderToList(ltable, root, column)
 	for _, folder in ipairs(root.folders_arr) do
 		local row = ltable:addRow(folder, {  })
-		local isextended = L.expandedFolders[config.folderIdFormat:format(L.params.settingKey, folder.fullname)]
+		local isextended = L.state[L.params.settingKey].expandedFolders[config.folderIdFormat:format(L.params.settingKey, folder.fullname)]
 		row[column]:createButton({ helpOverlayID = folder.fullname, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
 		row[column].handlers.onClick = function () return L.buttonExtendListEntry(folder.fullname, row.index) end
 		local text = L.settings.folder_fullname and folder.fullname or folder.name
@@ -538,7 +628,7 @@ function L.createSearchField(stable)
 	row[1]:setColSpan(2):createText(ReadText(1811143915, 15), config.browserHeaderTextProperties)
 
 	local row = stable:addRow(true, { fixed = true })
-	local editBox = row[1]:createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(L.filter[L.params.settingKey].search, { })
+	local editBox = row[1]:createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(L.state[L.params.settingKey].filter.search, { })
 	row[1].handlers.onEditBoxDeactivated = L.searchItemEdit
 	row[2]:createButton({  }):setText(ReadText(1811143915, 16), { halign = "center" })
 	row[2].handlers.onClick = function () L.searchItemEdit(nil, "", true) end
@@ -562,7 +652,7 @@ end
 
 function L.addModulesToFilter(table, buttonText, checked)
 	local atLeastOneAdded = false;
-	local selectedMacros = L.filter[L.params.settingKey].macros
+	local selectedMacros = L.state[L.params.settingKey].filter.macros
 	for _, module in ipairs(L.allProductionModules) do
 		local macro = module.macro
 		if (checked and ArrayIndexOf(selectedMacros, macro) ~= nil) or (not checked and ArrayIndexOf(selectedMacros, macro) == nil) then
@@ -589,7 +679,7 @@ end
 
 function L.addRacesToFilter(table, buttonText, checked)
 	local atLeastOneAdded = false;
-	local selectedRaces = L.filter[L.params.settingKey].races
+	local selectedRaces = L.state[L.params.settingKey].filter.races
 	for _, race in ipairs(L.allRaces) do
 		if (checked and selectedRaces[race.id] ~= nil) or (not checked and selectedRaces[race.id] == nil) then
 			local row = table:addRow(true, { })
@@ -602,8 +692,286 @@ function L.addRacesToFilter(table, buttonText, checked)
 	return atLeastOneAdded
 end
 
-function L.createAutoPresetEditorButton(stable)
+function L.createAutoPresetEditorContext()
+	--Helper.removeAllWidgetScripts(L.params.menu, L.params.contextLayer)
 
+	local contextFrame = Helper.createFrameHandle(L.params.menu, {
+		layer = L.params.contextLayer,
+		standardButtons = {},
+		width = L.params.width,
+		x = L.params.x,
+		y = L.params.y,
+		autoFrameHeight = true,
+	})
+	L.params.setContextFrame(contextFrame)
+	contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
+
+	local preset = L.state[L.params.settingKey].presetEditor
+
+	local raceOptions = { { id = "any", text = "Any", icon = "", displayremoveoption = false } }
+	for _,race in ipairs(L.allRaces) do
+		if race ~= "other" then
+			table.insert(raceOptions, { id = race.id, text = race.name, icon = "", displayremoveoption = false })
+		end
+	end
+	local valueOptions = {
+		{ id = "low", text = "Low", icon = "", displayremoveoption = false },
+		{ id = "medium", text = "Medium", icon = "", displayremoveoption = false },
+		{ id = "high", text = "High", icon = "", displayremoveoption = false }
+	}
+	local thrusterOptions = {
+		{ id = "mk1", text = "Mk1", icon = "", displayremoveoption = false },
+		{ id = "mk2", text = "Mk2", icon = "", displayremoveoption = false },
+		{ id = "mk3", text = "Mk3", icon = "", displayremoveoption = false }
+	}
+	local dockingComputerOptions = {
+		{ id = "none", text = "None", icon = "", displayremoveoption = false },
+		{ id = "software_dockmk1", text = "Mk1", icon = "", displayremoveoption = false },
+		{ id = "software_dockmk2", text = "Mk2", icon = "", displayremoveoption = false }
+	}
+	local longRangeScannerOptions = {
+		{ id = "software_scannerlongrangemk1", text = "Mk1", icon = "", displayremoveoption = false },
+		{ id = "software_scannerlongrangemk2", text = "Mk2", icon = "", displayremoveoption = false }
+	}
+	local objectScannerOptions = {
+		{ id = "software_scannerobjectmk1", text = "Basic", icon = "", displayremoveoption = false },
+		{ id = "software_scannerobjectmk2", text = "Police", icon = "", displayremoveoption = false }
+	}
+	local targetingComputerOptions = {
+		{ id = "none", text = "None", icon = "", displayremoveoption = false },
+		{ id = "software_targetmk1", text = "Mk1", icon = "", displayremoveoption = false }
+	}
+	local tradingComputerOptions = {
+		{ id = "none", text = "None", icon = "", displayremoveoption = false },
+		{ id = "software_trademk1", text = "Mk1", icon = "", displayremoveoption = false }
+	}
+
+	local htable = contextFrame:addTable(1, { tabOrder = 6, x = Helper.borderSize, width = L.params.width - Helper.borderSize * 2 })
+	local row = htable:addRow(false, { fixed = true })
+	row[1]:createText("Custom Auto-generated Preset Editor", config.browserHeaderTextProperties) -- TODO: move text to xml
+
+	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
+	local optionsWidth = (L.params.width / 2) - Helper.borderSize * 2
+	local c1table = contextFrame:addTable(6, { tabOrder = 6, x = Helper.borderSize, y = config.browserHeaderTextProperties.height + Helper.borderSize * 3, width = optionsWidth, maxVisibleHeight  = Helper.standardTextHeight * 30 })
+	c1table:setColWidth(1, smallColWidth, false)
+	c1table:setColWidth(2, smallColWidth, false)
+	c1table:setColWidth(3, smallColWidth, false)
+	c1table:setColWidth(4, smallColWidth, false)
+	c1table:setColWidth(5, smallColWidth, false)
+
+	local row = c1table:addRow(false, { fixed = false })
+	row[1]:setColSpan(6):createText("M Turrets", {}) -- TODO: move text to xml
+	L.createPresetRules(c1table, raceOptions, valueOptions, L.allMTurrets, preset.mturrets)
+
+	local row = c1table:addRow(false, { fixed = false })
+	row[1]:setColSpan(6):createText("L Turrets", {}) -- TODO: move text to xml
+	L.createPresetRules(c1table, raceOptions, valueOptions, L.allLTurrets, preset.lturrets)
+
+	local row = c1table:addRow(false, { fixed = false })
+	row[1]:setColSpan(6):createText("S Shields", {}) -- TODO: move text to xml
+	L.createPresetRules(c1table, raceOptions, valueOptions, L.allSShields, preset.sshields)
+
+	local row = c1table:addRow(false, { fixed = false })
+	row[1]:setColSpan(6):createText("M Shields", {}) -- TODO: move text to xml
+	L.createPresetRules(c1table, raceOptions, valueOptions, L.allMShields, preset.mshields)
+
+	local row = c1table:addRow(false, { fixed = false })
+	row[1]:setColSpan(6):createText("L Shields", {}) -- TODO: move text to xml
+	L.createPresetRules(c1table, raceOptions, valueOptions, L.allLShields, preset.lshields)
+
+	local row = c1table:addRow(false, { fixed = false })
+	row[1]:setColSpan(6):createText("XL Shields", {}) -- TODO: move text to xml
+	L.createPresetRules(c1table, raceOptions, valueOptions, L.allXLShields, preset.xlshields)
+
+	local row = c1table:addRow(false, { fixed = false })
+	row[1]:setColSpan(6):createText("Engines", {}) -- TODO: move text to xml
+	L.createPresetRules(c1table, raceOptions, valueOptions, L.allEngines, preset.engines)
+
+	local row = c1table:addRow(false, { fixed = false })
+	row[1]:setColSpan(6):createText("Weapons", {}) -- TODO: move text to xml
+	L.createPresetRules(c1table, raceOptions, valueOptions, L.allWeapons, preset.weapons)
+
+	local row = c1table:addRow(false, { fixed = false })
+	row[1]:setColSpan(6):createText("Thrusters", {}) -- TODO: move text to xml
+	L.createPresetRules(c1table, raceOptions, valueOptions, L.allThrusters, preset.thrusters)
+
+
+	local c2table = contextFrame:addTable(3, { tabOrder = 6, x = Helper.borderSize * 2 + (L.params.width / 2), y = config.browserHeaderTextProperties.height + Helper.borderSize * 3, width = optionsWidth })
+	c2table:setColWidth(1, smallColWidth, false)
+
+	local row = c2table:addRow(false, { fixed = false })
+	row[1]:setColSpan(3):createText("Software", {}) -- TODO: move text to xml
+	local row = c2table:addRow(true, { fixed = false })
+	row[2]:createText("Docking Computer", {}) -- TODO: move text to xml
+	row[3]:createDropDown(dockingComputerOptions, { startOption = preset.software.docking.id, height = Helper.standardTextHeight })
+	row[3].handlers.onDropDownConfirmed = function(_, id)
+		preset.software.docking.id = id
+	end
+	local row = c2table:addRow(true, { fixed = false })
+	row[2]:createText("Long Range Scanner", {}) -- TODO: move text to xml
+	row[3]:createDropDown(longRangeScannerOptions, { startOption = preset.software.longrangescanner.id, height = Helper.standardTextHeight })
+	row[3].handlers.onDropDownConfirmed = function(_, id)
+		preset.software.longrangescanner.id = id
+	end
+	local row = c2table:addRow(true, { fixed = false })
+	row[2]:createText("Object Scanner", {}) -- TODO: move text to xml
+	row[3]:createDropDown(objectScannerOptions, { startOption = preset.software.objectscanner.id, height = Helper.standardTextHeight })
+	row[3].handlers.onDropDownConfirmed = function(_, id)
+		preset.software.objectscanner.id = id
+	end
+	local row = c2table:addRow(true, { fixed = false })
+	row[2]:createText("Targeting Computer", {}) -- TODO: move text to xml
+	row[3]:createDropDown(targetingComputerOptions, { startOption = preset.software.targeting.id, height = Helper.standardTextHeight })
+	row[3].handlers.onDropDownConfirmed = function(_, id)
+		preset.software.targeting.id = id
+	end
+	local row = c2table:addRow(true, { fixed = false })
+	row[2]:createText("Trading Computer", {}) -- TODO: move text to xml
+	row[3]:createDropDown(tradingComputerOptions, { startOption = preset.software.trading.id, height = Helper.standardTextHeight })
+	row[3].handlers.onDropDownConfirmed = function(_, id)
+		preset.software.trading.id = id
+	end
+
+	local row = c2table:addRow(false, { fixed = false })
+	row[1]:setColSpan(2):createText("Crew", {}) -- TODO: move text to xml
+	L.createPresetPercentageSlider(c2table, "crew", preset.crew, "Crew")
+	L.createPresetPercentageSlider(c2table, "marines", preset.crew, "Marines")
+
+	local row = c2table:addRow(false, { fixed = false })
+	row[1]:setColSpan(2):createText("Drones", {}) -- TODO: move text to xml
+	L.createPresetPercentageSlider(c2table, "cargo", preset.drones, "Cargo")
+	L.createPresetPercentageSlider(c2table, "mining", preset.drones, "Mining/Gas")
+	L.createPresetPercentageSlider(c2table, "defence", preset.drones, "Defence")
+	L.createPresetPercentageSlider(c2table, "repair", preset.drones, "Repair")
+
+	local row = c2table:addRow(false, { fixed = false })
+	row[1]:setColSpan(2):createText("Deployables", {}) -- TODO: move text to xml
+	L.createPresetPercentageSlider(c2table, "advsatellite", preset.deployables, "Advanced Satellite")
+	L.createPresetPercentageSlider(c2table, "satellite", preset.deployables, "Satellite")
+	L.createPresetPercentageSlider(c2table, "resprobe", preset.deployables, "Resource Probe")
+	L.createPresetPercentageSlider(c2table, "lastower1", preset.deployables, "Laser Tower Mk1")
+	L.createPresetPercentageSlider(c2table, "lastower2", preset.deployables, "Laser Tower Mk2")
+	L.createPresetPercentageSlider(c2table, "ffmine", preset.deployables, "Friend/Foe Mine")
+	L.createPresetPercentageSlider(c2table, "mine", preset.deployables, "Mine")
+	L.createPresetPercentageSlider(c2table, "trackmine", preset.deployables, "Tracking Mine")
+
+	local row = c2table:addRow(false, { fixed = false })
+	row[1]:setColSpan(2):createText("Flares", {}) -- TODO: move text to xml
+	L.createPresetPercentageSlider(c2table, "flares", preset.countermeasure, "Flares")
+
+	c2table:addEmptyRow(Helper.standardTextHeight)
+
+	local row = c2table:addRow(true, { fixed = false })
+	row[1]:setColSpan(3):createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(preset.name, { })
+	row[1].handlers.onTextChanged = function(_, text, textchanged)
+		preset.name = text
+	end
+	local row = c2table:addRow(true, { fixed = false })
+	row[1]:setColSpan(3):createButton({ }):setText("Save", { halign = "center" })
+	row[1].handlers.onClick = function()
+		L.saveAutoPreset(preset)
+		L.createAutoPresetEditorContext()
+	end
+
+	contextFrame:display()
+end
+
+function L.createPresetRules(c1table, raceOptions, valueOptions, exactOptions, rules)
+	local exactKey = "exact"
+	local autoKey = "auto"
+
+	for i, rule in ipairs(rules) do
+		----- Rule header row -----
+		local row = c1table:addRow(true, { fixed = false })
+		-- Move up button --
+		row[2]:createButton({ active = i ~= 1, height = Helper.standardTextHeight }):setIcon("widget_arrow_up_01")
+		row[2].handlers.onClick = function ()
+			table.insert(rules, i-1, rule)
+			table.remove(rules, i+1)
+			L.createAutoPresetEditorContext()
+		end
+		-- Move down button --
+		row[3]:createButton({ active = i ~= #rules, height = Helper.standardTextHeight }):setIcon("widget_arrow_down_01")
+		row[3].handlers.onClick = function ()
+			table.insert(rules, i, rules[i+1])
+			table.remove(rules, i+2)
+			L.createAutoPresetEditorContext()
+		end
+		-- Delete button --
+		row[4]:createButton({ height = Helper.standardTextHeight }):setIcon("widget_cross_01")
+		row[4].handlers.onClick = function ()
+			table.remove(rules, i)
+			L.createAutoPresetEditorContext()
+		end
+		-- Rule number --
+		--row[5]:setColSpan(2):createText(tostring(i), { })
+
+		if rule.type == exactKey then
+			L.createPresetExactRows(c1table, exactOptions, rule)
+		elseif rule.type == autoKey then
+			L.createPresetAutoRows(c1table, raceOptions, valueOptions, rule)
+		else
+			row[3]:setColSpan(4):createText("Unknown rule type!", {})
+		end
+	end
+
+	-- Create add new rule dropdown
+	local row = c1table:addRow(true, { fixed = false })
+	local addOptions = {
+		{ id = exactKey, text = "Exact module", icon = "", displayremoveoption = false }, -- TODO: move text to xml
+		{ id = autoKey, text = "Auto choose", icon = "", displayremoveoption = false } -- TODO: move text to xml
+	}
+	row[2]:setColSpan(5):createDropDown(addOptions, { height = Helper.standardTextHeight, textOverride = "Add new rule"}) -- TODO: move text to xml
+	row[2].handlers.onDropDownConfirmed = function(_, id)
+		local rule = { type = id }
+		if id == autoKey then
+			-- set defaults
+			rule.race = "any"
+			rule.value = "low"
+		end
+		table.insert(rules, rule)
+		L.createAutoPresetEditorContext()
+	end
+end
+
+function L.createPresetExactRows(c1table, options, rule)
+	local row = c1table:addRow(true, { fixed = false })
+	row[3]:setColSpan(3):createText("Exact", {}) -- TODO: move text to xml
+	row[6]:createDropDown(options, { startOption = rule.macro, height = Helper.standardTextHeight })
+	row[6].handlers.onDropDownConfirmed = function(_, id)
+		rule.macro = id
+	end
+end
+
+function L.createPresetAutoRows(c1table, raceOptions, valueOptions, rule)
+	local row = c1table:addRow(true, { fixed = false })
+	row[3]:setColSpan(3):createText("Race", {}) -- TODO: move text to xml
+	row[6]:createDropDown(raceOptions, { startOption = rule.race, height = Helper.standardTextHeight })
+	row[6].handlers.onDropDownConfirmed = function(_, id)
+		rule.race = id
+	end
+	local row = c1table:addRow(true, { fixed = false })
+	row[3]:setColSpan(3):createText("Value", {}) -- TODO: move text to xml
+	row[6]:createDropDown(valueOptions, { startOption = rule.value, height = Helper.standardTextHeight })
+	row[6].handlers.onDropDownConfirmed = function(_, id)
+		rule.value = id
+	end
+end
+
+function L.createPresetPercentageSlider(c1table, current, all, text)
+	local remaining = 100
+	for k, v in pairs(all) do
+		if k ~= "type" and k ~= current then
+			remaining = remaining - v
+		end
+	end
+
+	local row = c1table:addRow(true, { fixed = false })
+	row[2]:setColSpan(2):createSliderCell({ maxSelect = remaining, height = Helper.standardTextHeight, valueColor = Color["slider_value"], min = 0, max = 100, start = all[current], suffix = "%" }):setText(text)
+	row[2].handlers.onSliderCellConfirm = function(_, value)
+		all[current] = value
+		L.createAutoPresetEditorContext()
+	end
 end
 
 function L.isRowValidForLoad()
@@ -627,15 +995,15 @@ function L.buttonLoadItem()
 end
 
 function L.refreshLoadFrame()
-	L.topRow = GetTopRow(L.params.menu.contexttable)
+	L.state[L.params.settingKey].topRow = GetTopRow(L.params.menu.contexttable)
 	L.autoSelectSearch = false
 	L.createLoadContext()
 end
 
 function L.buttonExtendListEntry(index, row)
 	local key = config.folderIdFormat:format(L.params.settingKey, index)
-	L.expandedFolders[key] = not L.expandedFolders[key]
-	L.selectedRow = row
+	L.state[L.params.settingKey].expandedFolders[key] = not L.state[L.params.settingKey].expandedFolders[key]
+	L.state[L.params.settingKey].selectedRow = row
 	L.refreshLoadFrame()
 end
 
@@ -646,14 +1014,14 @@ end
 
 function L.expandAll(root)
 	for _,folder in ipairs(root.folders_arr) do
-		L.expandedFolders[config.folderIdFormat:format(L.params.settingKey, folder.fullname)] = true
+		L.state[L.params.settingKey].expandedFolders[config.folderIdFormat:format(L.params.settingKey, folder.fullname)] = true
 		L.expandAll(folder)
 	end
 end
 
 function L.buttonCollapseAll()
-	for k,_ in pairs(L.expandedFolders) do
-		L.expandedFolders[k] = false
+	for k,_ in pairs(L.state[L.params.settingKey].expandedFolders) do
+		L.state[L.params.settingKey].expandedFolders[k] = false
 	end
 	L.refreshLoadFrame()
 end
@@ -663,12 +1031,12 @@ function L.searchItemEdit(_, text, textchanged)
 		return
 	end
 
-	L.filter[L.params.settingKey].search = text
+	L.state[L.params.settingKey].filter.search = text
 	L.refreshLoadFrame()
 end
 
 function L.filterMacroToggled(macro, checked)
-	local selectedMacros = L.filter[L.params.settingKey].macros
+	local selectedMacros = L.state[L.params.settingKey].filter.macros
 	if checked then
 		table.insert(selectedMacros, macro)
 	else
@@ -681,7 +1049,7 @@ function L.filterMacroToggled(macro, checked)
 end
 
 function L.filterRaceToggled(id, checked)
-	local selectedRaces = L.filter[L.params.settingKey].races
+	local selectedRaces = L.state[L.params.settingKey].filter.races
 	if checked then
 		selectedRaces[id] = true
 	else
@@ -704,13 +1072,17 @@ function L.onSelectElement(uitable)
 	end
 end
 
-function L.onLoadoutLoad(menu, item)
+function L.onDropDownActivated(dropdown)
+	return true
+end
+
+function L.onStationLoadoutLoad(menu, item)
 	if not item.customPreset then
 		menu.dropdownLoadout(_, item.id)
 		return
 	end
 
-	local upgradeplan = {} -- TODO
+	local upgradeplan = L.generateLoadoutUpgradePlan(menu, item.customPreset)
 
 	menu.getUpgradeData(upgradeplan)
 	if menu.holomap and (menu.holomap ~= 0) then
@@ -720,13 +1092,32 @@ function L.onLoadoutLoad(menu, item)
 	menu.displayMenu()
 end
 
+function L.onShipLoadoutLoad(menu, item)
+	if not item.customPreset then
+		menu.dropdownLoadout(_, item.id)
+		return
+	end
+
+	local upgradeplan = L.generateLoadoutUpgradePlan(menu, item.customPreset)
+
+	if menu.usemacro then
+		menu.captainSelected = true
+	end
+	menu.getDataAndDisplay(upgradeplan, nil)
+end
+
 function L.onLoadoutRemoved(defaultLoad, item)
 	if not item.customPreset then
 		defaultLoad(nil, item.id)
 		return
 	end
 
-	-- TODO: remove custom preset
+	local autoPresets = GetNPCBlackboard(L.playerID, config.autoPresetsBlackboardId)
+	if autoPresets then
+		autoPresets[L.params.settingKey][item.id] = nil
+		SetNPCBlackboard(L.playerID, config.autoPresetsBlackboardId, autoPresets)
+		L.refreshLoadFrame()
+	end
 end
 
 
@@ -791,7 +1182,7 @@ function L.prepareBrowserStructure(itemList)
 end
 
 function L.filterItem(item)
-	local search = L.filter[L.params.settingKey].search
+	local search = L.state[L.params.settingKey].filter.search
 	if search and search ~= "" then
 		local searchMatch = item.name:lower():find(search:lower())
 		if not searchMatch then
@@ -808,7 +1199,7 @@ function L.filterItem(item)
 end
 
 function L.filterItemByModules(item)
-	local selectedMacros = L.filter[L.params.settingKey].macros
+	local selectedMacros = L.state[L.params.settingKey].filter.macros
 	if selectedMacros and #selectedMacros > 0 then
 		local hasmacros = Helper.textArrayHelper(selectedMacros, function (numtexts, texts) return C.CheckConstructionPlanForMacros(item.id, texts, numtexts) end)
 		if not hasmacros then
@@ -820,7 +1211,7 @@ end
 
 function L.filterItemByRace(item)
 	local makerraces = GetMacroData(item.id, "makerraceid")
-	local selectedRaces = L.filter[L.params.settingKey].races
+	local selectedRaces = L.state[L.params.settingKey].filter.races
 	if selectedRaces and next(selectedRaces) ~= nil then
 		local f = false
 		for k,_ in pairs(selectedRaces) do
@@ -876,27 +1267,120 @@ function L.sortFolder(folder)
 	end
 end
 
-function L.getAllProductionModules()
+function L.getAllWaresByTag(tag)
 	-- uint32_t GetNumWares(const char* tags, bool research, const char* licenceownerid, const char* exclusiontags);
 	-- uint32_t GetWares(const char** result, uint32_t resultlen, const char* tags, bool research, const char* licenceownerid, const char* exclusiontags);
-	local modulewares = {}
-    local tag = "module"
-    local numwares = C.GetNumWares(tag, false, nil, "noplayerblueprint")
-    local wares = ffi.new("const char*[?]", numwares)
-    numwares = C.GetWares(wares, numwares, tag, false, nil, "noplayerblueprint")
-    for j = 0, numwares - 1 do
-        local locware = ffi.string(wares[j])
-        local name, macro = GetWareData(locware, "name", "component")
+	local result = {}
+	local numwares = C.GetNumWares(tag, false, nil, "noplayerblueprint")
+	local wares = ffi.new("const char*[?]", numwares)
+	numwares = C.GetWares(wares, numwares, tag, false, nil, "noplayerblueprint")
+	for j = 0, numwares - 1 do
+		local locware = ffi.string(wares[j])
+		table.insert(result, locware)
+	end
+	return result
+end
+
+function L.getAllProductionModules()
+	local result = {}
+    for _, ware in ipairs(L.getAllWaresByTag("module")) do
+        local name, macro = GetWareData(ware, "name", "component")
 		local moduletype = GetMacroData(macro, "infolibrary")
 
 		if moduletype == "moduletypes_production" then
 			local entry = { name = name, macro = macro }
-			table.insert(modulewares, entry)
+			table.insert(result, entry)
 		end
     end
 	
-	table.sort(modulewares, function (a, b) return a.name < b.name end)
-	return modulewares
+	table.sort(result, function (a, b) return a.name < b.name end)
+	return result
+end
+
+function L.getAllWeapons()
+	local result = {}
+    for _, ware in ipairs(L.getAllWaresByTag("weapon")) do
+        local name, macro = GetWareData(ware, "name", "component")
+		local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
+		table.insert(result, entry)
+    end
+	
+	table.sort(result, function (a, b) return a.text < b.text end)
+	return result
+end
+
+function L.getAllTurrets()
+	local mTurrets = {}
+	local lTurrets = {}
+    for _, ware in ipairs(L.getAllWaresByTag("turret")) do
+        local name, macro = GetWareData(ware, "name", "component")
+		local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
+		local _, _, slotsize = macro:find("^%a+_%a+_(%a)_")
+		if slotsize then
+			if slotsize:lower() == "l" then
+				table.insert(lTurrets, entry)
+			elseif slotsize:lower() == "m" then
+				table.insert(mTurrets, entry)
+			end
+		end
+    end
+	
+	table.sort(mTurrets, function (a, b) return a.text < b.text end)
+	table.sort(lTurrets, function (a, b) return a.text < b.text end)
+	return mTurrets, lTurrets
+end
+
+function L.getAllShields()
+	local mShields = {}
+	local lShields = {}
+	local xlShields = {}
+	local sShields = {}
+    for _, ware in ipairs(L.getAllWaresByTag("shield")) do
+        local name, macro = GetWareData(ware, "name", "component")
+		local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
+		local _, _, type, slotsize = macro:find("^(%a+)_%a+_(%a+)_")
+		if slotsize and type ~= "ishield" then -- Ignore VRO internal shields
+			if slotsize:lower() == "l" then
+				table.insert(lShields, entry)
+			elseif slotsize:lower() == "m" then
+				table.insert(mShields, entry)
+			elseif slotsize:lower() == "xl" then
+				table.insert(xlShields, entry)
+			elseif slotsize:lower() == "s" then
+				table.insert(sShields, entry)
+			end
+		end
+    end
+	
+	table.sort(sShields, function (a, b) return a.text < b.text end)
+	table.sort(mShields, function (a, b) return a.text < b.text end)
+	table.sort(lShields, function (a, b) return a.text < b.text end)
+	table.sort(xlShields, function (a, b) return a.text < b.text end)
+	return sShields, mShields, lShields, xlShields
+end
+
+function L.getAllEngines()
+	local result = {}
+    for _, ware in ipairs(L.getAllWaresByTag("engine")) do
+        local name, macro = GetWareData(ware, "name", "component")
+		local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
+		table.insert(result, entry)
+    end
+	
+	table.sort(result, function (a, b) return a.text < b.text end)
+	return result
+end
+
+function L.getAllThrusters()
+	local result = {}
+    for _, ware in ipairs(L.getAllWaresByTag("thruster")) do
+        local name, macro = GetWareData(ware, "name", "component")
+		local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
+		table.insert(result, entry)
+    end
+	
+	table.sort(result, function (a, b) return a.text < b.text end)
+	return result
 end
 
 function L.getAllRaces()
@@ -973,8 +1457,272 @@ function L.setLoadSetting(configKey, key, value)
 end
 
 function L.addCustomAutoPresets(key, loadouts)
-	-- TODO
+	local autoPresets = GetNPCBlackboard(L.playerID, config.autoPresetsBlackboardId)
+	if autoPresets and next(autoPresets[key]) ~= nil then
+		loadouts = ShallowCopy(loadouts)
+		for id, preset in pairs(autoPresets[key]) do
+			table.insert(loadouts, { customPreset = preset, id = id, name = preset.name, deleteable = true, active = true })
+		end
+	end
 	return loadouts
+end
+
+function L.saveAutoPreset(preset)
+	if not preset or not preset.name or preset.name == "" then
+		return
+	end
+	local autoPresets = GetNPCBlackboard(L.playerID, config.autoPresetsBlackboardId)
+	if not autoPresets then
+		autoPresets = {
+			[config.stationKey] = { },
+			[config.stationLoadoutKey] = { },
+			[config.shipKey] = {  },
+			[config.shipLoadoutKey] = { },
+			idCounter = 0
+		}
+	end
+	local autoPresetsForKey = autoPresets[L.params.settingKey]
+	local id = autoPresets.idCounter + 1
+	autoPresets.idCounter = id
+	preset.id = id
+	autoPresetsForKey["rknconfigio_auto_" .. tostring(id)] = preset
+	SetNPCBlackboard(L.playerID, config.autoPresetsBlackboardId, autoPresets)
+end
+
+function L.generateLoadoutUpgradePlan(menu, presetTemplate)
+	local upgradeplan = {
+		drone = { },
+		thruster = { },
+		shield = { },
+		engine = { },
+		deployable = { },
+		crew = { },
+		turret = { },
+		turretgroup = { },
+		software = { },
+		shieldgroup = { },
+		countermeasure = { },
+		missile = { },
+		enginegroup = { },
+		weapon = { }
+	}
+
+	for _, group in ipairs(menu.groups) do
+		if #group.turret.possiblemacros > 0 then
+			local chosenMacro
+			if group.turret.slotsize == "medium" then
+				chosenMacro = L.chooseMacroByRules(menu, group.turret.possiblemacros, presetTemplate.mturrets)
+			elseif group.turret.slotsize == "large" then
+				chosenMacro = L.chooseMacroByRules(menu, group.turret.possiblemacros, presetTemplate.lturrets)
+			end
+			if chosenMacro then
+				table.insert(upgradeplan.turretgroup, { path = group.path, group = group.group, count = group.turret.total, macro = chosenMacro })
+			end
+		end
+		if #group.shield.possiblemacros > 0 then
+			local chosenMacro
+			if group.shield.slotsize == "medium" then
+				chosenMacro = L.chooseMacroByRules(menu, group.shield.possiblemacros, presetTemplate.mshields)
+			elseif group.shield.slotsize == "large" then
+				chosenMacro = L.chooseMacroByRules(menu, group.shield.possiblemacros, presetTemplate.lshields)
+			elseif group.shield.slotsize == "extralarge" then
+				chosenMacro = L.chooseMacroByRules(menu, group.shield.possiblemacros, presetTemplate.xlshields)
+			end
+			if chosenMacro then
+				table.insert(upgradeplan.shieldgroup, { path = group.path, group = group.group, count = group.shield.total, macro = chosenMacro })
+			end
+		end
+		if #group.engine.possiblemacros > 0 then
+			local chosenMacro = L.chooseMacroByRules(menu, group.engine.possiblemacros, presetTemplate.engines)
+			if chosenMacro then
+				table.insert(upgradeplan.enginegroup, { path = group.path, group = group.group, count = group.engine.total, macro = chosenMacro })
+				for i = 1, group.engine.total do
+					table.insert(upgradeplan.engine, { macro = chosenMacro })
+				end
+			end
+		end
+	end
+
+	for type, slots in pairs(menu.slots) do
+		for i, slot in ipairs(slots) do
+			if not slot.isgroup and #slot.possiblemacros > 0 then
+				if type == "shield" then
+					local chosenMacro
+					if slot.slotsize == "small" then
+						chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.sshields)
+					elseif slot.slotsize == "medium" then
+						chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.mshields)
+					elseif slot.slotsize == "large" then
+						chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.lshields)
+					elseif slot.slotsize == "extralarge" then
+						chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.xlshields)
+					else
+						-- Internal shields from VRO has no slotsize and only one available macro
+						chosenMacro = slot.possiblemacros[1]
+					end
+					if chosenMacro then
+						upgradeplan.shield[i] = { macro = chosenMacro }
+					end
+				elseif type == "weapon" then
+					local chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.weapons)
+					if chosenMacro then
+						upgradeplan.weapon[i] = { macro = chosenMacro }
+					end
+				elseif type == "engine" and #upgradeplan.enginegroup == 0 then
+					local chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.engines)
+					if chosenMacro then
+						upgradeplan.engine[i] = { macro = chosenMacro }
+					end
+				elseif type == "turret" then
+					local chosenMacro
+					if slot.slotsize == "medium" then
+						chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.mturrets)
+					elseif slot.slotsize == "large" then
+						chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.lturrets)
+					end
+					if chosenMacro then
+						upgradeplan.turret[i] = { macro = chosenMacro }
+					end
+				elseif type == "thruster" then
+					local chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.thrusters)
+					if chosenMacro then
+						upgradeplan.thruster[i] = { macro = chosenMacro }
+					end
+				end
+			end
+		end
+	end
+
+	if presetTemplate.software.docking.id ~= "none" then
+		upgradeplan.software[1] = presetTemplate.software.docking.id
+	end
+	if presetTemplate.software.longrangescanner.id ~= "none" then
+		upgradeplan.software[3] = presetTemplate.software.longrangescanner.id
+	end
+	if presetTemplate.software.objectscanner.id ~= "none" then
+		upgradeplan.software[4] = presetTemplate.software.objectscanner.id
+	end
+	if presetTemplate.software.targeting.id ~= "none" then
+		upgradeplan.software[5] = presetTemplate.software.targeting.id
+	end
+	if presetTemplate.software.trading.id ~= "none" then
+		upgradeplan.software[6] = presetTemplate.software.trading.id
+	end
+	upgradeplan.software[2] = "software_flightassistmk1"
+	if menu.crew then
+		local crewCapacity = menu.crew.capacity
+		upgradeplan.crew.service = L.getProportionateCount(crewCapacity, presetTemplate.crew.crew)
+		upgradeplan.crew.marine = L.getProportionateCount(crewCapacity, presetTemplate.crew.marines)
+	end
+	local droneCapacity = GetMacroUnitStorageCapacity(menu.macro)
+	if droneCapacity > 0 then
+		upgradeplan.drone.ship_gen_xs_cargodrone_empty_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.cargo)
+		--upgradeplan.drone.ship_gen_s_miningdrone_solid_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.mining)
+		--upgradeplan.drone.ship_gen_s_miningdrone_liquid_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.mining)
+		upgradeplan.drone.ship_gen_s_fightingdrone_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.defence)
+		upgradeplan.drone.ship_gen_xs_repairdrone_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.repair)
+	end
+	local deployCapacity = C.GetMacroDeployableCapacity(menu.macro)
+	if deployCapacity > 0 then
+		upgradeplan.deployable.eq_arg_satellite_02_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.advsatellite)
+		upgradeplan.deployable.eq_arg_satellite_01_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.satellite)
+		upgradeplan.deployable.env_deco_nav_beacon_t1_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.navbeacon)
+		upgradeplan.deployable.eq_arg_resourceprobe_01_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.resprobe)
+		upgradeplan.deployable.ship_gen_xs_lasertower_01_a_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.lastower1)
+		upgradeplan.deployable.ship_gen_s_lasertower_01_a_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.lastower2)
+		upgradeplan.deployable.weapon_gen_mine_03_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.ffmine)
+		upgradeplan.deployable.weapon_gen_mine_01_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.mine)
+		upgradeplan.deployable.weapon_gen_mine_02_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.trackmine)
+	end
+	local counterCapacity = C.GetDefaultCountermeasureStorageCapacity(menu.macro)
+	if counterCapacity > 0 then
+		upgradeplan.countermeasure.countermeasure_flares_01_macro = L.getProportionateCount(counterCapacity, presetTemplate.countermeasure.flares)
+	end
+	--C.GetMacroMissileCapacity(currentmacro)
+
+	return upgradeplan
+end
+
+function L.getProportionateCount(totalCapacity, preset)
+	if not preset then
+		return 0
+	end
+	return math.floor(totalCapacity * (preset / 100))
+end
+
+function L.chooseMacroByRules(menu, possiblemacros, rules)
+	for _, rule in ipairs(rules) do
+		local macro
+		if rule.type == "exact" then
+			macro = L.chooseMacroByExactRule(possiblemacros, rule)
+		elseif rule.type == "auto" then
+			macro = L.chooseMacroByAutoRule(menu, possiblemacros, rule)
+		end
+		if macro then
+			return macro
+		end
+	end
+	return nil
+end
+
+function L.chooseMacroByExactRule(possiblemacros, rule)
+	if not rule.macro then
+		return nil
+	end
+	for _, macro in ipairs(possiblemacros) do
+		if macro == rule.macro then
+			return macro
+		end
+	end
+	return nil
+end
+
+function L.chooseMacroByAutoRule(menu, possiblemacros, rule)
+	if not rule.race or not rule.value then
+		return nil
+	end
+
+	-- First filter by race
+	local filteredMacros = {}
+	for _, macro in ipairs(possiblemacros) do
+		local macroRaces, ware = GetMacroData(macro, "makerraceid", "ware")
+		if rule.race or ArrayIndexOf(macroRaces, rule.race) then
+			local tradelicence = GetWareData(ware, "tradelicence")
+			if menu.isplayerowned or (not tradelicence) or tradelicence == "" or HasLicence("player", tradelicence, menu.containerowner) then
+				table.insert(filteredMacros, { macro = macro })
+			end
+		end
+	end
+	if #filteredMacros == 0 then
+		return nil
+	end
+	-- Now sort by price and choose by rule value
+	for _, macro in ipairs(filteredMacros) do
+		--[[local ware
+		for _, w in ipairs(upgradewares) do
+			if w.macro == macro.macro then
+				ware = w.ware
+				break
+			end
+		end--]]
+		local ware = GetMacroData(macro.macro, "ware")
+		if ware then
+			local price = tonumber(C.GetBuildWarePrice(menu.container, ware))
+			macro.price = price
+		else
+			macro.price = 0
+		end
+	end
+	table.sort(filteredMacros, function (a, b) return a.price < b.price end)
+	if rule.value == "low" then
+		return filteredMacros[1].macro
+	elseif rule.value == "medium" then
+		return filteredMacros[math.floor(#filteredMacros / 2)].macro
+	elseif rule.value == "high" then
+		return filteredMacros[#filteredMacros].macro
+	else
+		return nil
+	end
 end
 
 init()

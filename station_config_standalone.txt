@@ -28,6 +28,7 @@ local function init()
 	menu.refreshTitleBar = rkn_menu.refreshTitleBar
 	menu.onRowChanged = rkn_menu.onRowChanged
 	menu.onSelectElement = rkn_menu.onSelectElement
+	menu.onDropDownActivated = rkn_menu.onDropDownActivated
 end
 
 -- Overriden function --
@@ -226,6 +227,16 @@ function rkn_menu.onSelectElement(uitable, modified, row)
 	-- Runekn's Changes Start Here! --
     ConfigioLib.onSelectElement(uitable)
 	-- Runekn's Changes Stop Here! --
+end
+
+function rkn_menu.onDropDownActivated(dropdown)
+	-- Runekn's Changes Start Here! --
+	if ConfigioLib.onDropDownActivated(dropdown) then
+		return
+	end
+	-- Runekn's Changes Stop Here! --
+
+	menu.closeContextMenu()
 end
 
 init()
