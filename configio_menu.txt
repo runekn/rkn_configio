@@ -171,8 +171,7 @@ function L.buttonStationTitleLoad(menu, contextLayer)
 			optionItemNameText = ReadText(1811143915, 9),
 			onSelection = function(item) menu.dropdownLoad(nil, item.id) end,
 			onDeletion = function(item)
-				DebugError(tostring(item.id))
-				menu.dropdownRemovedCP(nil, item.id)
+				L.buttonDeleteCP(menu, item.id)
 			end,
 			maxFolders = config.maxFolders,
 			itemFilter = L.filterItemByModules,
@@ -1157,6 +1156,20 @@ function L.onLoadoutRemoved(defaultLoad, item)
 		autoPresets[L.params.settingKey][item.id] = nil
 		SetNPCBlackboard(L.playerID, config.autoPresetsBlackboardId, autoPresets)
 		L.refreshLoadFrame()
+	end
+end
+
+function L.buttonDeleteCP(menu, id)
+	C.RemoveConstructionPlan("local", id)
+	if id == menu.currentCPID then
+		menu.currentCPID = nil
+		menu.currentCPName = nil
+	end
+	for i, plan in ipairs(menu.constructionplans) do
+		if plan.id == id then
+			table.remove(menu.constructionplans, i)
+			break
+		end
 	end
 end
 
