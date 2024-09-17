@@ -66,11 +66,6 @@ local function init()
 	L.params = {}
 	L.allProductionModules = L.getAllProductionModules()
 	L.allRaces = L.getAllRaces()
-	L.allWeapons = L.getAllWeapons()
-	L.allMTurrets, L.allLTurrets = L.getAllTurrets()
-	L.allSShields, L.allMShields, L.allLShields, L.allXLShields = L.getAllShields()
-	L.allEngines = L.getAllEngines()
-	L.allThrusters = L.getAllThrusters()
 
 	-- Set settings for extension options menu on game start --
 	local settings = L.getLoadSettings()
@@ -328,6 +323,8 @@ function L.buttonStationLoadoutTitleAutoPresets(menu, contextLayer)
 		menu.closeContextMenu()
 	else
 		menu.displayContextFrame("autoPreset", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		local allMTurrets, allLTurrets = L.getAllTurrets()
+		local allSShields, allMShields, allLShields, allXLShields = L.getAllShields()
 		L.params = {
 			settingKey = config.stationLoadoutKey,
 			x = menu.contextMode.x,
@@ -340,7 +337,13 @@ function L.buttonStationLoadoutTitleAutoPresets(menu, contextLayer)
 			setContextFrame = function(f) menu.contextFrame = f end,
 			menu = menu,
 			editorShipLoadout = false,
-			onSave = function() L.buttonStationLoadoutTitleLoad(menu, contextLayer) end
+			onSave = function() L.buttonStationLoadoutTitleLoad(menu, contextLayer) end,
+			weaponsOptions = L.getAllWeapons(),
+			mTurretOptions = allMTurrets,
+			lTurretOptions = allLTurrets,
+			sShieldsOptions = allSShields,
+			mShieldOptions = allMShields,
+			lShieldOptions = allLShields
 		}
 		L.createAutoPresetEditorContext()
 	end
@@ -351,6 +354,8 @@ function L.buttonShipLoadoutTitleAutoPresets(menu, contextLayer)
 		menu.closeContextMenu()
 	else
 		menu.displayContextFrame("autoPreset", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		local allMTurrets, allLTurrets = L.getAllTurrets()
+		local allSShields, allMShields, allLShields, allXLShields = L.getAllShields()
 		L.params = {
 			settingKey = config.shipLoadoutKey,
 			x = menu.contextMode.x,
@@ -363,7 +368,16 @@ function L.buttonShipLoadoutTitleAutoPresets(menu, contextLayer)
 			setContextFrame = function(f) menu.contextFrame = f end,
 			menu = menu,
 			editorShipLoadout = true,
-			onSave = function() L.buttonShipLoadoutTitleLoad(menu, contextLayer) end
+			onSave = function() L.buttonShipLoadoutTitleLoad(menu, contextLayer) end,
+			mTurretOptions = allMTurrets,
+			lTurretOptions = allLTurrets,
+			sShieldsOptions = allSShields,
+			mShieldOptions = allMShields,
+			lShieldOptions = allLShields,
+			xlShieldOptions = allXLShields,
+			engineOptions = L.getAllEngines(),
+			thrusterOptions = L.getAllThrusters(),
+			weaponOptions = L.getAllWeapons()
 		}
 		L.createAutoPresetEditorContext()
 	end
@@ -401,9 +415,6 @@ function L.createLoadContext()
 
 	L.addFolderToList(ltable, listRoot, 1)
 
-	ltable:setTopRow(L.state[L.params.settingKey].topRow)
-	ltable:setSelectedRow(L.state[L.params.settingKey].selectedRow)
-
 	-- Create list buttons --
 	local tableColumns = 4
 	local btable = contextFrame:addTable(tableColumns, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = L.params.height - Helper.standardButtonHeight, x = browserX, width = browserWidth })
@@ -435,6 +446,12 @@ function L.createLoadContext()
 	if L.contextModule ~= nil then
 		L.contextModule(contextFrame, L.params.height + Helper.standardButtonHeight)
 	end
+
+	if L.state[L.params.settingKey].topRow then
+		ltable:setTopRow(L.state[L.params.settingKey].topRow.listTable)
+		stable:setTopRow(L.state[L.params.settingKey].topRow.settingsTable)
+	end
+	ltable:setSelectedRow(L.state[L.params.settingKey].selectedRow)
 
 	contextFrame:display()
 end
@@ -717,42 +734,42 @@ function L.createAutoPresetEditorContext()
 
 	local row = c1table:addRow(false, { fixed = false })
 	row[1]:setColSpan(6):createText(ReadText(1811143915, 36), {})
-	L.createPresetRules(c1table, raceOptions, valueOptions, L.allMTurrets, preset.mturrets)
+	L.createPresetRules(c1table, raceOptions, valueOptions, L.params.mTurretOptions, preset.mturrets)
 
 	local row = c1table:addRow(false, { fixed = false })
 	row[1]:setColSpan(6):createText(ReadText(1811143915, 37), {})
-	L.createPresetRules(c1table, raceOptions, valueOptions, L.allLTurrets, preset.lturrets)
+	L.createPresetRules(c1table, raceOptions, valueOptions, L.params.lTurretOptions, preset.lturrets)
 
 	if L.params.editorShipLoadout then
 		local row = c1table:addRow(false, { fixed = false })
 		row[1]:setColSpan(6):createText(ReadText(1811143915, 38), {})
-		L.createPresetRules(c1table, raceOptions, valueOptions, L.allSShields, preset.sshields)
+		L.createPresetRules(c1table, raceOptions, valueOptions, L.params.sShieldsOptions, preset.sshields)
 	end
 
 	local row = c1table:addRow(false, { fixed = false })
 	row[1]:setColSpan(6):createText(ReadText(1811143915, 39), {})
-	L.createPresetRules(c1table, raceOptions, valueOptions, L.allMShields, preset.mshields)
+	L.createPresetRules(c1table, raceOptions, valueOptions, L.params.mShieldOptions, preset.mshields)
 
 	local row = c1table:addRow(false, { fixed = false })
 	row[1]:setColSpan(6):createText(ReadText(1811143915, 40), {})
-	L.createPresetRules(c1table, raceOptions, valueOptions, L.allLShields, preset.lshields)
+	L.createPresetRules(c1table, raceOptions, valueOptions, L.params.lShieldOptions, preset.lshields)
 
 	if L.params.editorShipLoadout then
 		local row = c1table:addRow(false, { fixed = false })
 		row[1]:setColSpan(6):createText(ReadText(1811143915, 41), {})
-		L.createPresetRules(c1table, raceOptions, valueOptions, L.allXLShields, preset.xlshields)
+		L.createPresetRules(c1table, raceOptions, valueOptions, L.params.xlShieldOptions, preset.xlshields)
 
 		local row = c1table:addRow(false, { fixed = false })
 		row[1]:setColSpan(6):createText(ReadText(1811143915, 42), {})
-		L.createPresetRules(c1table, raceOptions, valueOptions, L.allEngines, preset.engines)
+		L.createPresetRules(c1table, raceOptions, valueOptions, L.params.engineOptions, preset.engines)
 
 		local row = c1table:addRow(false, { fixed = false })
 		row[1]:setColSpan(6):createText(ReadText(1811143915, 43), {})
-		L.createPresetRules(c1table, raceOptions, valueOptions, L.allWeapons, preset.weapons)
+		L.createPresetRules(c1table, raceOptions, valueOptions, L.params.weaponOptions, preset.weapons)
 
 		local row = c1table:addRow(false, { fixed = false })
 		row[1]:setColSpan(6):createText(ReadText(1811143915, 44), {})
-		L.createPresetRules(c1table, raceOptions, valueOptions, L.allThrusters, preset.thrusters)
+		L.createPresetRules(c1table, raceOptions, valueOptions, L.params.thrusterOptions, preset.thrusters)
 	end
 
 
@@ -841,6 +858,10 @@ function L.createAutoPresetEditorContext()
 		L.saveAutoPreset(preset)
 		L.params.onSave()
 	end
+	
+	if L.state[L.params.settingKey].topRow then
+		c1table:setTopRow(L.state[L.params.settingKey].topRow.leftTable)
+	end
 
 	contextFrame:display()
 end
@@ -857,20 +878,20 @@ function L.createPresetRules(c1table, raceOptions, valueOptions, exactOptions, r
 		row[2].handlers.onClick = function ()
 			table.insert(rules, i-1, rule)
 			table.remove(rules, i+1)
-			L.createAutoPresetEditorContext()
+			L.refreshPresetFrame()
 		end
 		-- Move down button --
 		row[3]:createButton({ active = i ~= #rules, height = Helper.standardTextHeight }):setIcon("widget_arrow_down_01")
 		row[3].handlers.onClick = function ()
 			table.insert(rules, i, rules[i+1])
 			table.remove(rules, i+2)
-			L.createAutoPresetEditorContext()
+			L.refreshPresetFrame()
 		end
 		-- Delete button --
 		row[4]:createButton({ height = Helper.standardTextHeight }):setIcon("widget_cross_01")
 		row[4].handlers.onClick = function ()
 			table.remove(rules, i)
-			L.createAutoPresetEditorContext()
+			L.refreshPresetFrame()
 		end
 		-- Rule number --
 		--row[5]:setColSpan(2):createText(tostring(i), { })
@@ -899,7 +920,7 @@ function L.createPresetRules(c1table, raceOptions, valueOptions, exactOptions, r
 			rule.value = "low"
 		end
 		table.insert(rules, rule)
-		L.createAutoPresetEditorContext()
+		L.refreshPresetFrame()
 	end
 end
 
@@ -939,7 +960,7 @@ function L.createPresetPercentageSlider(c1table, current, all, text)
 	row[2]:setColSpan(2):createSliderCell({ maxSelect = remaining, height = Helper.standardTextHeight, valueColor = Color["slider_value"], min = 0, max = 100, start = all[current], suffix = "%" }):setText(text)
 	row[2].handlers.onSliderCellConfirm = function(_, value)
 		all[current] = value
-		L.createAutoPresetEditorContext()
+		L.refreshPresetFrame()
 	end
 end
 
@@ -968,9 +989,21 @@ function L.buttonLoadItem()
 end
 
 function L.refreshLoadFrame()
-	L.state[L.params.settingKey].topRow = GetTopRow(L.params.menu.contexttable)
+	local state = L.state[L.params.settingKey]
+	state.topRow = {
+		listTable = GetTopRow(state.tables[1]),
+		settingsTable = GetTopRow(state.tables[3])
+	}
 	L.autoSelectSearch = false
 	L.createLoadContext()
+end
+
+function L.refreshPresetFrame()
+	local state = L.state[L.params.settingKey]
+	state.topRow = {
+		leftTable = GetTopRow(state.tables[2])
+	}
+	L.createAutoPresetEditorContext()
 end
 
 function L.buttonExtendListEntry(index, row)
@@ -1047,6 +1080,12 @@ end
 
 function L.onDropDownActivated(dropdown)
 	return true
+end
+
+function L.viewCreated(layer, ...)
+	if layer == 2 then
+		L.state[L.params.settingKey].tables = table.pack(...)
+	end
 end
 
 function L.onStationLoadoutLoad(menu, item)

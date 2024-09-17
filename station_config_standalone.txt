@@ -29,6 +29,8 @@ local function init()
 	menu.onRowChanged = rkn_menu.onRowChanged
 	menu.onSelectElement = rkn_menu.onSelectElement
 	menu.onDropDownActivated = rkn_menu.onDropDownActivated
+	rkn_menu.viewCreatedOld = menu.viewCreated
+	menu.viewCreated = rkn_menu.viewCreated
 end
 
 -- Overriden function --
@@ -237,6 +239,11 @@ function rkn_menu.onDropDownActivated(dropdown)
 	-- Runekn's Changes Stop Here! --
 
 	menu.closeContextMenu()
+end
+
+function rkn_menu.viewCreated(layer, ...)
+	ConfigioLib.viewCreated(layer, ...)
+	rkn_menu.viewCreatedOld(layer, ...)
 end
 
 init()

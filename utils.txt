@@ -37,7 +37,7 @@ function Util.ShallowCopy(orig)
     return copy
 end
 
-function ArrayIndexOf(arr, v)
+function Util.ArrayIndexOf(arr, v)
 	if not arr then
 		return nil
 	end

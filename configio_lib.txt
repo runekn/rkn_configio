@@ -189,8 +189,12 @@ function L.getAllWeapons()
 	local result = {}
     for _, ware in ipairs(L.getAllWaresByTag("weapon")) do
         local name, macro = GetWareData(ware, "name", "component")
-		local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
-		table.insert(result, entry)
+		
+		local isAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
+		if not isAlias and IsKnownItem(librarytype, macro) then
+			local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
+			table.insert(result, entry)
+		end
     end
 	
 	table.sort(result, function (a, b) return a.text < b.text end)
@@ -202,13 +206,17 @@ function L.getAllTurrets()
 	local lTurrets = {}
     for _, ware in ipairs(L.getAllWaresByTag("turret")) do
         local name, macro = GetWareData(ware, "name", "component")
-		local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
-		local _, _, slotsize = macro:find("^%a+_%a+_(%a)_")
-		if slotsize then
-			if slotsize:lower() == "l" then
-				table.insert(lTurrets, entry)
-			elseif slotsize:lower() == "m" then
-				table.insert(mTurrets, entry)
+		
+		local isAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
+		if not isAlias and IsKnownItem(librarytype, macro) then
+			local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
+			local _, _, slotsize = macro:find("^%a+_%a+_(%a)_")
+			if slotsize then
+				if slotsize:lower() == "l" then
+					table.insert(lTurrets, entry)
+				elseif slotsize:lower() == "m" then
+					table.insert(mTurrets, entry)
+				end
 			end
 		end
     end
@@ -225,17 +233,21 @@ function L.getAllShields()
 	local sShields = {}
     for _, ware in ipairs(L.getAllWaresByTag("shield")) do
         local name, macro = GetWareData(ware, "name", "component")
-		local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
-		local _, _, type, slotsize = macro:find("^(%a+)_%a+_(%a+)_")
-		if slotsize and type ~= "ishield" then -- Ignore VRO internal shields
-			if slotsize:lower() == "l" then
-				table.insert(lShields, entry)
-			elseif slotsize:lower() == "m" then
-				table.insert(mShields, entry)
-			elseif slotsize:lower() == "xl" then
-				table.insert(xlShields, entry)
-			elseif slotsize:lower() == "s" then
-				table.insert(sShields, entry)
+		
+		local isAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
+		if not isAlias and IsKnownItem(librarytype, macro) then
+			local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
+			local _, _, type, slotsize = macro:find("^(%a+)_%a+_(%a+)_")
+			if slotsize and type ~= "ishield" then -- Ignore VRO internal shields
+				if slotsize:lower() == "l" then
+					table.insert(lShields, entry)
+				elseif slotsize:lower() == "m" then
+					table.insert(mShields, entry)
+				elseif slotsize:lower() == "xl" then
+					table.insert(xlShields, entry)
+				elseif slotsize:lower() == "s" then
+					table.insert(sShields, entry)
+				end
 			end
 		end
     end
@@ -251,8 +263,12 @@ function L.getAllEngines()
 	local result = {}
     for _, ware in ipairs(L.getAllWaresByTag("engine")) do
         local name, macro = GetWareData(ware, "name", "component")
-		local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
-		table.insert(result, entry)
+		
+		local isAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
+		if not isAlias and IsKnownItem(librarytype, macro) then
+			local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
+			table.insert(result, entry)
+		end
     end
 	
 	table.sort(result, function (a, b) return a.text < b.text end)
@@ -263,8 +279,12 @@ function L.getAllThrusters()
 	local result = {}
     for _, ware in ipairs(L.getAllWaresByTag("thruster")) do
         local name, macro = GetWareData(ware, "name", "component")
-		local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
-		table.insert(result, entry)
+		
+		local isAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
+		if not isAlias and IsKnownItem(librarytype, macro) then
+			local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
+			table.insert(result, entry)
+		end
     end
 	
 	table.sort(result, function (a, b) return a.text < b.text end)
@@ -523,8 +543,11 @@ function L.generateLoadoutUpgradePlan(menu, presetTemplate)
 		local droneCapacity = GetMacroUnitStorageCapacity(menu.macro)
 		if droneCapacity > 0 then
 			upgradeplan.drone.ship_gen_xs_cargodrone_empty_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.cargo)
-			--upgradeplan.drone.ship_gen_s_miningdrone_solid_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.mining)
-			--upgradeplan.drone.ship_gen_s_miningdrone_liquid_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.mining)
+			if C.IsUnitMacroCompatible(menu.object, menu.macro, "ship_gen_s_miningdrone_solid_01_a_macro") then
+				upgradeplan.drone.ship_gen_s_miningdrone_solid_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.mining)
+			elseif C.IsUnitMacroCompatible(menu.object, menu.macro, "ship_gen_s_miningdrone_liquid_01_a_macro") then
+				upgradeplan.drone.ship_gen_s_miningdrone_liquid_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.mining)
+			end
 			upgradeplan.drone.ship_gen_s_fightingdrone_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.defence)
 			upgradeplan.drone.ship_gen_xs_repairdrone_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.repair)
 		end
