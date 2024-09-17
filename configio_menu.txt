@@ -1,0 +1,1099 @@
+-- ffi setup 
+local ffi = require("ffi")
+local C = ffi.C
+
+local L = require("extensions.rkn_configio.configio_lib")
+local Utils = require("extensions.rkn_configio.utils")
+
+local config = {
+	stationKey = "station",
+	stationLoadoutKey = "station_loadout",
+	shipKey = "ship",
+	shipLoadoutKey = "ship_loadout",
+	folderIdFormat = "rkn_configio.folder.%s.%s",
+	settingsBlackboardId = "$RKN_ConfigioSettings",
+	autoPresetsBlackboardId = "$RKN_ConfigioAutoPresets",
+	loadWidthMultiplier = 0.8,
+	maxFolders = 6,
+	stationLoadHeight = 0.5 * Helper.viewHeight,
+	stationLoadoutLoadHeight = 0.3 * Helper.viewHeight,
+	loadSettingsWidth = Helper.scaleX(300),
+	settingsBrowserSeparation = Helper.borderSize * 10,
+	browserHeaderTextProperties = {
+		font = Helper.headerRow1Font,
+		fontsize = Helper.headerRow1FontSize,
+		x = Helper.headerRow1Offsetx,
+		y = math.floor((Helper.scaleY(30) - Helper.scaleY(Helper.headerRow1Height)) / 2 + Helper.scaleY(Helper.headerRow1Offsety)),
+		height = Helper.scaleY(30),
+		halign = "center",
+		cellBGColor = Color["row_background"],
+		titleColor = Color["row_title"],
+	},
+	folderTextProperties = {
+		font = Helper.titleFont,
+		fontsize = Helper.standardFontSize,
+		height = Helper.subHeaderHeight,
+		cellBGColor = Color["row_background"],
+		titleColor = { r = 128, g = 128, b = 128, a = 100 }
+	},
+	planTextProperties = {
+		height = math.floor(Helper.standardTextHeight + Helper.scaleY(1) * 2),
+		y = math.floor(Helper.scaleY(1)),
+	},
+	inactiveColor = { r = 128, g = 128, b = 128, a = 100 },
+	autoPresetColor = { r = 100, g = 225, b = 0, a = 100 }
+}
+
+
+local function init()
+	L.playerID = ConvertStringTo64Bit(tostring(C.GetPlayerID()))
+
+	L.state = { }
+	for _,key in ipairs({config.stationKey, config.stationLoadoutKey, config.shipLoadoutKey, config.shipKey}) do
+		L.state[key] = {
+			filter = {
+				macros = {},
+				races = {}
+			},
+			expandedFolders = {},
+			selectedRow = nil,
+			topRow = nil,
+		}
+	end
+
+	L.settings = {}
+	L.autoPresets = {}
+	L.params = {}
+	L.allProductionModules = L.getAllProductionModules()
+	L.allRaces = L.getAllRaces()
+	L.allWeapons = L.getAllWeapons()
+	L.allMTurrets, L.allLTurrets = L.getAllTurrets()
+	L.allSShields, L.allMShields, L.allLShields, L.allXLShields = L.getAllShields()
+	L.allEngines = L.getAllEngines()
+	L.allThrusters = L.getAllThrusters()
+
+	-- Set settings for extension options menu on game start --
+	local settings = L.getLoadSettings()
+	SetNPCBlackboard(L.playerID, config.settingsBlackboardId, settings)
+end
+
+
+function L.createStationTitleBarButton(row, menu, sc_config, loadOptions)
+	if L.isModEnabledForType(config.stationKey) then
+		row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(1811143915, 1), { halign = "center" })
+		row[2].handlers.onClick = function() L.buttonStationTitleLoad(menu, sc_config.contextLayer) end
+	else
+		row[2]:createDropDown(loadOptions, { textOverride = ReadText(1001, 7904), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize }):setTextProperties(sc_config.dropDownTextProperties)
+		row[2].handlers.onDropDownConfirmed = menu.dropdownLoad
+		row[2].handlers.onDropDownRemoved = menu.dropdownRemovedCP
+	end
+end
+
+function L.createRefreshStationTitleBarButton(menu, text, loadOptions)
+	-- No need for refreshing if enabled --
+	if not L.isModEnabledForType(config.stationKey) then
+		local desc = Helper.createDropDown(loadOptions, "", text, nil, true, true, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize)
+		Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, nil, menu.dropdownLoad, menu.dropdownRemovedCP)
+	end
+end
+
+function L.createStationLoadoutTitleBarButton(row, menu, sc_config, loadoutOptions)
+	if L.isModEnabledForType(config.stationLoadoutKey) then
+		row[2]:setColSpan(6):createButton({ helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(1811143915, 22), { halign = "center" })
+		row[2].handlers.onClick = function() L.buttonStationLoadoutTitleLoad(menu, sc_config.contextLayer) end
+	else
+		row[2]:setColSpan(6):createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), optionWidth = menu.titleData.dropdownWidth + 6 * (menu.titleData.height + Helper.borderSize) }):setTextProperties(sc_config.dropDownTextProperties)
+		row[2].handlers.onDropDownConfirmed = menu.dropdownLoadout
+		row[2].handlers.onDropDownRemoved = menu.dropdownRemovedLoadout
+	end
+end
+
+function L.createRefreshStationLoadoutTitleBarButton(menu, text, loadoutOptions)
+	-- No need for refreshing if enabled --
+	if not L.isModEnabledForType(config.stationKey) then
+		local desc = Helper.createDropDown(loadoutOptions, "", text, nil, true, next(menu.loadouts) ~= nil, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + 4 * (menu.titleData.height + Helper.borderSize))
+		Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, nil, menu.dropdownLoadout, menu.dropdownRemovedLoadout)
+	end
+end
+
+function L.createShipTitleBarButton(row, menu, sc_config, shipOptions, curShipOption, dropDownIconProperties)
+	if L.isModEnabledForType(config.shipKey) and menu.mode ~= "upgrade" then
+		local dropdownDummy = { properties = { text = { }, icon = {} } }
+		local text = ReadText(1811143915, 30)
+		local mouseOverText = ""
+		if menu.macro and menu.macro ~= "" then
+			for _,o in ipairs(shipOptions) do
+				if o.id == menu.macro then
+					text = o.text
+					mouseOverText = o.mouseovertext
+					break
+				end
+			end
+		end
+		if (menu.mode == "purchase") and (menu.macro ~= "") and (not menu.validLicence) then
+			local haslicence, icon, overridecolor, mouseovertext = menu.checkLicence(menu.macro, true)
+			text = Helper.convertColorToText(overridecolor) .. text
+		end
+		row[2]:createButton({ active = (not menu.isReadOnly) and (menu.class ~= ""), height = menu.titleData.height, mouseOverText = mouseOverText }):setText(text, { halign = "center"  })
+		row[2].handlers.onClick = function() L.buttonShipTitleLoad(menu, shipOptions, sc_config.contextLayer) end
+		return dropdownDummy
+	else
+		local dropdown = row[2]:createDropDown(shipOptions, { startOption = curShipOption, active = (not menu.isReadOnly) and (menu.class ~= ""), optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, helpOverlayID = "shipconfig_shipoptions", helpOverlayText = " ", helpOverlayHighlightOnly = true }):setTextProperties(sc_config.dropDownTextProperties):setIconProperties(dropDownIconProperties)
+		row[2].properties.text.halign = "left"
+		row[2].handlers.onDropDownConfirmed = menu.dropdownShip
+		return dropdown
+	end
+end
+
+function L.createShipLoadoutTitleBarButton(row, menu, sc_config, active, loadoutOptions)
+	if L.isModEnabledForType(config.shipLoadoutKey) then
+		row[3]:createButton({ active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), height = menu.titleData.height, width = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setText(ReadText(1001, 7905), { halign = "center" })
+		row[3].handlers.onClick = function() L.buttonShipLoadoutTitleLoad(menu, sc_config.contextLayer) end
+	else
+		row[3]:setColSpan(2):createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setTextProperties(sc_config.dropDownTextProperties)
+		row[3].handlers.onDropDownConfirmed = menu.dropdownLoadout
+		row[3].handlers.onDropDownRemoved = menu.dropdownLoadoutRemoved
+	end
+end
+
+function L.isModEnabledForType(type)
+	return L.getLoadSettings()[type].enabled
+end
+
+function L.buttonStationTitleLoad(menu, contextLayer)
+	if menu.contextMode and (menu.contextMode.mode == "loadCP") then
+		menu.closeContextMenu()
+	else
+		menu.displayContextFrame("loadCP", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		L.params = {
+			settingKey = config.stationKey,
+			x = menu.contextMode.x,
+			y = menu.contextMode.y,
+			width = menu.contextMode.width,
+			height = config.stationLoadHeight,
+			itemsList = function() return menu.constructionplans end,
+			header = ReadText(1811143915, 2),
+			optionItemNameText = ReadText(1811143915, 9),
+			onSelection = function(item) menu.dropdownLoad(nil, item.id) end,
+			onDeletion = function(item) menu.dropdownRemovedCP(nil, item.id) end,
+			maxFolders = config.maxFolders,
+			itemFilter = L.filterItemByModules,
+			contextLayer = contextLayer,
+			closeContextMenu = menu.closeContextMenu,
+			contextMode = menu.contextMode,
+			setContextFrame = function(f) menu.contextFrame = f end,
+			menu = menu,
+			isItemActive = function(item) return item.active end,
+			frameModules = { L.createSettings, L.createSearchField, L.createCPModulesFilter },
+		}
+		L.autoSelectSearch = true
+		L.contextModule = nil
+		L.createLoadContext()
+	end
+end
+
+function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
+	if menu.contextMode and (menu.contextMode.mode == "loadCL") then
+		menu.closeContextMenu()
+	else
+		menu.displayContextFrame("loadCL", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		L.params = {
+			settingKey = config.stationLoadoutKey,
+			x = menu.contextMode.x,
+			y = menu.contextMode.y,
+			width = menu.contextMode.width,
+			height = config.stationLoadoutLoadHeight,
+			itemsList = function() return L.addCustomAutoPresets(config.stationLoadoutKey, menu.loadouts) end,
+			header = ReadText(1811143915, 22),
+			optionItemNameText = ReadText(1811143915, 24),
+			onSelection = function(item)
+				menu.closeContextMenu()
+				L.onStationLoadoutLoad(menu, item)
+			end,
+			onDeletion = function(item)
+				menu.closeContextMenu()
+				L.onLoadoutRemoved(menu.dropdownRemovedLoadout, item)
+			end,
+			maxFolders = config.maxFolders,
+			contextLayer = contextLayer,
+			closeContextMenu = menu.closeContextMenu,
+			contextMode = menu.contextMode,
+			setContextFrame = function(f) menu.contextFrame = f end,
+			menu = menu,
+			addToSettingsTable = nil,
+			itemFilter = nil,
+			isItemActive = function(item) return item.active or (item.preset and true or false) end,
+			overrideItemText = function(item)
+				if item.item.preset or item.item.customPreset then
+					return Helper.convertColorToText(config.autoPresetColor) .. item.name
+				end
+				return item.name
+			end,
+			onOpenPresetEditor = function() L.buttonStationLoadoutTitleAutoPresets(menu, contextLayer) end,
+			frameModules = {
+				L.createSettings,
+				L.createSearchField,
+				function(s) L.createAutoPresetEditorButtons(s) end
+			}
+		}
+		L.autoSelectSearch = true
+		L.contextModule = nil
+		L.createLoadContext()
+	end
+end
+
+function L.buttonShipTitleLoad(menu, shipOptions, contextLayer)
+	if menu.contextMode and (menu.contextMode.mode == "loadCS") then
+		menu.closeContextMenu()
+	else
+		menu.displayContextFrame("loadCS", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		L.params = {
+			settingKey = config.shipKey,
+			x = menu.contextMode.x,
+			y = menu.contextMode.y,
+			width = menu.contextMode.width,
+			height = config.stationLoadoutLoadHeight,
+			itemsList = function() return shipOptions end,
+			header = ReadText(1811143915, 30),
+			onSelection = function(item)
+				menu.closeContextMenu()
+				menu.dropdownShip(nil, item.id)
+			end,
+			contextLayer = contextLayer,
+			closeContextMenu = menu.closeContextMenu,
+			contextMode = menu.contextMode,
+			setContextFrame = function(f) menu.contextFrame = f end,
+			menu = menu,
+			itemFilter = L.filterItemByRace,
+			isItemActive = function(_) return true end,
+			overrideItemText = function(item) return Helper.convertColorToText(item.item.overridecolor) .. item.item.text end,
+			frameModules = { L.createSearchField, L.createShipRacesFilter }
+		}
+		L.autoSelectSearch = true
+		L.contextModule = nil
+		L.createLoadContext()
+	end
+end
+
+function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
+	if menu.contextMode and (menu.contextMode.mode == "loadCL") then
+		menu.closeContextMenu()
+	else
+		menu.displayContextFrame("loadCL", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		L.params = {
+			settingKey = config.shipLoadoutKey,
+			x = menu.contextMode.x,
+			y = menu.contextMode.y,
+			width = menu.contextMode.width,
+			height = config.stationLoadoutLoadHeight,
+			itemsList = function() return L.addCustomAutoPresets(config.shipLoadoutKey, menu.loadouts) end,
+			header = ReadText(1811143915, 22),
+			optionItemNameText = ReadText(1811143915, 24),
+			onSelection = function(item)
+				menu.closeContextMenu()
+				L.onShipLoadoutLoad(menu, item)
+			end,
+			maxFolders = config.maxFolders,
+			onDeletion = function(item)
+				menu.closeContextMenu()
+				L.onLoadoutRemoved(menu.dropdownLoadoutRemoved, item)
+			end,
+			contextLayer = contextLayer,
+			closeContextMenu = menu.closeContextMenu,
+			contextMode = menu.contextMode,
+			setContextFrame = function(f) menu.contextFrame = f end,
+			menu = menu,
+			isItemActive = function(item) return item.active or (item.preset and true or false) end,
+			overrideItemText = function(item)
+				if item.item.preset or item.item.customPreset then
+					return Helper.convertColorToText(config.autoPresetColor) .. item.name
+				end
+				return item.name
+			end,
+			onOpenPresetEditor = function() L.buttonShipLoadoutTitleAutoPresets(menu, contextLayer) end,
+			frameModules = {
+				L.createSettings,
+				L.createSearchField,
+				function(s) L.createAutoPresetEditorButtons(s) end
+			}
+		}
+		L.autoSelectSearch = true
+		L.contextModule = nil
+		L.createLoadContext()
+	end
+end
+
+function L.buttonStationLoadoutTitleAutoPresets(menu, contextLayer)
+	if menu.contextMode and (menu.contextMode.mode == "autoPreset") then
+		menu.closeContextMenu()
+	else
+		menu.displayContextFrame("autoPreset", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		L.params = {
+			settingKey = config.stationLoadoutKey,
+			x = menu.contextMode.x,
+			y = menu.contextMode.y,
+			width = menu.contextMode.width,
+			height = config.stationLoadoutLoadHeight,
+			contextLayer = contextLayer,
+			closeContextMenu = menu.closeContextMenu,
+			contextMode = menu.contextMode,
+			setContextFrame = function(f) menu.contextFrame = f end,
+			menu = menu,
+			editorShipLoadout = false,
+			onSave = function() L.buttonStationLoadoutTitleLoad(menu, contextLayer) end
+		}
+		L.createAutoPresetEditorContext()
+	end
+end
+
+function L.buttonShipLoadoutTitleAutoPresets(menu, contextLayer)
+	if menu.contextMode and (menu.contextMode.mode == "autoPreset") then
+		menu.closeContextMenu()
+	else
+		menu.displayContextFrame("autoPreset", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		L.params = {
+			settingKey = config.shipLoadoutKey,
+			x = menu.contextMode.x,
+			y = menu.contextMode.y,
+			width = menu.contextMode.width,
+			height = config.stationLoadoutLoadHeight,
+			contextLayer = contextLayer,
+			closeContextMenu = menu.closeContextMenu,
+			contextMode = menu.contextMode,
+			setContextFrame = function(f) menu.contextFrame = f end,
+			menu = menu,
+			editorShipLoadout = true,
+			onSave = function() L.buttonShipLoadoutTitleLoad(menu, contextLayer) end
+		}
+		L.createAutoPresetEditorContext()
+	end
+end
+
+function L.createLoadContext()
+	L.settings = L.getLoadSettings()[L.params.settingKey]
+	local listRoot = L.prepareBrowserStructure(L.params.itemsList())
+
+	Helper.removeAllWidgetScripts(L.params.menu, L.params.contextLayer)
+
+	local contextFrame = Helper.createFrameHandle(L.params.menu, {
+		layer = L.params.contextLayer,
+		standardButtons = {},
+		width = L.params.width,
+		x = L.params.x,
+		y = L.params.y,
+		autoFrameHeight = true,
+	})
+	L.params.setContextFrame(contextFrame)
+	contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
+
+	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
+	local browserWidth = L.params.width - config.loadSettingsWidth - Helper.borderSize * 2 - config.settingsBrowserSeparation
+	local browserX = config.loadSettingsWidth + Helper.borderSize + config.settingsBrowserSeparation
+
+	-- Create item list --
+	local ltable = contextFrame:addTable(config.maxFolders + 1, { wraparound = true, tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = L.params.height - Helper.standardButtonHeight, x = browserX, width = browserWidth })
+	for column = 1, config.maxFolders do
+		ltable:setColWidth(column, smallColWidth, false)
+	end
+	L.ltable = ltable
+	local row = ltable:addRow(false, { fixed = true })
+	row[1]:setColSpan(config.maxFolders + 1):createText(L.params.header, config.browserHeaderTextProperties)
+
+	L.addFolderToList(ltable, listRoot, 1)
+
+	ltable:setTopRow(L.state[L.params.settingKey].topRow)
+	ltable:setSelectedRow(L.state[L.params.settingKey].selectedRow)
+
+	-- Create list buttons --
+	local tableColumns = 4
+	local btable = contextFrame:addTable(tableColumns, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = L.params.height - Helper.standardButtonHeight, x = browserX, width = browserWidth })
+	L.btable = btable
+	local row = btable:addRow(true, { fixed = true })
+	row[tableColumns-2]:createButton({ active = L.isRowValidForLoad }):setText(ReadText(1811143915, 3), { halign = "center" })
+	row[tableColumns-2].handlers.onClick = L.buttonLoadItem
+	row[tableColumns-1]:createButton({ active = L.isRowValidForDeletion }):setText(ReadText(1811143915, 4), { halign = "center" })
+	row[tableColumns-1].handlers.onClick = L.buttonDeleteItem
+	row[tableColumns]:createButton({  }):setText(ReadText(1811143915, 5), { halign = "center" })
+	row[tableColumns].handlers.onClick = L.params.closeContextMenu
+
+	-- Create expand/collapse all buttons --
+	local etable = contextFrame:addTable(2, { tabOrder = 5, x = browserX, y = config.browserHeaderTextProperties.y, width = smallColWidth * 2 })
+	local row = etable:addRow(true, { })
+	row[1]:createButton({ mouseOverText = ReadText(1811143915, 20), active = L.settings.folder_enabled }):setText("+", { halign = "center" })
+	row[1].handlers.onClick = function() L.buttonExpandAll(listRoot) end
+	row[2]:createButton({ mouseOverText = ReadText(1811143915, 21), active = L.settings.folder_enabled }):setText("-", { halign = "center" })
+	row[2].handlers.onClick = L.buttonCollapseAll
+
+	-- Create settings list --
+	local stable = contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = L.params.height, x = Helper.borderSize, width = config.loadSettingsWidth - Helper.borderSize * 2 })
+	stable:setColWidth(1, config.loadSettingsWidth * 0.7, false)
+
+	for _, frameModule in ipairs(L.params.frameModules) do
+		frameModule(stable)
+	end
+
+	if L.contextModule ~= nil then
+		L.contextModule(contextFrame, L.params.height + Helper.standardButtonHeight)
+	end
+
+	contextFrame:display()
+end
+
+function L.addFolderToList(ltable, root, column)
+	for _, folder in ipairs(root.folders_arr) do
+		local row = ltable:addRow(folder, {  })
+		local isextended = L.state[L.params.settingKey].expandedFolders[config.folderIdFormat:format(L.params.settingKey, folder.fullname)]
+		row[column]:createButton({ helpOverlayID = folder.fullname, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
+		row[column].handlers.onClick = function () return L.buttonExtendListEntry(folder.fullname, row.index) end
+		local text = L.settings.folder_fullname and folder.fullname or folder.name
+		row[column + 1]:setColSpan(config.maxFolders - column + 1):createText(text, config.folderTextProperties)
+		if isextended then
+			L.addFolderToList(ltable, folder, column + 1)
+		end
+	end
+
+	for _, item in ipairs(root.items) do
+		local row = ltable:addRow(item, {  })
+		local text = L.settings.item_fullname and item.item.name or item.name
+		if not item.active then
+			text = Helper.convertColorToText(config.inactiveColor) .. text
+		elseif L.params.overrideItemText then
+			text = L.params.overrideItemText(item)
+		end
+		row[column]:setColSpan(config.maxFolders - column + 2):createText(text, config.planTextProperties)
+		row[column].properties.mouseOverText = item.item.mouseovertext
+	end
+end
+
+function L.createSettings(stable)
+	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
+
+	local row = stable:addRow(false, { fixed = true })
+	row[1]:setColSpan(2):createText(ReadText(1811143915, 6), config.browserHeaderTextProperties)
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:createText(ReadText(1811143915, 7), { })
+	row[2]:createCheckBox(L.settings.folder_enabled, { width = smallColWidth })
+	row[2].handlers.onClick = function(_, checked)
+		L.setLoadSetting(L.params.settingKey, "folder_enabled", checked)
+		L.refreshLoadFrame()
+	end
+
+	stable:addEmptyRow(Helper.standardTextHeight)
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:createText(ReadText(1811143915, 8), { })
+	local delimiterEditBoxText = L.settings.folder_delimiter:gsub(" ", "(space)") -- Replace spaces with '(space)' so that it is easier to read
+	row[2]:createEditBox({ scaling = true }):setText(delimiterEditBoxText, { })
+	row[2].handlers.onEditBoxDeactivated = function(_, text, textchanged)
+		if textchanged then
+			text = text:gsub("(space)", " ")
+			if text:len() > 1 then
+				text = text:sub(1, 1)
+			end
+			L.setLoadSetting(L.params.settingKey, "folder_delimiter", text)
+			L.refreshLoadFrame()
+		end
+	end
+	row[2].properties.mouseOverText = ReadText(1811143915, 12)
+	row[2].properties.active = L.settings.folder_enabled
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:createText(L.params.optionItemNameText, { })
+	row[2]:createCheckBox(L.settings.item_fullname, { width = smallColWidth })
+	row[2].handlers.onClick = function(_, checked)
+		L.setLoadSetting(L.params.settingKey, "item_fullname", checked)
+		L.refreshLoadFrame()
+	end
+	row[2].properties.active = L.settings.folder_enabled
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:createText(ReadText(1811143915, 10), { })
+	row[2]:createCheckBox(L.settings.folder_fullname, { width = smallColWidth })
+	row[2].handlers.onClick = function(_, checked)
+		L.setLoadSetting(L.params.settingKey, "folder_fullname", checked)
+		L.refreshLoadFrame()
+	end
+	row[2].properties.active = L.settings.folder_enabled
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:createText(ReadText(1811143915, 11), { })
+	row[2]:createCheckBox(L.settings.folder_flatten_single_item, { width = smallColWidth })
+	row[2].handlers.onClick = function(_, checked)
+		L.setLoadSetting(L.params.settingKey, "folder_flatten_single_item", checked)
+		L.refreshLoadFrame()
+	end
+	row[2].properties.mouseOverText = ReadText(1811143915, 14)
+	row[2].properties.active = L.settings.folder_enabled
+
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:createText(ReadText(1811143915, 33), { })
+	row[2]:createCheckBox(L.settings.item_hide_inactive, { width = smallColWidth })
+	row[2].handlers.onClick = function(_, checked)
+		L.setLoadSetting(L.params.settingKey, "item_hide_inactive", checked)
+		L.refreshLoadFrame()
+	end
+end
+
+function L.createSearchField(stable)
+	-- Search bar --
+	local row = stable:addRow(false, { fixed = true })
+	row[1]:setColSpan(2):createText(ReadText(1811143915, 15), config.browserHeaderTextProperties)
+
+	local row = stable:addRow(true, { fixed = true })
+	local editBox = row[1]:createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(L.state[L.params.settingKey].filter.search, { })
+	row[1].handlers.onEditBoxDeactivated = L.searchItemEdit
+	row[2]:createButton({  }):setText(ReadText(1811143915, 16), { halign = "center" })
+	row[2].handlers.onClick = function () L.searchItemEdit(nil, "", true) end
+	if L.autoSelectSearch then
+		-- This will cause the editbox to be automatically activated --
+		L.params.contextMode.nameEditBox = editBox
+	end
+end
+
+function L.createCPModulesFilter(stable)
+	local row = stable:addRow(false, { fixed = true })
+	row[1]:setColSpan(2):createText(ReadText(1811143915, 17), config.browserHeaderTextProperties)
+	row[1].properties.mouseOverText = ReadText(1811143915, 23)
+
+	local addSeparation = L.addModulesToFilter(stable, ReadText(1811143915, 18), true)
+	if addSeparation then
+		stable:addEmptyRow(Helper.standardTextHeight)
+	end
+	L.addModulesToFilter(stable, ReadText(1811143915, 19), false)
+end
+
+function L.addModulesToFilter(table, buttonText, checked)
+	local atLeastOneAdded = false;
+	local selectedMacros = L.state[L.params.settingKey].filter.macros
+	for _, module in ipairs(L.allProductionModules) do
+		local macro = module.macro
+		if (checked and Utils.ArrayIndexOf(selectedMacros, macro) ~= nil) or (not checked and Utils.ArrayIndexOf(selectedMacros, macro) == nil) then
+			local row = table:addRow(true, { })
+			row[1]:createText(module.name, { })
+			row[2]:createButton({  }):setText(buttonText, { halign = "center" })
+			row[2].handlers.onClick = function () L.filterMacroToggled(macro, not checked) end
+			atLeastOneAdded = true
+		end
+	end
+	return atLeastOneAdded
+end
+
+function L.createShipRacesFilter(stable)
+	local row = stable:addRow(false, { fixed = true })
+	row[1]:setColSpan(2):createText(ReadText(1811143915, 31), config.browserHeaderTextProperties)
+
+	local addSeparation = L.addRacesToFilter(stable, ReadText(1811143915, 18), true)
+	if addSeparation then
+		stable:addEmptyRow(Helper.standardTextHeight)
+	end
+	L.addRacesToFilter(stable, ReadText(1811143915, 19), false)
+end
+
+function L.addRacesToFilter(table, buttonText, checked)
+	local atLeastOneAdded = false;
+	local selectedRaces = L.state[L.params.settingKey].filter.races
+	for _, race in ipairs(L.allRaces) do
+		if (checked and selectedRaces[race.id] ~= nil) or (not checked and selectedRaces[race.id] == nil) then
+			local row = table:addRow(true, { })
+			row[1]:createText(race.name, { })
+			row[2]:createButton({  }):setText(buttonText, { halign = "center" })
+			row[2].handlers.onClick = function () L.filterRaceToggled(race.id, not checked) end
+			atLeastOneAdded = true
+		end
+	end
+	return atLeastOneAdded
+end
+
+function L.createAutoPresetEditorButtons(stable)
+	local row = stable:addRow(false, { fixed = true })
+	row[1]:setColSpan(2):createText(ReadText(1811143915, 74), config.browserHeaderTextProperties)
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:setColSpan(2):createButton({ }):setText(ReadText(1811143915, 75), { halign = "center" })
+	row[1].handlers.onClick = function()
+		L.state[L.params.settingKey].presetEditor = nil
+		L.params.onOpenPresetEditor()
+	end
+	local row = stable:addRow(true, { fixed = true })
+	row[1]:setColSpan(2):createButton({ active = function() return L.getSelectedRowCustomAutoPreset() ~= nil end }):setText(ReadText(1811143915, 76), { halign = "center" })
+	row[1].handlers.onClick = function()
+		L.state[L.params.settingKey].presetEditor = L.getSelectedRowCustomAutoPreset()
+		L.params.onOpenPresetEditor()
+	end
+end
+
+function L.createAutoPresetEditorContext()
+	Helper.removeAllWidgetScripts(L.params.menu, L.params.contextLayer)
+
+	local contextFrame = Helper.createFrameHandle(L.params.menu, {
+		layer = L.params.contextLayer,
+		standardButtons = {},
+		width = L.params.width,
+		x = L.params.x,
+		y = L.params.y,
+		autoFrameHeight = true,
+	})
+	L.params.setContextFrame(contextFrame)
+	contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
+
+	local preset = L.state[L.params.settingKey].presetEditor
+	if not preset then
+		preset = {
+			name = "New Auto-Preset",
+			engines = {},
+			weapons = {},
+			mturrets = {},
+			lturrets = {},
+			sshields = {},
+			mshields = {},
+			lshields = {},
+			xlshields = {},
+			thrusters = {},
+			software = {
+				longrangescanner = { type = "exact", id = "software_scannerlongrangemk1" },
+				objectscanner = { type = "exact", id = "software_scannerobjectmk1" },
+				docking = { type = "exact", id = "none" },
+				trading = { type = "exact", id = "none" },
+				targeting = { type = "exact", id = "none" }
+			},
+			drones = { type = "percentage" },
+			crew = { type = "percentage" },
+			deployables = { type = "percentage" },
+			countermeasure = { type = "percentage" }
+		}
+		L.state[L.params.settingKey].presetEditor = preset
+	end
+
+	local raceOptions = { { id = "any", text = ReadText(1811143915, 34), icon = "", displayremoveoption = false } }
+	for _,race in ipairs(L.allRaces) do
+		if race ~= "other" then
+			table.insert(raceOptions, { id = race.id, text = race.name, icon = "", displayremoveoption = false })
+		end
+	end
+	local valueOptions = {
+		{ id = "low", text = ReadText(1811143915, 71), icon = "", displayremoveoption = false },
+		{ id = "medium", text = ReadText(1811143915, 72), icon = "", displayremoveoption = false },
+		{ id = "high", text = ReadText(1811143915, 73), icon = "", displayremoveoption = false }
+	}
+	local thrusterOptions = {
+		{ id = "mk1", text = "Mk1", icon = "", displayremoveoption = false },
+		{ id = "mk2", text = "Mk2", icon = "", displayremoveoption = false },
+		{ id = "mk3", text = "Mk3", icon = "", displayremoveoption = false }
+	}
+	local dockingComputerOptions = {
+		{ id = "none", text = "None", icon = "", displayremoveoption = false },
+		{ id = "software_dockmk1", text = "Mk1", icon = "", displayremoveoption = false },
+		{ id = "software_dockmk2", text = "Mk2", icon = "", displayremoveoption = false }
+	}
+	local longRangeScannerOptions = {
+		{ id = "software_scannerlongrangemk1", text = "Mk1", icon = "", displayremoveoption = false },
+		{ id = "software_scannerlongrangemk2", text = "Mk2", icon = "", displayremoveoption = false }
+	}
+	local objectScannerOptions = {
+		{ id = "software_scannerobjectmk1", text = "Basic", icon = "", displayremoveoption = false },
+		{ id = "software_scannerobjectmk2", text = "Police", icon = "", displayremoveoption = false }
+	}
+	local targetingComputerOptions = {
+		{ id = "none", text = "None", icon = "", displayremoveoption = false },
+		{ id = "software_targetmk1", text = "Mk1", icon = "", displayremoveoption = false }
+	}
+	local tradingComputerOptions = {
+		{ id = "none", text = "None", icon = "", displayremoveoption = false },
+		{ id = "software_trademk1", text = "Mk1", icon = "", displayremoveoption = false }
+	}
+
+	local htable = contextFrame:addTable(1, { tabOrder = 6, x = Helper.borderSize, width = L.params.width - Helper.borderSize * 2 })
+	local row = htable:addRow(false, { fixed = true })
+	row[1]:createText(ReadText(1811143915, 35), config.browserHeaderTextProperties)
+
+	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
+	local optionsWidth = (L.params.width / 2) - Helper.borderSize * 2
+	local c1table = contextFrame:addTable(6, { tabOrder = 6, x = Helper.borderSize, y = config.browserHeaderTextProperties.height + Helper.borderSize * 3, width = optionsWidth, maxVisibleHeight  = Helper.standardTextHeight * 30 })
+	c1table:setColWidth(1, smallColWidth, false)
+	c1table:setColWidth(2, smallColWidth, false)
+	c1table:setColWidth(3, smallColWidth, false)
+	c1table:setColWidth(4, smallColWidth, false)
+	c1table:setColWidth(5, smallColWidth, false)
+
+	local row = c1table:addRow(false, { fixed = false })
+	row[1]:setColSpan(6):createText(ReadText(1811143915, 36), {})
+	L.createPresetRules(c1table, raceOptions, valueOptions, L.allMTurrets, preset.mturrets)
+
+	local row = c1table:addRow(false, { fixed = false })
+	row[1]:setColSpan(6):createText(ReadText(1811143915, 37), {})
+	L.createPresetRules(c1table, raceOptions, valueOptions, L.allLTurrets, preset.lturrets)
+
+	if L.params.editorShipLoadout then
+		local row = c1table:addRow(false, { fixed = false })
+		row[1]:setColSpan(6):createText(ReadText(1811143915, 38), {})
+		L.createPresetRules(c1table, raceOptions, valueOptions, L.allSShields, preset.sshields)
+	end
+
+	local row = c1table:addRow(false, { fixed = false })
+	row[1]:setColSpan(6):createText(ReadText(1811143915, 39), {})
+	L.createPresetRules(c1table, raceOptions, valueOptions, L.allMShields, preset.mshields)
+
+	local row = c1table:addRow(false, { fixed = false })
+	row[1]:setColSpan(6):createText(ReadText(1811143915, 40), {})
+	L.createPresetRules(c1table, raceOptions, valueOptions, L.allLShields, preset.lshields)
+
+	if L.params.editorShipLoadout then
+		local row = c1table:addRow(false, { fixed = false })
+		row[1]:setColSpan(6):createText(ReadText(1811143915, 41), {})
+		L.createPresetRules(c1table, raceOptions, valueOptions, L.allXLShields, preset.xlshields)
+
+		local row = c1table:addRow(false, { fixed = false })
+		row[1]:setColSpan(6):createText(ReadText(1811143915, 42), {})
+		L.createPresetRules(c1table, raceOptions, valueOptions, L.allEngines, preset.engines)
+
+		local row = c1table:addRow(false, { fixed = false })
+		row[1]:setColSpan(6):createText(ReadText(1811143915, 43), {})
+		L.createPresetRules(c1table, raceOptions, valueOptions, L.allWeapons, preset.weapons)
+
+		local row = c1table:addRow(false, { fixed = false })
+		row[1]:setColSpan(6):createText(ReadText(1811143915, 44), {})
+		L.createPresetRules(c1table, raceOptions, valueOptions, L.allThrusters, preset.thrusters)
+	end
+
+
+	local c2table = contextFrame:addTable(3, { tabOrder = 6, x = Helper.borderSize * 2 + (L.params.width / 2), y = config.browserHeaderTextProperties.height + Helper.borderSize * 3, width = optionsWidth })
+	c2table:setColWidth(1, smallColWidth, false)
+
+	if L.params.editorShipLoadout then
+		local row = c2table:addRow(false, { fixed = false })
+		row[1]:setColSpan(3):createText(ReadText(1811143915, 45), {})
+		local row = c2table:addRow(true, { fixed = false })
+		row[2]:createText(ReadText(1811143915, 46), {})
+		row[3]:createDropDown(dockingComputerOptions, { startOption = preset.software.docking.id, height = Helper.standardTextHeight })
+		row[3].handlers.onDropDownConfirmed = function(_, id)
+			preset.software.docking.id = id
+		end
+		local row = c2table:addRow(true, { fixed = false })
+		row[2]:createText(ReadText(1811143915, 47), {})
+		row[3]:createDropDown(longRangeScannerOptions, { startOption = preset.software.longrangescanner.id, height = Helper.standardTextHeight })
+		row[3].handlers.onDropDownConfirmed = function(_, id)
+			preset.software.longrangescanner.id = id
+		end
+		local row = c2table:addRow(true, { fixed = false })
+		row[2]:createText(ReadText(1811143915, 48), {})
+		row[3]:createDropDown(objectScannerOptions, { startOption = preset.software.objectscanner.id, height = Helper.standardTextHeight })
+		row[3].handlers.onDropDownConfirmed = function(_, id)
+			preset.software.objectscanner.id = id
+		end
+		local row = c2table:addRow(true, { fixed = false })
+		row[2]:createText(ReadText(1811143915, 49), {})
+		row[3]:createDropDown(targetingComputerOptions, { startOption = preset.software.targeting.id, height = Helper.standardTextHeight })
+		row[3].handlers.onDropDownConfirmed = function(_, id)
+			preset.software.targeting.id = id
+		end
+		local row = c2table:addRow(true, { fixed = false })
+		row[2]:createText(ReadText(1811143915, 50), {})
+		row[3]:createDropDown(tradingComputerOptions, { startOption = preset.software.trading.id, height = Helper.standardTextHeight })
+		row[3].handlers.onDropDownConfirmed = function(_, id)
+			preset.software.trading.id = id
+		end
+
+		local row = c2table:addRow(false, { fixed = false })
+		row[1]:setColSpan(2):createText(ReadText(1811143915, 51), {})
+		L.createPresetPercentageSlider(c2table, "crew", preset.crew, ReadText(1811143915, 52))
+		L.createPresetPercentageSlider(c2table, "marines", preset.crew, ReadText(1811143915, 53))
+
+		local row = c2table:addRow(false, { fixed = false })
+		row[1]:setColSpan(2):createText(ReadText(1811143915, 54), {})
+		L.createPresetPercentageSlider(c2table, "cargo", preset.drones, ReadText(1811143915, 55))
+		L.createPresetPercentageSlider(c2table, "mining", preset.drones, ReadText(1811143915, 56))
+		L.createPresetPercentageSlider(c2table, "defence", preset.drones, ReadText(1811143915, 57))
+		L.createPresetPercentageSlider(c2table, "repair", preset.drones, ReadText(1811143915, 58))
+
+		local row = c2table:addRow(false, { fixed = false })
+		row[1]:setColSpan(2):createText(ReadText(1811143915, 59), {})
+		L.createPresetPercentageSlider(c2table, "advsatellite", preset.deployables, ReadText(1811143915, 60))
+		L.createPresetPercentageSlider(c2table, "satellite", preset.deployables, ReadText(1811143915, 61))
+		L.createPresetPercentageSlider(c2table, "resprobe", preset.deployables, ReadText(1811143915, 62))
+		L.createPresetPercentageSlider(c2table, "lastower1", preset.deployables, ReadText(1811143915, 63))
+		L.createPresetPercentageSlider(c2table, "lastower2", preset.deployables, ReadText(1811143915, 64))
+		L.createPresetPercentageSlider(c2table, "ffmine", preset.deployables, ReadText(1811143915, 65))
+		L.createPresetPercentageSlider(c2table, "mine", preset.deployables, ReadText(1811143915, 66))
+		L.createPresetPercentageSlider(c2table, "trackmine", preset.deployables, ReadText(1811143915, 67))
+
+		local row = c2table:addRow(false, { fixed = false })
+		row[1]:setColSpan(2):createText(ReadText(1811143915, 68), {})
+		L.createPresetPercentageSlider(c2table, "flares", preset.countermeasure, ReadText(1811143915, 68))
+
+		c2table:addEmptyRow(Helper.standardTextHeight)
+	end
+
+	local row = c2table:addRow(true, { fixed = false })
+	row[1]:setColSpan(3):createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(preset.name, { })
+	row[1].handlers.onTextChanged = function(_, text, textchanged)
+		preset.name = text
+	end
+
+	local allPresets = L.getAutoPresets(L.params.settingKey)
+	local row = c2table:addRow(true, { fixed = false })
+	row[1]:setColSpan(2):createButton({ active = function() return L.getAutoPresetByName(allPresets, preset.name) ~= nil end }):setText(ReadText(1811143915, 70), { halign = "center" })
+	row[1].handlers.onClick = function()
+		L.saveAutoPreset(preset, L.getAutoPresetByName(allPresets, preset.name).id)
+		L.params.onSave()
+	end
+	row[3]:createButton({ active = function() return L.getAutoPresetByName(allPresets, preset.name) == nil end }):setText(ReadText(1811143915, 69), { halign = "center" })
+	row[3].handlers.onClick = function()
+		L.saveAutoPreset(preset)
+		L.params.onSave()
+	end
+
+	contextFrame:display()
+end
+
+function L.createPresetRules(c1table, raceOptions, valueOptions, exactOptions, rules)
+	local exactKey = "exact"
+	local autoKey = "auto"
+
+	for i, rule in ipairs(rules) do
+		----- Rule header row -----
+		local row = c1table:addRow(true, { fixed = false })
+		-- Move up button --
+		row[2]:createButton({ active = i ~= 1, height = Helper.standardTextHeight }):setIcon("widget_arrow_up_01")
+		row[2].handlers.onClick = function ()
+			table.insert(rules, i-1, rule)
+			table.remove(rules, i+1)
+			L.createAutoPresetEditorContext()
+		end
+		-- Move down button --
+		row[3]:createButton({ active = i ~= #rules, height = Helper.standardTextHeight }):setIcon("widget_arrow_down_01")
+		row[3].handlers.onClick = function ()
+			table.insert(rules, i, rules[i+1])
+			table.remove(rules, i+2)
+			L.createAutoPresetEditorContext()
+		end
+		-- Delete button --
+		row[4]:createButton({ height = Helper.standardTextHeight }):setIcon("widget_cross_01")
+		row[4].handlers.onClick = function ()
+			table.remove(rules, i)
+			L.createAutoPresetEditorContext()
+		end
+		-- Rule number --
+		--row[5]:setColSpan(2):createText(tostring(i), { })
+
+		if rule.type == exactKey then
+			L.createPresetExactRows(c1table, exactOptions, rule)
+		elseif rule.type == autoKey then
+			L.createPresetAutoRows(c1table, raceOptions, valueOptions, rule)
+		else
+			row[3]:setColSpan(4):createText("Unknown rule type!", {})
+		end
+	end
+
+	-- Create add new rule dropdown
+	local row = c1table:addRow(true, { fixed = false })
+	local addOptions = {
+		{ id = exactKey, text = ReadText(1811143915, 77), icon = "", displayremoveoption = false },
+		{ id = autoKey, text = ReadText(1811143915, 78), icon = "", displayremoveoption = false }
+	}
+	row[2]:setColSpan(5):createDropDown(addOptions, { height = Helper.standardTextHeight, textOverride = ReadText(1811143915, 79)})
+	row[2].handlers.onDropDownConfirmed = function(_, id)
+		local rule = { type = id }
+		if id == autoKey then
+			-- set defaults
+			rule.race = "any"
+			rule.value = "low"
+		end
+		table.insert(rules, rule)
+		L.createAutoPresetEditorContext()
+	end
+end
+
+function L.createPresetExactRows(c1table, options, rule)
+	local row = c1table:addRow(true, { fixed = false })
+	row[3]:setColSpan(3):createText(ReadText(1811143915, 80), {})
+	row[6]:createDropDown(options, { startOption = rule.macro, height = Helper.standardTextHeight })
+	row[6].handlers.onDropDownConfirmed = function(_, id)
+		rule.macro = id
+	end
+end
+
+function L.createPresetAutoRows(c1table, raceOptions, valueOptions, rule)
+	local row = c1table:addRow(true, { fixed = false })
+	row[3]:setColSpan(3):createText(ReadText(1811143915, 81), {})
+	row[6]:createDropDown(raceOptions, { startOption = rule.race, height = Helper.standardTextHeight })
+	row[6].handlers.onDropDownConfirmed = function(_, id)
+		rule.race = id
+	end
+	local row = c1table:addRow(true, { fixed = false })
+	row[3]:setColSpan(3):createText(ReadText(1811143915, 82), {})
+	row[6]:createDropDown(valueOptions, { startOption = rule.value, height = Helper.standardTextHeight })
+	row[6].handlers.onDropDownConfirmed = function(_, id)
+		rule.value = id
+	end
+end
+
+function L.createPresetPercentageSlider(c1table, current, all, text)
+	local remaining = 100
+	for k, v in pairs(all) do
+		if k ~= "type" and k ~= current then
+			remaining = remaining - v
+		end
+	end
+
+	local row = c1table:addRow(true, { fixed = false })
+	row[2]:setColSpan(2):createSliderCell({ maxSelect = remaining, height = Helper.standardTextHeight, valueColor = Color["slider_value"], min = 0, max = 100, start = all[current], suffix = "%" }):setText(text)
+	row[2].handlers.onSliderCellConfirm = function(_, value)
+		all[current] = value
+		L.createAutoPresetEditorContext()
+	end
+end
+
+function L.isRowValidForLoad()
+	return L.selectedEntry and L.selectedEntry.active
+end
+
+function L.isRowValidForDeletion()
+	return L.selectedEntry and L.selectedEntry.deleteable
+end
+
+function L.getSelectedRowCustomAutoPreset()
+	return L.selectedEntry and L.selectedEntry.item and L.selectedEntry.item.customPreset
+end
+
+function L.buttonDeleteItem()
+	if L.isRowValidForDeletion() then
+		L.params.onDeletion(L.selectedEntry.item)
+	end
+end
+
+function L.buttonLoadItem()
+	if L.isRowValidForLoad() then
+		L.params.onSelection(L.selectedEntry.item)
+	end
+end
+
+function L.refreshLoadFrame()
+	L.state[L.params.settingKey].topRow = GetTopRow(L.params.menu.contexttable)
+	L.autoSelectSearch = false
+	L.createLoadContext()
+end
+
+function L.buttonExtendListEntry(index, row)
+	local key = config.folderIdFormat:format(L.params.settingKey, index)
+	L.state[L.params.settingKey].expandedFolders[key] = not L.state[L.params.settingKey].expandedFolders[key]
+	L.state[L.params.settingKey].selectedRow = row
+	L.refreshLoadFrame()
+end
+
+function L.buttonExpandAll(listRoot)
+	L.expandAll(listRoot)
+	L.refreshLoadFrame()
+end
+
+function L.expandAll(root)
+	for _,folder in ipairs(root.folders_arr) do
+		L.state[L.params.settingKey].expandedFolders[config.folderIdFormat:format(L.params.settingKey, folder.fullname)] = true
+		L.expandAll(folder)
+	end
+end
+
+function L.buttonCollapseAll()
+	for k,_ in pairs(L.state[L.params.settingKey].expandedFolders) do
+		L.state[L.params.settingKey].expandedFolders[k] = false
+	end
+	L.refreshLoadFrame()
+end
+
+function L.searchItemEdit(_, text, textchanged)
+	if not textchanged then
+		return
+	end
+
+	L.state[L.params.settingKey].filter.search = text
+	L.refreshLoadFrame()
+end
+
+function L.filterMacroToggled(macro, checked)
+	local selectedMacros = L.state[L.params.settingKey].filter.macros
+	if checked then
+		table.insert(selectedMacros, macro)
+	else
+		local index = Utils.ArrayIndexOf(selectedMacros, macro)
+		if index then
+			table.remove(selectedMacros, index)
+		end
+	end
+	L.refreshLoadFrame()
+end
+
+function L.filterRaceToggled(id, checked)
+	local selectedRaces = L.state[L.params.settingKey].filter.races
+	if checked then
+		selectedRaces[id] = true
+	else
+		selectedRaces[id] = nil
+	end
+	L.refreshLoadFrame()
+end
+
+function L.onRowChanged(uitable, rowdata)
+	if L.ltable and uitable == L.ltable.id then
+		L.selectedEntry = rowdata
+		return true
+	end
+	return false
+end
+
+function L.onSelectElement(uitable)
+	if uitable == L.ltable.id then
+		L.buttonLoadItem()
+	end
+end
+
+function L.onDropDownActivated(dropdown)
+	return true
+end
+
+function L.onStationLoadoutLoad(menu, item)
+	if not item.customPreset then
+		menu.dropdownLoadout(_, item.id)
+		return
+	end
+
+	local upgradeplan = L.generateLoadoutUpgradePlan(menu, item.customPreset)
+
+	menu.getUpgradeData(upgradeplan)
+	if menu.holomap and (menu.holomap ~= 0) then
+		Helper.callLoadoutFunction(menu.constructionplan[menu.loadoutMode].upgradeplan, nil, function (loadout, _) return C.UpdateObjectConfigurationMap(menu.holomap, menu.container, menu.loadoutModule.component, menu.loadoutModule.macro, true, loadout) end)
+	end
+
+	menu.displayMenu()
+end
+
+function L.onShipLoadoutLoad(menu, item)
+	if not item.customPreset then
+		menu.dropdownLoadout(_, item.id)
+		return
+	end
+
+	local upgradeplan = L.generateLoadoutUpgradePlan(menu, item.customPreset)
+
+	if menu.usemacro then
+		menu.captainSelected = true
+	end
+	menu.getDataAndDisplay(upgradeplan, nil)
+end
+
+function L.onLoadoutRemoved(defaultLoad, item)
+	if not item.customPreset then
+		defaultLoad(nil, item.id)
+		return
+	end
+
+	local autoPresets = GetNPCBlackboard(L.playerID, config.autoPresetsBlackboardId)
+	if autoPresets then
+		autoPresets[L.params.settingKey][item.id] = nil
+		SetNPCBlackboard(L.playerID, config.autoPresetsBlackboardId, autoPresets)
+		L.refreshLoadFrame()
+	end
+end
+
+
+init()
+
+return L

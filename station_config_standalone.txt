@@ -5,7 +5,7 @@ local ffi = require("ffi")
 local C = ffi.C
 
 local Lib = require("extensions.sn_mod_support_apis.lua_library")
-local ConfigioLib = require("extensions.rkn_configio.configio_lib")
+local ConfigioLib = require("extensions.rkn_configio.configio_menu")
 
 local rkn_menu = {}
 local menu = {}
