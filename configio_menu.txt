@@ -170,7 +170,10 @@ function L.buttonStationTitleLoad(menu, contextLayer)
 			header = ReadText(1811143915, 2),
 			optionItemNameText = ReadText(1811143915, 9),
 			onSelection = function(item) menu.dropdownLoad(nil, item.id) end,
-			onDeletion = function(item) menu.dropdownRemovedCP(nil, item.id) end,
+			onDeletion = function(item)
+				DebugError(tostring(item.id))
+				menu.dropdownRemovedCP(nil, item.id)
+			end,
 			maxFolders = config.maxFolders,
 			itemFilter = L.filterItemByModules,
 			contextLayer = contextLayer,
@@ -964,6 +967,30 @@ function L.createPresetPercentageSlider(c1table, current, all, text)
 	end
 end
 
+function L.createDeleteConfirmation(contextFrame, y, item)
+	local htable = contextFrame:addTable(4, { tabOrder = 6, x = Helper.borderSize, y = y, width = L.params.width - Helper.borderSize * 2 })
+	local row = htable:addRow(false, { fixed = true })
+	row[1]:setColSpan(4):createText("Delete item", config.browserHeaderTextProperties)
+
+	htable:addEmptyRow(Helper.standardTextHeight)
+	local row = htable:addRow(false, { fixed = true })
+	row[1]:setColSpan(4):createText("Are you sure you want to delete '" .. item.name .. "'?", { })
+
+	htable:addEmptyRow(Helper.standardTextHeight)
+	local row = htable:addRow(true, { fixed = true })
+	row[3]:createButton({ }):setText("Confirm", { halign = "center" })
+	row[3].handlers.onClick = function()
+		L.params.onDeletion(item)
+		L.contextModule = nil
+		L.refreshLoadFrame()
+	end
+	row[4]:createButton({ }):setText("Cancel", { halign = "center" })
+	row[4].handlers.onClick = function()
+		L.contextModule = nil
+		L.refreshLoadFrame()
+	end
+end
+
 function L.isRowValidForLoad()
 	return L.selectedEntry and L.selectedEntry.active
 end
@@ -978,7 +1005,8 @@ end
 
 function L.buttonDeleteItem()
 	if L.isRowValidForDeletion() then
-		L.params.onDeletion(L.selectedEntry.item)
+		L.contextModule = function(contextFrame, y) L.createDeleteConfirmation(contextFrame, y, L.selectedEntry.item) end
+		L.refreshLoadFrame()
 	end
 end
 
