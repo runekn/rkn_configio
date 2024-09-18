@@ -145,7 +145,7 @@ function L.createShipLoadoutTitleBarButton(row, menu, sc_config, active, loadout
 		row[3]:createButton({ active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), height = menu.titleData.height, width = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setText(ReadText(1001, 7905), { halign = "center" })
 		row[3].handlers.onClick = function() L.buttonShipLoadoutTitleLoad(menu, sc_config.contextLayer) end
 	else
-		row[3]:setColSpan(2):createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setTextProperties(sc_config.dropDownTextProperties)
+		row[3]:createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setTextProperties(sc_config.dropDownTextProperties)
 		row[3].handlers.onDropDownConfirmed = menu.dropdownLoadout
 		row[3].handlers.onDropDownRemoved = menu.dropdownLoadoutRemoved
 	end
@@ -967,24 +967,23 @@ function L.createPresetPercentageSlider(c1table, current, all, text)
 end
 
 function L.createDeleteConfirmation(contextFrame, y, item)
-	local htable = contextFrame:addTable(4, { tabOrder = 6, x = Helper.borderSize, y = y, width = L.params.width - Helper.borderSize * 2 })
+	local htable = contextFrame:addTable(8, { tabOrder = 6, x = Helper.borderSize, y = y, width = L.params.width - Helper.borderSize * 2 })
 	local row = htable:addRow(false, { fixed = true })
-	row[1]:setColSpan(4):createText("Delete item", config.browserHeaderTextProperties)
+	row[1]:setColSpan(8):createText(ReadText(1811143915, 83), config.browserHeaderTextProperties)
 
-	htable:addEmptyRow(Helper.standardTextHeight)
 	local row = htable:addRow(false, { fixed = true })
-	row[1]:setColSpan(4):createText("Are you sure you want to delete '" .. item.name .. "'?", { })
+	row[3]:setColSpan(4):createText(ReadText(1811143915, 84):format(item.name), { wordwrap = true })
 
 	htable:addEmptyRow(Helper.standardTextHeight)
 	local row = htable:addRow(true, { fixed = true })
-	row[3]:createButton({ }):setText("Confirm", { halign = "center" })
-	row[3].handlers.onClick = function()
+	row[5]:createButton({ }):setText(ReadText(1811143915, 85), { halign = "center" })
+	row[5].handlers.onClick = function()
 		L.params.onDeletion(item)
 		L.contextModule = nil
 		L.refreshLoadFrame()
 	end
-	row[4]:createButton({ }):setText("Cancel", { halign = "center" })
-	row[4].handlers.onClick = function()
+	row[6]:createButton({ }):setText(ReadText(1811143915, 86), { halign = "center" })
+	row[6].handlers.onClick = function()
 		L.contextModule = nil
 		L.refreshLoadFrame()
 	end

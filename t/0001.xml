@@ -84,5 +84,9 @@
 		<t id="80">Exact</t>
 		<t id="81">Race</t>
 		<t id="82">Value</t>
+		<t id="83">Delete item</t>
+		<t id="84">Are you sure you want to delete '%s'?</t>
+		<t id="85">Confirm</t>
+		<t id="86">Cancel</t>
 	</page>
 </language>
