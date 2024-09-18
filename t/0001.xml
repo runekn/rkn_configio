@@ -81,12 +81,14 @@
 		<t id="77">Exact module</t>
 		<t id="78">Auto choose</t>
 		<t id="79">Add new rule</t>
-		<t id="80">Exact</t>
+		<t id="80">Module</t>
 		<t id="81">Race</t>
 		<t id="82">Value</t>
 		<t id="83">Delete item</t>
 		<t id="84">Are you sure you want to delete '%s'?</t>
 		<t id="85">Confirm</t>
 		<t id="86">Cancel</t>
+		<t id="87">Match by exact module</t>
+		<t id="88">Match by race and value</t>
 	</page>
 </language>

@@ -694,11 +694,6 @@ function L.createAutoPresetEditorContext()
 		{ id = "medium", text = ReadText(1811143915, 72), icon = "", displayremoveoption = false },
 		{ id = "high", text = ReadText(1811143915, 73), icon = "", displayremoveoption = false }
 	}
-	local thrusterOptions = {
-		{ id = "mk1", text = "Mk1", icon = "", displayremoveoption = false },
-		{ id = "mk2", text = "Mk2", icon = "", displayremoveoption = false },
-		{ id = "mk3", text = "Mk3", icon = "", displayremoveoption = false }
-	}
 	local dockingComputerOptions = {
 		{ id = "none", text = "None", icon = "", displayremoveoption = false },
 		{ id = "software_dockmk1", text = "Mk1", icon = "", displayremoveoption = false },
@@ -727,7 +722,7 @@ function L.createAutoPresetEditorContext()
 
 	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
 	local optionsWidth = (L.params.width / 2) - Helper.borderSize * 2
-	local c1table = contextFrame:addTable(6, { tabOrder = 6, x = Helper.borderSize, y = config.browserHeaderTextProperties.height + Helper.borderSize * 3, width = optionsWidth, maxVisibleHeight  = Helper.standardTextHeight * 30 })
+	local c1table = contextFrame:addTable(6, { tabOrder = 6, x = Helper.borderSize, y = config.browserHeaderTextProperties.height + Helper.borderSize * 3, width = optionsWidth, maxVisibleHeight  = Helper.standardTextHeight * 32 + Helper.standardButtonHeight })
 	c1table:setColWidth(1, smallColWidth, false)
 	c1table:setColWidth(2, smallColWidth, false)
 	c1table:setColWidth(3, smallColWidth, false)
@@ -738,37 +733,45 @@ function L.createAutoPresetEditorContext()
 	row[1]:setColSpan(6):createText(ReadText(1811143915, 36), {})
 	L.createPresetRules(c1table, raceOptions, valueOptions, L.params.mTurretOptions, preset.mturrets)
 
+	c1table:addEmptyRow(Helper.standardTextHeight / 2)
 	local row = c1table:addRow(false, { fixed = false })
 	row[1]:setColSpan(6):createText(ReadText(1811143915, 37), {})
 	L.createPresetRules(c1table, raceOptions, valueOptions, L.params.lTurretOptions, preset.lturrets)
 
 	if L.params.editorShipLoadout then
+		c1table:addEmptyRow(Helper.standardTextHeight / 2)
 		local row = c1table:addRow(false, { fixed = false })
 		row[1]:setColSpan(6):createText(ReadText(1811143915, 38), {})
 		L.createPresetRules(c1table, raceOptions, valueOptions, L.params.sShieldsOptions, preset.sshields)
 	end
 
+	c1table:addEmptyRow(Helper.standardTextHeight / 2)
 	local row = c1table:addRow(false, { fixed = false })
 	row[1]:setColSpan(6):createText(ReadText(1811143915, 39), {})
 	L.createPresetRules(c1table, raceOptions, valueOptions, L.params.mShieldOptions, preset.mshields)
 
+	c1table:addEmptyRow(Helper.standardTextHeight / 2)
 	local row = c1table:addRow(false, { fixed = false })
 	row[1]:setColSpan(6):createText(ReadText(1811143915, 40), {})
 	L.createPresetRules(c1table, raceOptions, valueOptions, L.params.lShieldOptions, preset.lshields)
 
 	if L.params.editorShipLoadout then
+		c1table:addEmptyRow(Helper.standardTextHeight / 2)
 		local row = c1table:addRow(false, { fixed = false })
 		row[1]:setColSpan(6):createText(ReadText(1811143915, 41), {})
 		L.createPresetRules(c1table, raceOptions, valueOptions, L.params.xlShieldOptions, preset.xlshields)
 
+		c1table:addEmptyRow(Helper.standardTextHeight / 2)
 		local row = c1table:addRow(false, { fixed = false })
 		row[1]:setColSpan(6):createText(ReadText(1811143915, 42), {})
 		L.createPresetRules(c1table, raceOptions, valueOptions, L.params.engineOptions, preset.engines)
 
+		c1table:addEmptyRow(Helper.standardTextHeight / 2)
 		local row = c1table:addRow(false, { fixed = false })
 		row[1]:setColSpan(6):createText(ReadText(1811143915, 43), {})
 		L.createPresetRules(c1table, raceOptions, valueOptions, L.params.weaponOptions, preset.weapons)
 
+		c1table:addEmptyRow(Helper.standardTextHeight / 2)
 		local row = c1table:addRow(false, { fixed = false })
 		row[1]:setColSpan(6):createText(ReadText(1811143915, 44), {})
 		L.createPresetRules(c1table, raceOptions, valueOptions, L.params.thrusterOptions, preset.thrusters)
@@ -899,8 +902,10 @@ function L.createPresetRules(c1table, raceOptions, valueOptions, exactOptions, r
 		--row[5]:setColSpan(2):createText(tostring(i), { })
 
 		if rule.type == exactKey then
+			row[5]:setColSpan(2):createText(ReadText(1811143915, 87))
 			L.createPresetExactRows(c1table, exactOptions, rule)
 		elseif rule.type == autoKey then
+			row[5]:setColSpan(2):createText(ReadText(1811143915, 88))
 			L.createPresetAutoRows(c1table, raceOptions, valueOptions, rule)
 		else
 			row[3]:setColSpan(4):createText("Unknown rule type!", {})

@@ -18,7 +18,7 @@ Let's say you have three station plans:
  - ARG/EnergyCells/The Second
  - ARG/Wharf/Big Boy
  
-If we enable groups, and set the delimiter to slash '/', then the list will reorganize into the follwing structure:
+If we enable groups, and set the delimiter to slash '/', then the list will reorganize into the following structure:
  ```
  - [-] ARG				<-- collapsible group
  -     [-] EnergyCells		
@@ -42,6 +42,24 @@ The option 'Flatten one-item group' just ungroups these items. Meaning that it w
 
 The 'EnergyCells' group is left untouched because it contains more than one item. Note that 'Flatten one-item group' is recursive, meaning that if the group ARG also contained just one item after applying it, it too would be ungrouped.
 
+### How does 'Custom Auto-generated Preset' work?
+
+You know those default loadout presets called "High Preset", "Medium Preset", etc? Have you ever wanted something like that, but with more freedom to define exactly how it chooses each loadout module? For example "High Preset, but only Argon modules". That's what this feature seeks to accomplish.
+
+Lets go through each type of setting in the auto-preset editor.
+
+The entire left side allows you to setup rules for how it will match modules. Use the dropdowns for each module type to add a rule. You can add multiple rules, and order them by priority. Rules will be evaluated from the top, and will continue to the next if that rule did not find any match. There are currently only two types of rules, "Match exact" and "Match by race and value".
+Match exact is self-explanatory and just looks for the exact module you have selected. The module options only show those that are known to your character.
+Match by race and value is more automatic, and allows you to specify the race of the module, aswell as the general price of the module. The selection based on value is very simple right now, as it just sorts the modules by price and picks either the highest, lowest, or median.
+
+The software selection only allows for choosing exact software.
+
+The sliders for crew, drones, deployables, and flares are percentage based. So if you set Service crew to 70% and Marines to 10%, select the preset for a ship with crew capacity of 130, then it will choose 91 service crew and 13 marine. The total value of each slider section cannot go above 100%, for obvious reasons.
+
+If you ever want to edit an auto-preset, you can select one in the loader and click "Edit Selected in Editor". And just like with vanilla saving, you can overwrite as long as the name is the same.
+
+*NOTE: The editor does not currently have any options for missiles.*
+
 ## Requirements
 
 * SirNuke's Mod Support API [[Steam](https://steamcommunity.com/sharedfiles/filedetails/?id=2042901274) | [Nexus](https://www.nexusmods.com/x4foundations/mods/503)]
@@ -57,4 +75,5 @@ This mod is NOT guaranteed to be compatible with other mods that make changes to
 
 ## Updates
 
+* 1.1: Custom auto-generated presets. Delete confirmation. Fix delete and load buttons.
 * 1.0: Initial release
