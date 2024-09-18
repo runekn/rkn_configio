@@ -61,6 +61,7 @@ The sliders for crew, drones, deployables, and flares are percentage based. So i
 If you ever want to edit an auto-preset, you can select one in the loader and click "Edit Selected in Editor". And just like with vanilla saving, you can overwrite as long as the name is the same.
 
 *NOTE: The editor does not currently have any options for missiles.*
+
 *NOTE: The custom auto-presets are tied to the save. They will NOT appear between different saves.*
 
 ## Requirements
