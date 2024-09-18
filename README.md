@@ -9,6 +9,7 @@ Replaces the simple dropdown to load stations, ships, or loadouts with a bigger 
 * Production module filter: Filter stations by what production modules are included.
 * Ship race filter: Now you can easily find the boron ships in your long list of blueprints.
 * Disable mod by menu: Don't like the new dialog for a specific menu (station plans, module loadout, ship loadout)? You can disable them individually.
+* Custom auto-generated loadout presets: Generate loadouts based on custom criteria, so you don't have to build every loadout from scratch.
 
 ### How does groups work?
 
@@ -51,6 +52,7 @@ Lets go through each type of setting in the auto-preset editor.
 The entire left side allows you to setup rules for how it will match modules. Use the dropdowns for each module type to add a rule. You can add multiple rules, and order them by priority. Rules will be evaluated from the top, and will continue to the next if that rule did not find any match. There are currently only two types of rules, "Match exact" and "Match by race and value".
 Match exact is self-explanatory and just looks for the exact module you have selected. The module options only show those that are known to your character.
 Match by race and value is more automatic, and allows you to specify the race of the module, aswell as the general price of the module. The selection based on value is very simple right now, as it just sorts the modules by price and picks either the highest, lowest, or median.
+Unlike with the default auto-presets, these will always attempt to fill out every slot.
 
 The software selection only allows for choosing exact software.
 
@@ -59,6 +61,7 @@ The sliders for crew, drones, deployables, and flares are percentage based. So i
 If you ever want to edit an auto-preset, you can select one in the loader and click "Edit Selected in Editor". And just like with vanilla saving, you can overwrite as long as the name is the same.
 
 *NOTE: The editor does not currently have any options for missiles.*
+*NOTE: The custom auto-presets are tied to the save. They will NOT appear between different saves.*
 
 ## Requirements
 
