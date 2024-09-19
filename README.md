@@ -51,7 +51,7 @@ Lets go through each type of setting in the auto-preset editor.
 
 The entire left side allows you to setup rules for how it will match modules. Use the dropdowns for each module type to add a rule. You can add multiple rules, and order them by priority. Rules will be evaluated from the top, and will continue to the next if that rule did not find any match. There are currently only two types of rules, "Match exact" and "Match by race and value".
 Match exact is self-explanatory and just looks for the exact module you have selected. The module options only show those that are known to your character.
-Match by race and value is more automatic, and allows you to specify the race of the module, aswell as the general price of the module. The selection based on value is very simple right now, as it just sorts the modules by price and picks either the highest, lowest, or median.
+Match by race and value is more automatic, and allows you to specify the race of the module, as-well as the general price of the module. The selection based on value is very simple right now, as it just sorts the modules by price and picks either the highest, lowest, or median.
 Unlike with the default auto-presets, these will always attempt to fill out every slot.
 
 The software selection only allows for choosing exact software.
@@ -74,10 +74,12 @@ This mod is save compatible. You can add it to an existing save, and remove it w
 
 This mod is NOT guaranteed to be compatible with other mods that make changes to the station or ship designer UI.
 
+Use along-side VRO can break the "Race filter" during ship selection, unless this is also installed: [Maker-race fix for VRO](https://www.nexusmods.com/x4foundations/mods/1523/)
+
 ## Thanks to
 * netUpb/fikrethos: for feedback and help with code.
 
 ## Updates
 
-* 1.1: Custom auto-generated presets. Delete confirmation. Fix delete and load buttons.
+* 1.1: Added auto-generated preset editor. Added custom delete confirmation dialog. Fixed delete and load buttons working despite being inactive.
 * 1.0: Initial release

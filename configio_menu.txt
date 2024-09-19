@@ -220,11 +220,11 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 			addToSettingsTable = nil,
 			itemFilter = nil,
 			isItemActive = function(item) return item.active or (item.preset and true or false) end,
-			overrideItemText = function(item)
+			getItemColor = function(item)
 				if item.item.preset or item.item.customPreset then
-					return Helper.convertColorToText(config.autoPresetColor) .. item.name
+					return config.autoPresetColor
 				end
-				return item.name
+				return nil
 			end,
 			onOpenPresetEditor = function() L.buttonStationLoadoutTitleAutoPresets(menu, contextLayer) end,
 			frameModules = {
@@ -263,7 +263,7 @@ function L.buttonShipTitleLoad(menu, shipOptions, contextLayer)
 			menu = menu,
 			itemFilter = L.filterItemByRace,
 			isItemActive = function(_) return true end,
-			overrideItemText = function(item) return Helper.convertColorToText(item.item.overridecolor) .. item.item.text end,
+			getItemColor = function(item) return item.item.overridecolor end,
 			frameModules = { L.createSearchField, L.createShipRacesFilter }
 		}
 		L.autoSelectSearch = true
@@ -301,11 +301,11 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 			setContextFrame = function(f) menu.contextFrame = f end,
 			menu = menu,
 			isItemActive = function(item) return item.active or (item.preset and true or false) end,
-			overrideItemText = function(item)
+			getItemColor = function(item)
 				if item.item.preset or item.item.customPreset then
-					return Helper.convertColorToText(config.autoPresetColor) .. item.name
+					return config.autoPresetColor
 				end
-				return item.name
+				return nil
 			end,
 			onOpenPresetEditor = function() L.buttonShipLoadoutTitleAutoPresets(menu, contextLayer) end,
 			frameModules = {
@@ -474,10 +474,14 @@ function L.addFolderToList(ltable, root, column)
 	for _, item in ipairs(root.items) do
 		local row = ltable:addRow(item, {  })
 		local text = L.settings.item_fullname and item.item.name or item.name
+		local color
 		if not item.active then
-			text = Helper.convertColorToText(config.inactiveColor) .. text
-		elseif L.params.overrideItemText then
-			text = L.params.overrideItemText(item)
+			color = config.inactiveColor
+		elseif L.params.getItemColor then
+			color = L.params.getItemColor(item)
+		end
+		if color then
+			text = Helper.convertColorToText(color) .. text
 		end
 		row[column]:setColSpan(config.maxFolders - column + 2):createText(text, config.planTextProperties)
 		row[column].properties.mouseOverText = item.item.mouseovertext
