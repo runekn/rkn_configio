@@ -37,6 +37,22 @@ function Util.ShallowCopy(orig)
     return copy
 end
 
+function Util.DeepCopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in next, orig, nil do
+            copy[Util.DeepCopy(orig_key)] = Util.DeepCopy(orig_value)
+        end
+        setmetatable(copy, Util.DeepCopy(getmetatable(orig)))
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    return copy
+end
+
+
 function Util.ArrayIndexOf(arr, v)
 	if not arr then
 		return nil
@@ -88,6 +104,19 @@ function Util.DebugSplit(s)
 	else
 		DebugError(s)
 	end
+end
+
+function Util.Any(table, f)
+	return Util.First(table, f) ~= nil
+end
+
+function Util.First(tbl, f)
+	for k,v in pairs(tbl) do
+		if f(v, k) then
+			return {k, v}
+		end
+	end
+	return nil
 end
 
 return Util

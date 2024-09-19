@@ -319,6 +319,7 @@ function L.getLoadSettings()
 		folder_fullname = false,
 		item_fullname = true,
 		item_hide_inactive = false,
+		item_load_partial = false,
 		enabled = true,
 	}
 	local allDefault = {
@@ -347,15 +348,18 @@ function L.convertLoadSettings(s, default)
 	if not s then
 		return default
 	end
-	return {
-		folder_enabled = s.folder_enabled == nil and default.folder_enabled or s.folder_enabled == 1,
-		folder_delimiter = (s.folder_delimiter == nil or s.folder_delimiter == "") and default.folder_delimiter or s.folder_delimiter,
-		folder_flatten_single_item = s.folder_flatten_single_item == nil and default.folder_flatten_single_item or s.folder_flatten_single_item == 1,
-		folder_fullname = s.folder_fullname == nil and default.folder_fullname or s.folder_fullname == 1,
-		item_fullname = s.item_fullname == nil and default.item_fullname or s.item_fullname == 1,
-		item_hide_inactive = s.item_hide_inactive == nil and default.item_hide_inactive or s.item_hide_inactive == 1,
-		enabled = s.enabled == nil and default.enabled or s.enabled == 1,
-	}
+	local r = {}
+	for k,d in pairs(default) do
+		local l = s[k]
+		if type(d) == "boolean" then
+			l = l == nil and d or l == 1
+		end
+		if k == "folder_delimiter" and l == "" then
+			l = "/"
+		end
+		r[k] = l
+	end
+	return r
 end
 
 function L.setLoadSetting(configKey, key, value)
@@ -367,7 +371,6 @@ end
 function L.addCustomAutoPresets(key, loadouts)
 	local autoPresets = L.getAutoPresets(key)
 	if next(autoPresets) ~= nil then
-		loadouts = Utils.ShallowCopy(loadouts)
 		for id, preset in pairs(autoPresets) do
 			table.insert(loadouts, { customPreset = preset, id = id, name = preset.name, deleteable = true, active = true })
 		end
@@ -649,6 +652,69 @@ function L.chooseMacroByAutoRule(menu, possiblemacros, rule)
 		return filteredMacros[#filteredMacros].macro
 	else
 		return nil
+	end
+end
+
+-- Created by Eliptus
+-- Edited and integrated by Runekn
+function L.addPartialFlag(loadouts)
+	if L.settings.item_load_partial then
+		for _, loadout in ipairs(loadouts) do
+			if not loadout.active then
+				loadout.name = loadout.name
+				loadout.active = true
+				loadout.partial = true
+			end
+		end
+	end
+	return loadouts
+end
+
+-- Created by Eliptus
+-- Edited and integrated by Runekn
+function L.trimPartialLoadout(upgradeplan, upgradewares)
+	for type,plan in pairs(upgradeplan) do
+		local spec = Helper.findUpgradeType(type)
+		local wares = upgradewares[type]
+
+		local groupSuffix = "group"
+		if type:sub(-#groupSuffix) == groupSuffix then
+			local slotType = type:sub(1, #type - #groupSuffix)
+			spec = Helper.findUpgradeType(slotType)
+			wares = upgradewares[slotType]
+		end
+
+		if spec == nil or wares == nil then
+			-- skip
+
+		elseif spec.supertype == 'macro' or spec.supertype == 'virtualmacro' then
+			-- plan[slot]['macro'] = macro
+			for slot,info in pairs(plan) do
+				if not Utils.Any(wares, function(v, _) return v.macro == info.macro end) then
+					info.macro = ''
+					if info.count then
+						info.count = 0
+					end
+				end
+			end
+
+		elseif spec.supertype == 'ammo' then
+			-- plan[macro] = count
+			for macro,_ in pairs(plan) do
+				if not Utils.Any(wares, function(v, _) return v.macro == macro end) then
+					plan[macro] = 0
+				end
+			end
+
+		elseif spec.supertype == 'software' then
+			-- plan[slot] = ware
+			for slot,ware in pairs(plan) do
+				if not Utils.Any(wares, function(v, _) return v.ware == ware end) then
+					plan[slot] = ''
+				end
+			end
+
+		end
 	end
 end
 

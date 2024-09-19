@@ -78,6 +78,7 @@ Use along-side VRO can break the "Race filter" during ship selection, unless thi
 
 ## Thanks to
 * netUpb/fikrethos: for feedback and help with code.
+* Eliptus: author of partial loadout, which I was given permission to incorporate.
 
 ## Updates
 
