@@ -66,7 +66,8 @@ local function init()
 	L.autoPresets = {}
 	L.params = {}
 	L.allProductionModules = L.getAllProductionModules()
-	L.allRaces = L.getAllRaces()
+	L.allRaces = L.getAllShipFilterRaces()
+	L.allAutoPresetRaces = L.getAllAutoPresetRaces()
 
 	-- Set settings for extension options menu on game start --
 	local settings = L.getLoadSettings()
@@ -564,12 +565,13 @@ function L.createSettings(stable)
 
 	if L.params.settingKey == config.shipLoadoutKey then
 		local row = stable:addRow(true, { fixed = true })
-		row[1]:createText("Load partial preset", { }) -- TODO: text
+		row[1]:createText(ReadText(1811143915, 89), { })
 		row[2]:createCheckBox(L.settings.item_load_partial, { width = smallColWidth })
 		row[2].handlers.onClick = function(_, checked)
 			L.setLoadSetting(L.params.settingKey, "item_load_partial", checked)
 			L.refreshLoadFrame()
 		end
+		row[2].properties.mouseOverText = ReadText(1811143915, 90)
 	end
 end
 
@@ -703,7 +705,7 @@ function L.createAutoPresetEditorContext()
 	end
 
 	local raceOptions = { { id = "any", text = ReadText(1811143915, 34), icon = "", displayremoveoption = false } }
-	for _,race in ipairs(L.allRaces) do
+	for _,race in ipairs(L.allAutoPresetRaces) do
 		if race ~= "other" then
 			table.insert(raceOptions, { id = race.id, text = race.name, icon = "", displayremoveoption = false })
 		end

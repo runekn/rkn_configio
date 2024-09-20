@@ -291,8 +291,7 @@ function L.getAllThrusters()
 	return result
 end
 
-function L.getAllRaces()
-	local skip = { khaak = true, drone = true, xenon = true }
+function L.getAllRaces(skip)
 	local races = {}
 	local n = C.GetNumAllRaces()
 	local buf = ffi.new("RaceInfo[?]", n)
@@ -306,8 +305,21 @@ function L.getAllRaces()
 			table.insert(races, entry)
 		end
 	end
+	return races
+end
+
+function L.getAllShipFilterRaces()
+	local skip = { khaak = true, drone = true, xenon = true }
+	local races = L.getAllRaces(skip)
 	table.sort(races, function (a, b) return a.name < b.name end)
 	table.insert(races, { name = "Other", id = "other" })
+	return races
+end
+
+function L.getAllAutoPresetRaces()
+	local skip = { khaak = true, drone = true, xenon = true }
+	local races = L.getAllRaces(skip)
+	table.sort(races, function (a, b) return a.name < b.name end)
 	return races
 end
 
