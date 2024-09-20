@@ -179,6 +179,7 @@ function L.createShipLoadoutTitleBarButton(row, menu, sc_config, active, loadout
 end
 
 function L.isModEnabledForType(type)
+	L.settings = nil -- Detect changes from extension options menu
 	return L.getLoadSettings(type).enabled
 end
 
