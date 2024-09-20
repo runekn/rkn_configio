@@ -44,11 +44,11 @@ local config = {
 	autoPresetColor = { r = 100, g = 225, b = 0, a = 100 }, -- green
 	partialPresetColor = { r = 255, g = 100, b = 0, a = 100 }, -- orange
 	shipSortOptions = {
-		{ id = "default", text = "Default", displayremoveoption = false, icon = "" }, -- TODO: Text
-		{ id = "name", text = "Alphabetical", displayremoveoption = false, icon = "" } -- TODO: Text
+		{ id = "default", text = ReadText(1811143915, 92), displayremoveoption = false, icon = "" },
+		{ id = "name", text = ReadText(1811143915, 91), displayremoveoption = false, icon = "" }
 	},
 	defaultSortOptions = {
-		{ id = "name", text = "Alphabetical", displayremoveoption = false, icon = "" } -- TODO: Text
+		{ id = "name", text = ReadText(1811143915, 91), displayremoveoption = false, icon = "" }
 	},
 	valueOptions = {
 		{ id = "low", text = ReadText(1811143915, 71), icon = "", displayremoveoption = false },
@@ -500,7 +500,7 @@ function L.createLoadContext()
 	row[2]:createButton({ mouseOverText = ReadText(1811143915, 21), active = L.settings.folder_enabled }):setText("-", { halign = "center" })
 	row[2].handlers.onClick = L.buttonCollapseAll
 	-- Create sorting dropdown
-	row[3]:setColSpan(6):createDropDown(L.params.sortOptions, { startOption = L.state[L.params.settingKey].sort or L.params.sortDefault, mouseOverText = "Item sorting", active = #L.params.sortOptions > 1 })
+	row[3]:setColSpan(6):createDropDown(L.params.sortOptions, { startOption = L.state[L.params.settingKey].sort or L.params.sortDefault, mouseOverText = ReadText(1811143915, 93), active = #L.params.sortOptions > 1 })
 	row[3].handlers.onDropDownConfirmed = L.dropdownSort
 
 	-- Create settings list --

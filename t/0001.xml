@@ -92,5 +92,8 @@
 		<t id="88">Match by race and value</t>
 		<t id="89">Enable partial loadouts</t>
 		<t id="90">When enabled, loadouts that are normally inactive due to missing blueprints can still be loaded.</t>
+		<t id="91">Alphabetical</t>
+		<t id="92">Default</t>
+		<t id="93">Sorting options</t>
 	</page>
 </language>
