@@ -87,6 +87,8 @@ function rkn_menu.createTitleBar(frame)
 		ftable:setColWidth(7, menu.titleData.height)
 
 		local row = ftable:addRow(true, { fixed = true, bgColor = Color["row_background_blue"] })
+		---- Runekn's Changes Start Here! ----
+		--[[
 		-- class
 		row[1]:createDropDown(classOptions, { startOption = menu.class, active = (not menu.isReadOnly) and (#classOptions > 0), helpOverlayID = "shipconfig_classoptions", helpOverlayText = " ", helpOverlayHighlightOnly = true }):setTextProperties(config.dropDownTextProperties)
 		row[1].handlers.onDropDownConfirmed = menu.dropdownShipClass
@@ -98,13 +100,12 @@ function rkn_menu.createTitleBar(frame)
 			y = 0,
 			scaling = false,
 		}
+		local dropdown = row[2]:createDropDown(shipOptions, { startOption = curShipOption, active = (not menu.isReadOnly) and (menu.class ~= ""), optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, helpOverlayID = "shipconfig_shipoptions", helpOverlayText = " ", helpOverlayHighlightOnly = true }):setTextProperties(config.dropDownTextProperties):setIconProperties(dropDownIconProperties)
+		row[2].properties.text.halign = "left"
+		row[2].handlers.onDropDownConfirmed = menu.dropdownShip
+		--]]
 
-		---- Runekn's Changes Start Here! ----
-		--local dropdown = row[2]:createDropDown(shipOptions, { startOption = curShipOption, active = (not menu.isReadOnly) and (menu.class ~= ""), optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, helpOverlayID = "shipconfig_shipoptions", helpOverlayText = " ", helpOverlayHighlightOnly = true }):setTextProperties(config.dropDownTextProperties):setIconProperties(dropDownIconProperties)
-		--row[2].properties.text.halign = "left"
-		--row[2].handlers.onDropDownConfirmed = menu.dropdownShip
-
-		local dropdown = ConfigioLib.createShipTitleBarButton(row, menu, config, shipOptions, curShipOption, dropDownIconProperties)
+		local dropdown = ConfigioLib.createShipTitleBarButton(row, menu, config, classOptions, shipOptions, curShipOption, dropDownIconProperties)
 		---- Runekn's Changes Stop Here! ----
 		local active = true
 		if (menu.mode == "purchase") and (menu.macro ~= "") and (not menu.validLicence) then

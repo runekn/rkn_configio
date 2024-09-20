@@ -42,7 +42,40 @@ local config = {
 	},
 	inactiveColor = { r = 128, g = 128, b = 128, a = 100 }, -- dark gray
 	autoPresetColor = { r = 100, g = 225, b = 0, a = 100 }, -- green
-	partialPresetColor = { r = 255, g = 100, b = 0, a = 100 } -- orange
+	partialPresetColor = { r = 255, g = 100, b = 0, a = 100 }, -- orange
+	shipSortOptions = {
+		{ id = "default", text = "Default", displayremoveoption = false, icon = "" }, -- TODO: Text
+		{ id = "name", text = "Alphabetical", displayremoveoption = false, icon = "" } -- TODO: Text
+	},
+	defaultSortOptions = {
+		{ id = "name", text = "Alphabetical", displayremoveoption = false, icon = "" } -- TODO: Text
+	},
+	valueOptions = {
+		{ id = "low", text = ReadText(1811143915, 71), icon = "", displayremoveoption = false },
+		{ id = "medium", text = ReadText(1811143915, 72), icon = "", displayremoveoption = false },
+		{ id = "high", text = ReadText(1811143915, 73), icon = "", displayremoveoption = false }
+	},
+	dockingComputerOptions = {
+		{ id = "none", text = "None", icon = "", displayremoveoption = false },
+		{ id = "software_dockmk1", text = "Mk1", icon = "", displayremoveoption = false },
+		{ id = "software_dockmk2", text = "Mk2", icon = "", displayremoveoption = false }
+	},
+	longRangeScannerOptions = {
+		{ id = "software_scannerlongrangemk1", text = "Mk1", icon = "", displayremoveoption = false },
+		{ id = "software_scannerlongrangemk2", text = "Mk2", icon = "", displayremoveoption = false }
+	},
+	objectScannerOptions = {
+		{ id = "software_scannerobjectmk1", text = "Basic", icon = "", displayremoveoption = false },
+		{ id = "software_scannerobjectmk2", text = "Police", icon = "", displayremoveoption = false }
+	},
+	targetingComputerOptions = {
+		{ id = "none", text = "None", icon = "", displayremoveoption = false },
+		{ id = "software_targetmk1", text = "Mk1", icon = "", displayremoveoption = false }
+	},
+	tradingComputerOptions = {
+		{ id = "none", text = "None", icon = "", displayremoveoption = false },
+		{ id = "software_trademk1", text = "Mk1", icon = "", displayremoveoption = false }
+	}
 }
 
 
@@ -54,7 +87,9 @@ local function init()
 		L.state[key] = {
 			filter = {
 				macros = {},
-				races = {}
+				races = {},
+				sizes = {},
+				purposes = {}
 			},
 			expandedFolders = {},
 			selectedRow = nil,
@@ -113,8 +148,9 @@ function L.createRefreshStationLoadoutTitleBarButton(menu, text, loadoutOptions)
 	end
 end
 
-function L.createShipTitleBarButton(row, menu, sc_config, shipOptions, curShipOption, dropDownIconProperties)
+function L.createShipTitleBarButton(row, menu, sc_config, classOptions, shipOptions, curShipOption)
 	if L.isModEnabledForType(config.shipKey) and menu.mode ~= "upgrade" then
+		local shipOptions = L.createShipOptions(menu)
 		local dropdownDummy = { properties = { text = { }, icon = {} } }
 		local text = ReadText(1811143915, 30)
 		local mouseOverText = ""
@@ -131,10 +167,21 @@ function L.createShipTitleBarButton(row, menu, sc_config, shipOptions, curShipOp
 			local haslicence, icon, overridecolor, mouseovertext = menu.checkLicence(menu.macro, true)
 			text = Helper.convertColorToText(overridecolor) .. text
 		end
-		row[2]:createButton({ active = (not menu.isReadOnly) and (menu.class ~= ""), height = menu.titleData.height, mouseOverText = mouseOverText }):setText(text, { halign = "center"  })
-		row[2].handlers.onClick = function() L.buttonShipTitleLoad(menu, shipOptions, sc_config.contextLayer) end
+		row[2]:createButton({ active = not menu.isReadOnly, height = menu.titleData.height, mouseOverText = mouseOverText }):setText(text, { halign = "center"  })
+		row[2].handlers.onClick = function() L.buttonShipTitleLoad(menu, classOptions, shipOptions, sc_config.contextLayer) end
 		return dropdownDummy
 	else
+		-- class
+		row[1]:createDropDown(classOptions, { startOption = menu.class, active = (not menu.isReadOnly) and (#classOptions > 0), helpOverlayID = "shipconfig_classoptions", helpOverlayText = " ", helpOverlayHighlightOnly = true }):setTextProperties(sc_config.dropDownTextProperties)
+		row[1].handlers.onDropDownConfirmed = menu.dropdownShipClass
+		-- ships
+		local dropDownIconProperties = {
+			width = menu.titleData.height / 2,
+			height = menu.titleData.height / 2,
+			x = sc_config.dropdownRatios.ship * menu.titleData.dropdownWidth - 1.5 * menu.titleData.height,
+			y = 0,
+			scaling = false,
+		}
 		local dropdown = row[2]:createDropDown(shipOptions, { startOption = curShipOption, active = (not menu.isReadOnly) and (menu.class ~= ""), optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, helpOverlayID = "shipconfig_shipoptions", helpOverlayText = " ", helpOverlayHighlightOnly = true }):setTextProperties(sc_config.dropDownTextProperties):setIconProperties(dropDownIconProperties)
 		row[2].properties.text.halign = "left"
 		row[2].handlers.onDropDownConfirmed = menu.dropdownShip
@@ -184,6 +231,9 @@ function L.buttonStationTitleLoad(menu, contextLayer)
 			menu = menu,
 			isItemActive = function(item) return item.active end,
 			frameModules = { L.createSettings, L.createSearchField, L.createCPModulesFilter },
+			sortItems = function (a, b) return a.name < b.name end,
+			sortOptions = config.defaultSortOptions,
+			sortDefault = "name"
 		}
 		L.autoSelectSearch = true
 		L.contextModule = nil
@@ -233,7 +283,10 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 				L.createSettings,
 				L.createSearchField,
 				function(s) L.createAutoPresetEditorButtons(s) end
-			}
+			},
+			sortItems = function (a, b) return a.name < b.name end,
+			sortOptions = config.defaultSortOptions,
+			sortDefault = "name"
 		}
 		L.autoSelectSearch = true
 		L.contextModule = nil
@@ -241,7 +294,7 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 	end
 end
 
-function L.buttonShipTitleLoad(menu, shipOptions, contextLayer)
+function L.buttonShipTitleLoad(menu, classOptions, shipOptions, contextLayer)
 	if menu.contextMode and (menu.contextMode.mode == "loadCS") then
 		menu.closeContextMenu()
 	else
@@ -263,10 +316,13 @@ function L.buttonShipTitleLoad(menu, shipOptions, contextLayer)
 			contextMode = menu.contextMode,
 			setContextFrame = function(f) menu.contextFrame = f end,
 			menu = menu,
-			itemFilter = L.filterItemByRace,
+			itemFilter = L.filterShip,
 			isItemActive = function(_) return true end,
 			getItemColor = function(item) return item.item.overridecolor end,
-			frameModules = { L.createSearchField, L.createShipRacesFilter }
+			frameModules = { L.createSearchField, function(stable) L.createShipFilters(stable, classOptions, L.getShipPurposes(shipOptions)) end },
+			sortItems = L.sortShips,
+			sortOptions = config.shipSortOptions,
+			sortDefault = "default"
 		}
 		L.autoSelectSearch = true
 		L.contextModule = nil
@@ -316,7 +372,10 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 				L.createSettings,
 				L.createSearchField,
 				function(s) L.createAutoPresetEditorButtons(s) end
-			}
+			},
+			sortItems = function (a, b) return a.name < b.name end,
+			sortOptions = config.defaultSortOptions,
+			sortDefault = "name"
 		}
 		L.autoSelectSearch = true
 		L.contextModule = nil
@@ -434,12 +493,15 @@ function L.createLoadContext()
 	row[tableColumns].handlers.onClick = L.params.closeContextMenu
 
 	-- Create expand/collapse all buttons --
-	local etable = contextFrame:addTable(2, { tabOrder = 5, x = browserX, y = config.browserHeaderTextProperties.y, width = smallColWidth * 2 })
+	local etable = contextFrame:addTable(8, { tabOrder = 5, x = browserX, y = config.browserHeaderTextProperties.y, width = smallColWidth * 8 })
 	local row = etable:addRow(true, { })
 	row[1]:createButton({ mouseOverText = ReadText(1811143915, 20), active = L.settings.folder_enabled }):setText("+", { halign = "center" })
 	row[1].handlers.onClick = function() L.buttonExpandAll(listRoot) end
 	row[2]:createButton({ mouseOverText = ReadText(1811143915, 21), active = L.settings.folder_enabled }):setText("-", { halign = "center" })
 	row[2].handlers.onClick = L.buttonCollapseAll
+	-- Create sorting dropdown
+	row[3]:setColSpan(6):createDropDown(L.params.sortOptions, { startOption = L.state[L.params.settingKey].sort or L.params.sortDefault, mouseOverText = "Item sorting", active = #L.params.sortOptions > 1 })
+	row[3].handlers.onDropDownConfirmed = L.dropdownSort
 
 	-- Create settings list --
 	local stable = contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = L.params.height, x = Helper.borderSize, width = config.loadSettingsWidth - Helper.borderSize * 2 })
@@ -619,26 +681,59 @@ function L.addModulesToFilter(table, buttonText, checked)
 	return atLeastOneAdded
 end
 
-function L.createShipRacesFilter(stable)
+function L.createShipFilters(stable, classOptions, purposes)
 	local row = stable:addRow(false, { fixed = true })
 	row[1]:setColSpan(2):createText(ReadText(1811143915, 31), config.browserHeaderTextProperties)
 
-	local addSeparation = L.addRacesToFilter(stable, ReadText(1811143915, 18), true)
+	local addSeparation = L.addRacesToFilter(stable, classOptions, purposes, ReadText(1811143915, 18), true)
 	if addSeparation then
-		stable:addEmptyRow(Helper.standardTextHeight)
+		stable:addEmptyRow(Helper.standardTextHeight / 4)
+		row = stable:addRow(false, { bgColor = { r = 128, g = 128, b = 128, a = 100 } } )
+		row[1]:setColSpan(2):createText("", { height = 3 } )
+		stable:addEmptyRow(Helper.standardTextHeight / 4)
 	end
-	L.addRacesToFilter(stable, ReadText(1811143915, 19), false)
+	L.addRacesToFilter(stable, classOptions, purposes, ReadText(1811143915, 19), false)
 end
 
-function L.addRacesToFilter(table, buttonText, checked)
+function L.addRacesToFilter(table, classOptions, purposes, buttonText, checked)
 	local atLeastOneAdded = false;
 	local selectedRaces = L.state[L.params.settingKey].filter.races
+	local selectedSizes = L.state[L.params.settingKey].filter.sizes
+	local selectedPurposes = L.state[L.params.settingKey].filter.purposes
+	for _, size in ipairs(classOptions) do
+		if (checked and selectedSizes[size.id] ~= nil) or (not checked and selectedSizes[size.id] == nil) then
+			local row = table:addRow(true, { })
+			row[1]:createText(size.text, { })
+			row[2]:createButton({  }):setText(buttonText, { halign = "center" })
+			row[2].handlers.onClick = function () L.filterShipToggled(size.id, selectedSizes, not checked) end
+			atLeastOneAdded = true
+		end
+	end
+	local needSep = atLeastOneAdded
+	for _, purpose in ipairs(purposes) do
+		if (checked and selectedPurposes[purpose] ~= nil) or (not checked and selectedPurposes[purpose] == nil) then
+			if needSep then
+				table:addEmptyRow(Helper.standardTextHeight / 4)
+				needSep = false
+			end
+			local row = table:addRow(true, { })
+			row[1]:createText((purpose:gsub("^%l", string.upper)), { })
+			row[2]:createButton({  }):setText(buttonText, { halign = "center" })
+			row[2].handlers.onClick = function () L.filterShipToggled(purpose, selectedPurposes, not checked) end
+			atLeastOneAdded = true
+		end
+	end
+	local needSep = atLeastOneAdded
 	for _, race in ipairs(L.allRaces) do
 		if (checked and selectedRaces[race.id] ~= nil) or (not checked and selectedRaces[race.id] == nil) then
+			if needSep then
+				table:addEmptyRow(Helper.standardTextHeight / 4)
+				needSep = false
+			end
 			local row = table:addRow(true, { })
 			row[1]:createText(race.name, { })
 			row[2]:createButton({  }):setText(buttonText, { halign = "center" })
-			row[2].handlers.onClick = function () L.filterRaceToggled(race.id, not checked) end
+			row[2].handlers.onClick = function () L.filterShipToggled(race.id, selectedRaces, not checked) end
 			atLeastOneAdded = true
 		end
 	end
@@ -710,32 +805,6 @@ function L.createAutoPresetEditorContext()
 			table.insert(raceOptions, { id = race.id, text = race.name, icon = "", displayremoveoption = false })
 		end
 	end
-	local valueOptions = {
-		{ id = "low", text = ReadText(1811143915, 71), icon = "", displayremoveoption = false },
-		{ id = "medium", text = ReadText(1811143915, 72), icon = "", displayremoveoption = false },
-		{ id = "high", text = ReadText(1811143915, 73), icon = "", displayremoveoption = false }
-	}
-	local dockingComputerOptions = {
-		{ id = "none", text = "None", icon = "", displayremoveoption = false },
-		{ id = "software_dockmk1", text = "Mk1", icon = "", displayremoveoption = false },
-		{ id = "software_dockmk2", text = "Mk2", icon = "", displayremoveoption = false }
-	}
-	local longRangeScannerOptions = {
-		{ id = "software_scannerlongrangemk1", text = "Mk1", icon = "", displayremoveoption = false },
-		{ id = "software_scannerlongrangemk2", text = "Mk2", icon = "", displayremoveoption = false }
-	}
-	local objectScannerOptions = {
-		{ id = "software_scannerobjectmk1", text = "Basic", icon = "", displayremoveoption = false },
-		{ id = "software_scannerobjectmk2", text = "Police", icon = "", displayremoveoption = false }
-	}
-	local targetingComputerOptions = {
-		{ id = "none", text = "None", icon = "", displayremoveoption = false },
-		{ id = "software_targetmk1", text = "Mk1", icon = "", displayremoveoption = false }
-	}
-	local tradingComputerOptions = {
-		{ id = "none", text = "None", icon = "", displayremoveoption = false },
-		{ id = "software_trademk1", text = "Mk1", icon = "", displayremoveoption = false }
-	}
 
 	local htable = contextFrame:addTable(1, { tabOrder = 6, x = Helper.borderSize, width = L.params.width - Helper.borderSize * 2 })
 	local row = htable:addRow(false, { fixed = true })
@@ -752,50 +821,50 @@ function L.createAutoPresetEditorContext()
 
 	local row = c1table:addRow(false, { fixed = false })
 	row[1]:setColSpan(6):createText(ReadText(1811143915, 36), {})
-	L.createPresetRules(c1table, raceOptions, valueOptions, L.params.mTurretOptions, preset.mturrets)
+	L.createPresetRules(c1table, raceOptions, config.valueOptions, L.params.mTurretOptions, preset.mturrets)
 
 	c1table:addEmptyRow(Helper.standardTextHeight / 2)
 	local row = c1table:addRow(false, { fixed = false })
 	row[1]:setColSpan(6):createText(ReadText(1811143915, 37), {})
-	L.createPresetRules(c1table, raceOptions, valueOptions, L.params.lTurretOptions, preset.lturrets)
+	L.createPresetRules(c1table, raceOptions, config.valueOptions, L.params.lTurretOptions, preset.lturrets)
 
 	if L.params.editorShipLoadout then
 		c1table:addEmptyRow(Helper.standardTextHeight / 2)
 		local row = c1table:addRow(false, { fixed = false })
 		row[1]:setColSpan(6):createText(ReadText(1811143915, 38), {})
-		L.createPresetRules(c1table, raceOptions, valueOptions, L.params.sShieldsOptions, preset.sshields)
+		L.createPresetRules(c1table, raceOptions, config.valueOptions, L.params.sShieldsOptions, preset.sshields)
 	end
 
 	c1table:addEmptyRow(Helper.standardTextHeight / 2)
 	local row = c1table:addRow(false, { fixed = false })
 	row[1]:setColSpan(6):createText(ReadText(1811143915, 39), {})
-	L.createPresetRules(c1table, raceOptions, valueOptions, L.params.mShieldOptions, preset.mshields)
+	L.createPresetRules(c1table, raceOptions, config.valueOptions, L.params.mShieldOptions, preset.mshields)
 
 	c1table:addEmptyRow(Helper.standardTextHeight / 2)
 	local row = c1table:addRow(false, { fixed = false })
 	row[1]:setColSpan(6):createText(ReadText(1811143915, 40), {})
-	L.createPresetRules(c1table, raceOptions, valueOptions, L.params.lShieldOptions, preset.lshields)
+	L.createPresetRules(c1table, raceOptions, config.valueOptions, L.params.lShieldOptions, preset.lshields)
 
 	if L.params.editorShipLoadout then
 		c1table:addEmptyRow(Helper.standardTextHeight / 2)
 		local row = c1table:addRow(false, { fixed = false })
 		row[1]:setColSpan(6):createText(ReadText(1811143915, 41), {})
-		L.createPresetRules(c1table, raceOptions, valueOptions, L.params.xlShieldOptions, preset.xlshields)
+		L.createPresetRules(c1table, raceOptions, config.valueOptions, L.params.xlShieldOptions, preset.xlshields)
 
 		c1table:addEmptyRow(Helper.standardTextHeight / 2)
 		local row = c1table:addRow(false, { fixed = false })
 		row[1]:setColSpan(6):createText(ReadText(1811143915, 42), {})
-		L.createPresetRules(c1table, raceOptions, valueOptions, L.params.engineOptions, preset.engines)
+		L.createPresetRules(c1table, raceOptions, config.valueOptions, L.params.engineOptions, preset.engines)
 
 		c1table:addEmptyRow(Helper.standardTextHeight / 2)
 		local row = c1table:addRow(false, { fixed = false })
 		row[1]:setColSpan(6):createText(ReadText(1811143915, 43), {})
-		L.createPresetRules(c1table, raceOptions, valueOptions, L.params.weaponOptions, preset.weapons)
+		L.createPresetRules(c1table, raceOptions, config.valueOptions, L.params.weaponOptions, preset.weapons)
 
 		c1table:addEmptyRow(Helper.standardTextHeight / 2)
 		local row = c1table:addRow(false, { fixed = false })
 		row[1]:setColSpan(6):createText(ReadText(1811143915, 44), {})
-		L.createPresetRules(c1table, raceOptions, valueOptions, L.params.thrusterOptions, preset.thrusters)
+		L.createPresetRules(c1table, raceOptions, config.valueOptions, L.params.thrusterOptions, preset.thrusters)
 	end
 
 
@@ -807,31 +876,31 @@ function L.createAutoPresetEditorContext()
 		row[1]:setColSpan(3):createText(ReadText(1811143915, 45), {})
 		local row = c2table:addRow(true, { fixed = false })
 		row[2]:createText(ReadText(1811143915, 46), {})
-		row[3]:createDropDown(dockingComputerOptions, { startOption = preset.software.docking.id, height = Helper.standardTextHeight })
+		row[3]:createDropDown(config.dockingComputerOptions, { startOption = preset.software.docking.id, height = Helper.standardTextHeight })
 		row[3].handlers.onDropDownConfirmed = function(_, id)
 			preset.software.docking.id = id
 		end
 		local row = c2table:addRow(true, { fixed = false })
 		row[2]:createText(ReadText(1811143915, 47), {})
-		row[3]:createDropDown(longRangeScannerOptions, { startOption = preset.software.longrangescanner.id, height = Helper.standardTextHeight })
+		row[3]:createDropDown(config.longRangeScannerOptions, { startOption = preset.software.longrangescanner.id, height = Helper.standardTextHeight })
 		row[3].handlers.onDropDownConfirmed = function(_, id)
 			preset.software.longrangescanner.id = id
 		end
 		local row = c2table:addRow(true, { fixed = false })
 		row[2]:createText(ReadText(1811143915, 48), {})
-		row[3]:createDropDown(objectScannerOptions, { startOption = preset.software.objectscanner.id, height = Helper.standardTextHeight })
+		row[3]:createDropDown(config.objectScannerOptions, { startOption = preset.software.objectscanner.id, height = Helper.standardTextHeight })
 		row[3].handlers.onDropDownConfirmed = function(_, id)
 			preset.software.objectscanner.id = id
 		end
 		local row = c2table:addRow(true, { fixed = false })
 		row[2]:createText(ReadText(1811143915, 49), {})
-		row[3]:createDropDown(targetingComputerOptions, { startOption = preset.software.targeting.id, height = Helper.standardTextHeight })
+		row[3]:createDropDown(config.targetingComputerOptions, { startOption = preset.software.targeting.id, height = Helper.standardTextHeight })
 		row[3].handlers.onDropDownConfirmed = function(_, id)
 			preset.software.targeting.id = id
 		end
 		local row = c2table:addRow(true, { fixed = false })
 		row[2]:createText(ReadText(1811143915, 50), {})
-		row[3]:createDropDown(tradingComputerOptions, { startOption = preset.software.trading.id, height = Helper.standardTextHeight })
+		row[3]:createDropDown(config.tradingComputerOptions, { startOption = preset.software.trading.id, height = Helper.standardTextHeight })
 		row[3].handlers.onDropDownConfirmed = function(_, id)
 			preset.software.trading.id = id
 		end
@@ -1106,12 +1175,11 @@ function L.filterMacroToggled(macro, checked)
 	L.refreshLoadFrame()
 end
 
-function L.filterRaceToggled(id, checked)
-	local selectedRaces = L.state[L.params.settingKey].filter.races
+function L.filterShipToggled(id, selected, checked)
 	if checked then
-		selectedRaces[id] = true
+		selected[id] = true
 	else
-		selectedRaces[id] = nil
+		selected[id] = nil
 	end
 	L.refreshLoadFrame()
 end
@@ -1201,6 +1269,11 @@ function L.buttonDeleteCP(menu, id)
 			break
 		end
 	end
+end
+
+function L.dropdownSort(_, id)
+	L.state[L.params.settingKey].sort = id
+	L.refreshLoadFrame()
 end
 
 

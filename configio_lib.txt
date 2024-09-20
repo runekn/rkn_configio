@@ -97,25 +97,36 @@ function L.filterItemByModules(item)
 	return true
 end
 
-function L.filterItemByRace(item)
-	local makerraces = GetMacroData(item.id, "makerraceid")
+function L.filterShip(item)
 	local selectedRaces = L.state[L.params.settingKey].filter.races
+	local selectedSizes = L.state[L.params.settingKey].filter.sizes
+	local selectedPurposes = L.state[L.params.settingKey].filter.purposes
 	if selectedRaces and next(selectedRaces) ~= nil then
-		local f = false
 		for k,_ in pairs(selectedRaces) do
-			if #makerraces == 0 then
+			if #item.race == 0 then
 				if k == "other" then
-					return true
+					goto continue
 				end
 			else
-				for _,r in ipairs(makerraces) do
+				for _,r in ipairs(item.race) do
 					if r == k or (r == "xenon" and k == "other") then
-						return true
+						goto continue
 					end
 				end
 			end
 		end
 		return false
+	end
+	::continue::
+	if selectedPurposes and next(selectedPurposes) ~= nil then
+		if not selectedPurposes[item.purpose] then
+			return false
+		end
+	end
+	if selectedSizes and next(selectedSizes) ~= nil then
+		if not selectedSizes[item.class] then
+			return false
+		end
 	end
 	return true
 end
@@ -148,7 +159,8 @@ function L.undentSingleItems(folder, parent)
 end
 
 function L.sortFolder(folder)
-	table.sort(folder.items, function (a, b) return a.name < b.name end)
+	local sortOption = L.state[L.params.settingKey].sort or L.params.sortDefault
+	table.sort(folder.items, function (a,b) return L.params.sortItems(a, b, sortOption) end)
 	table.sort(folder.folders_arr, function (a, b) return a.name < b.name end)
 	for _, innerFolder in ipairs(folder.folders_arr) do
 		L.sortFolder(innerFolder)
@@ -728,6 +740,37 @@ function L.trimPartialLoadout(upgradeplan, upgradewares)
 
 		end
 	end
+end
+
+function L.createShipOptions(menu)
+	local shipOptions = {}
+	for _, shipmacros in pairs(menu.availableshipmacrosbyclass) do
+		for _, macro in ipairs(shipmacros) do
+			local haslicence, icon, overridecolor, mouseovertext, limitstring = menu.checkLicence(macro, true)
+			local name, infolibrary, shiptypename, primarypurpose, shipicon, race = GetMacroData(macro, "name", "infolibrary", "shiptypename", "primarypurpose", "icon", "makerraceid")
+			local class = ffi.string(C.GetMacroClass(macro))
+			table.insert(shipOptions, { id = macro, text = "\27[" .. shipicon .. "] " .. name .. " - " .. shiptypename .. limitstring, icon = icon or "", displayremoveoption = false, overridecolor = overridecolor, mouseovertext = mouseovertext, name = name .. " - " .. shiptypename, objectid = "", class = class, purpose = primarypurpose, race = race, helpOverlayID = "shipconfig_shipoptions_" .. macro, helpOverlayText = " ", helpOverlayHighlightOnly = true })
+		end
+	end
+	return shipOptions
+end
+
+function L.getShipPurposes(shipOptions)
+	local purposes = {}
+	for _, ship in ipairs(shipOptions) do
+		if not purposes[ship.purpose] then
+			table.insert(purposes, ship.purpose)
+			purposes[ship.purpose] = true
+		end
+	end
+	return purposes
+end
+
+function L.sortShips(a, b, o)
+	if o == "default" then
+		return Helper.sortShipsByClassAndPurpose(a.item, b.item)
+	end
+	return a.name < b.name
 end
 
 return L
