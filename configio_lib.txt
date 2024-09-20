@@ -25,10 +25,10 @@ function L.prepareBrowserStructure(itemList)
 		end
 		local cwd = root
 		-- iterate through item folders --
-		local nextMatch = string.gmatch(item.name, "[^" .. Utils.EscapeGmatch(L.settings.folder_delimiter) .. "]+")
+		local nextMatch = string.gmatch(item.name, "[^" .. Utils.EscapeGmatch(L.getLoadSettings().folder_delimiter) .. "]+")
 		local folder = nextMatch()
 		local name = item.name
-		local levelsLeft = L.settings.folder_enabled and L.params.maxFolders or 0
+		local levelsLeft = L.getLoadSettings().folder_enabled and L.params.maxFolders or 0
 		local folderPath = ""
 		while 1==1 do
 			-- Check if this is the item name --
@@ -59,7 +59,7 @@ function L.prepareBrowserStructure(itemList)
 		::continue::
 	end
 
-	if L.settings.folder_flatten_single_item then
+	if L.getLoadSettings().folder_flatten_single_item then
 		L.undentSingleItems(root)
 	end
 
@@ -70,14 +70,14 @@ function L.prepareBrowserStructure(itemList)
 end
 
 function L.filterItem(item)
-	local search = L.state[L.params.settingKey].filter.search
+	local search = L.getState().filter.search
 	if search and search ~= "" then
 		local searchMatch = item.name:lower():find(search:lower())
 		if not searchMatch then
 			return false
 		end
 	end
-	if L.settings.item_hide_inactive and not L.params.isItemActive(item) then
+	if L.getLoadSettings().item_hide_inactive and not L.params.isItemActive(item) then
 		return false
 	end
 	if L.params.itemFilter and (not L.params.itemFilter(item)) then
@@ -87,7 +87,7 @@ function L.filterItem(item)
 end
 
 function L.filterItemByModules(item)
-	local selectedMacros = L.state[L.params.settingKey].filter.macros
+	local selectedMacros = L.getState().filter.macros
 	if selectedMacros and #selectedMacros > 0 then
 		local hasmacros = Helper.textArrayHelper(selectedMacros, function (numtexts, texts) return C.CheckConstructionPlanForMacros(item.id, texts, numtexts) end)
 		if not hasmacros then
@@ -98,21 +98,13 @@ function L.filterItemByModules(item)
 end
 
 function L.filterShip(item)
-	local selectedRaces = L.state[L.params.settingKey].filter.races
-	local selectedSizes = L.state[L.params.settingKey].filter.sizes
-	local selectedPurposes = L.state[L.params.settingKey].filter.purposes
+	local selectedRaces = L.getState().filter.races
+	local selectedSizes = L.getState().filter.sizes
+	local selectedPurposes = L.getState().filter.purposes
 	if selectedRaces and next(selectedRaces) ~= nil then
-		for k,_ in pairs(selectedRaces) do
-			if #item.race == 0 then
-				if k == "other" then
-					goto continue
-				end
-			else
-				for _,r in ipairs(item.race) do
-					if r == k or (r == "xenon" and k == "other") then
-						goto continue
-					end
-				end
+		for _,r in ipairs(item.races) do
+			if selectedRaces[r] then
+				goto continue
 			end
 		end
 		return false
@@ -151,7 +143,7 @@ function L.undentSingleItems(folder, parent)
 		table.insert(parent.items, item)
 		table.remove(folder.items, 1)
 
-		item.name = folder.name .. L.settings.folder_delimiter .. item.name
+		item.name = folder.name .. L.getLoadSettings().folder_delimiter .. item.name
 	elseif itemCount > 1 then
 		canDelete = false
 	end
@@ -159,7 +151,7 @@ function L.undentSingleItems(folder, parent)
 end
 
 function L.sortFolder(folder)
-	local sortOption = L.state[L.params.settingKey].sort or L.params.sortDefault
+	local sortOption = L.getState().sort or L.params.sortDefault
 	table.sort(folder.items, function (a,b) return L.params.sortItems(a, b, sortOption) end)
 	table.sort(folder.folders_arr, function (a, b) return a.name < b.name end)
 	for _, innerFolder in ipairs(folder.folders_arr) do
@@ -182,35 +174,40 @@ function L.getAllWaresByTag(tag)
 end
 
 function L.getAllProductionModules()
-	local result = {}
-    for _, ware in ipairs(L.getAllWaresByTag("module")) do
-        local name, macro = GetWareData(ware, "name", "component")
-		local moduletype = GetMacroData(macro, "infolibrary")
+	if not L.allProductionModules then
+		local result = {}
+		for _, ware in ipairs(L.getAllWaresByTag("module")) do
+			local name, macro = GetWareData(ware, "name", "component")
+			local moduletype = GetMacroData(macro, "infolibrary")
 
-		if moduletype == "moduletypes_production" then
-			local entry = { name = name, macro = macro }
-			table.insert(result, entry)
+			if moduletype == "moduletypes_production" then
+				local entry = { name = name, macro = macro }
+				table.insert(result, entry)
+			end
 		end
-    end
-	
-	table.sort(result, function (a, b) return a.name < b.name end)
-	return result
+		table.sort(result, function (a, b) return a.name < b.name end)
+		L.allProductionModules = result
+	end
+	return L.allProductionModules
 end
 
 function L.getAllWeapons()
-	local result = {}
-    for _, ware in ipairs(L.getAllWaresByTag("weapon")) do
-        local name, macro = GetWareData(ware, "name", "component")
-		
-		local isAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
-		if not isAlias and IsKnownItem(librarytype, macro) then
-			local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
-			table.insert(result, entry)
+	if not L.allWeapons then
+		local result = {}
+		for _, ware in ipairs(L.getAllWaresByTag("weapon")) do
+			local name, macro = GetWareData(ware, "name", "component")
+			
+			local isAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
+			if not isAlias and IsKnownItem(librarytype, macro) then
+				local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
+				table.insert(result, entry)
+			end
 		end
-    end
-	
-	table.sort(result, function (a, b) return a.text < b.text end)
-	return result
+		
+		table.sort(result, function (a, b) return a.text < b.text end)
+		L.allWeapons = result
+	end
+	return L.allWeapons
 end
 
 function L.getAllTurrets()
@@ -303,69 +300,111 @@ function L.getAllThrusters()
 	return result
 end
 
-function L.getAllRaces(skip)
-	local races = {}
-	local n = C.GetNumAllRaces()
-	local buf = ffi.new("RaceInfo[?]", n)
-	n = C.GetAllRaces(buf, n)
-	for i = 0, n - 1 do
-		local entry = {}
-		entry.id = ffi.string(buf[i].id)
-		entry.name = ffi.string(buf[i].name)
-
-		if not skip[entry.id] then
-			table.insert(races, entry)
+function L.getRaceNameMap()
+	if not L.raceNameMap then
+		local races = {}
+		local n = C.GetNumAllRaces()
+		local buf = ffi.new("RaceInfo[?]", n)
+		n = C.GetAllRaces(buf, n)
+		for i = 0, n - 1 do
+			local id = ffi.string(buf[i].id)
+			local name = ffi.string(buf[i].name)
+			races[id] = name
 		end
+		L.raceNameMap = races
 	end
-	return races
+	return L.raceNameMap
 end
 
 function L.getAllShipFilterRaces()
-	local skip = { khaak = true, drone = true, xenon = true }
-	local races = L.getAllRaces(skip)
+	local races = L.getRaceNameMap()
 	table.sort(races, function (a, b) return a.name < b.name end)
 	table.insert(races, { name = "Other", id = "other" })
 	return races
 end
 
 function L.getAllAutoPresetRaces()
-	local skip = { khaak = true, drone = true, xenon = true }
-	local races = L.getAllRaces(skip)
-	table.sort(races, function (a, b) return a.name < b.name end)
-	return races
+	if not L.allAutoPresetRaces then
+		local skip = { khaak = true, drone = true, xenon = true }
+		local raceMap = L.getRaceNameMap()
+		local races = {}
+		for id,name in pairs(raceMap) do
+			if not skip[id] then
+				table.insert(races, { id = id, name = name })
+			end
+		end
+		table.sort(races, function (a, b) return a.name < b.name end)
+		L.allAutoPresetRaces = races
+	end
+	return L.allAutoPresetRaces
 end
 
-function L.getLoadSettings()
-	local default = {
-		folder_enabled = false,
-		folder_delimiter = "/",
-		folder_flatten_single_item = false,
-		folder_fullname = false,
-		item_fullname = true,
-		item_hide_inactive = false,
-		item_load_partial = false,
-		enabled = true,
-	}
-	local allDefault = {
-		[config.stationKey] = Utils.ShallowCopy(default),
-		[config.stationLoadoutKey] = Utils.ShallowCopy(default),
-		[config.shipKey] = Utils.ShallowCopy(default),
-		[config.shipLoadoutKey] = Utils.ShallowCopy(default)
-	}
+function L.getState()
+	if not L.state then
+		L.state = { }
+		for _,key in ipairs({config.stationKey, config.stationLoadoutKey, config.shipLoadoutKey, config.shipKey}) do
+			L.state[key] = {
+				filter = {
+					macros = {},
+					races = {},
+					sizes = {},
+					purposes = {}
+				},
+				expandedFolders = {},
+				selectedRow = nil,
+				topRow = nil,
+			}
+		end
+	end
+	return L.state[L.params.settingKey]
+end
+
+function L.getPlayerId()
 	if not L.playerID then
-		return allDefault
+		L.playerID = ConvertStringTo64Bit(tostring(C.GetPlayerID()))
 	end
-	local all = GetNPCBlackboard(L.playerID, config.settingsBlackboardId)
-	if not all then
-		return allDefault
+	return L.playerID
+end
+
+function L.getLoadSettings(key)
+	if not key then
+		key = L.params.settingKey
 	end
-	local r = {
-		[config.stationKey] = L.convertLoadSettings(all[config.stationKey], default),
-		[config.stationLoadoutKey] = L.convertLoadSettings(all[config.stationLoadoutKey], default),
-		[config.shipKey] = L.convertLoadSettings(all[config.shipKey], default),
-		[config.shipLoadoutKey] = L.convertLoadSettings(all[config.shipLoadoutKey], default)
-	}
-	return r
+	if not L.settings then
+		local default = {
+			folder_enabled = false,
+			folder_delimiter = "/",
+			folder_flatten_single_item = false,
+			folder_fullname = false,
+			item_fullname = true,
+			item_hide_inactive = false,
+			item_load_partial = false,
+			enabled = true,
+		}
+		local allDefault = {
+			[config.stationKey] = Utils.ShallowCopy(default),
+			[config.stationLoadoutKey] = Utils.ShallowCopy(default),
+			[config.shipKey] = Utils.ShallowCopy(default),
+			[config.shipLoadoutKey] = Utils.ShallowCopy(default)
+		}
+		if not L.getPlayerId() then
+			return allDefault
+		end
+		local all = GetNPCBlackboard(L.getPlayerId(), config.settingsBlackboardId)
+		local r
+		if not all then
+			r = allDefault
+		else
+			r = {
+				[config.stationKey] = L.convertLoadSettings(all[config.stationKey], default),
+				[config.stationLoadoutKey] = L.convertLoadSettings(all[config.stationLoadoutKey], default),
+				[config.shipKey] = L.convertLoadSettings(all[config.shipKey], default),
+				[config.shipLoadoutKey] = L.convertLoadSettings(all[config.shipLoadoutKey], default)
+			}
+		end
+		L.settings = r
+	end
+	return L.settings[key]
 end
 
 function L.convertLoadSettings(s, default)
@@ -386,10 +425,10 @@ function L.convertLoadSettings(s, default)
 	return r
 end
 
-function L.setLoadSetting(configKey, key, value)
-	local settings = L.getLoadSettings()
-	settings[configKey][key] = value
-	SetNPCBlackboard(L.playerID, config.settingsBlackboardId, settings)
+function L.setLoadSetting(key, value)
+	L.getLoadSettings()
+	L.settings[L.params.settingKey][key] = value
+	SetNPCBlackboard(L.getPlayerId(), config.settingsBlackboardId, L.settings)
 end
 
 function L.addCustomAutoPresets(key, loadouts)
@@ -412,7 +451,7 @@ function L.getAutoPresetByName(autoPresets, name)
 end
 
 function L.getAutoPresets(key)
-	local autoPresets = GetNPCBlackboard(L.playerID, config.autoPresetsBlackboardId)
+	local autoPresets = GetNPCBlackboard(L.getPlayerId(), config.autoPresetsBlackboardId)
 	if autoPresets then
 		return autoPresets[key] or {}
 	end
@@ -423,7 +462,7 @@ function L.saveAutoPreset(preset, id)
 	if not preset or not preset.name or preset.name == "" then
 		return
 	end
-	local autoPresets = GetNPCBlackboard(L.playerID, config.autoPresetsBlackboardId)
+	local autoPresets = GetNPCBlackboard(L.getPlayerId(), config.autoPresetsBlackboardId)
 	if not autoPresets then
 		autoPresets = { idCounter = 0 }
 	end
@@ -438,7 +477,7 @@ function L.saveAutoPreset(preset, id)
 		preset.id = id
 	end
 	autoPresetsForKey["rknconfigio_auto_" .. tostring(id)] = preset
-	SetNPCBlackboard(L.playerID, config.autoPresetsBlackboardId, autoPresets)
+	SetNPCBlackboard(L.getPlayerId(), config.autoPresetsBlackboardId, autoPresets)
 end
 
 function L.generateLoadoutUpgradePlan(menu, presetTemplate)
@@ -682,7 +721,7 @@ end
 -- Created by Eliptus
 -- Edited and integrated by Runekn
 function L.addPartialFlag(loadouts)
-	if L.settings.item_load_partial then
+	if L.getLoadSettings().item_load_partial then
 		for _, loadout in ipairs(loadouts) do
 			if not loadout.active then
 				loadout.name = loadout.name
@@ -747,9 +786,26 @@ function L.createShipOptions(menu)
 	for _, shipmacros in pairs(menu.availableshipmacrosbyclass) do
 		for _, macro in ipairs(shipmacros) do
 			local haslicence, icon, overridecolor, mouseovertext, limitstring = menu.checkLicence(macro, true)
-			local name, infolibrary, shiptypename, primarypurpose, shipicon, race = GetMacroData(macro, "name", "infolibrary", "shiptypename", "primarypurpose", "icon", "makerraceid")
+			local name, infolibrary, shiptypename, primarypurpose, shipicon, races = GetMacroData(macro, "name", "infolibrary", "shiptypename", "primarypurpose", "icon", "makerraceid")
 			local class = ffi.string(C.GetMacroClass(macro))
-			table.insert(shipOptions, { id = macro, text = "\27[" .. shipicon .. "] " .. name .. " - " .. shiptypename .. limitstring, icon = icon or "", displayremoveoption = false, overridecolor = overridecolor, mouseovertext = mouseovertext, name = name .. " - " .. shiptypename, objectid = "", class = class, purpose = primarypurpose, race = race, helpOverlayID = "shipconfig_shipoptions_" .. macro, helpOverlayText = " ", helpOverlayHighlightOnly = true })
+			if #races == 0 then
+				table.insert(races, "other")
+			end
+			table.insert(shipOptions, {
+				id = macro,
+				text = "\27[" .. shipicon .. "] " .. name .. " - " .. shiptypename .. limitstring,
+				icon = icon or "", displayremoveoption = false,
+				overridecolor = overridecolor,
+				mouseovertext = mouseovertext,
+				name = name .. " - " .. shiptypename,
+				objectid = "",
+				class = class,
+				purpose = primarypurpose,
+				races = races,
+				helpOverlayID = "shipconfig_shipoptions_" .. macro,
+				helpOverlayText = " ",
+				helpOverlayHighlightOnly = true
+			})
 		end
 	end
 	return shipOptions
@@ -759,11 +815,35 @@ function L.getShipPurposes(shipOptions)
 	local purposes = {}
 	for _, ship in ipairs(shipOptions) do
 		if not purposes[ship.purpose] then
-			table.insert(purposes, ship.purpose)
+			table.insert(purposes, { id = ship.purpose, text = ship.purpose:gsub("^%l", string.upper) })
 			purposes[ship.purpose] = true
 		end
 	end
+	table.sort(purposes, function(a,b) return a.text < b.text end)
 	return purposes
+end
+
+function L.getShipRaces(shipOptions)
+	local races = {}
+	local raceNameMap = L.getRaceNameMap()
+	for _, ship in ipairs(shipOptions) do
+		for _, race in ipairs(ship.races) do
+			if not races[race] then
+				local name = race == "other" and "Other" or raceNameMap[race]
+				table.insert(races, { id = race, text = name })
+				races[race] = true
+			end
+		end
+	end
+	table.sort(races, function(a,b)
+		if b.id == "other" then
+			return true
+		elseif a.id == "other" then
+			return false
+		end
+		return a.text < b.text
+	end)
+	return races
 end
 
 function L.sortShips(a, b, o)
