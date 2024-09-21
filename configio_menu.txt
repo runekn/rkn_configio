@@ -1058,10 +1058,10 @@ end
 function L.createRenameItemContext(contextFrame, y, item)
 	local htable = contextFrame:addTable(8, { tabOrder = 6, x = Helper.borderSize, y = y, width = L.params.width - Helper.borderSize * 2 })
 	local row = htable:addRow(false, { fixed = true })
-	row[1]:setColSpan(8):createText("Rename item", config.browserHeaderTextProperties) -- TODO: text
+	row[1]:setColSpan(8):createText(ReadText(1811143915, 94), config.browserHeaderTextProperties)
 
 	local row = htable:addRow(false, { fixed = true })
-	row[3]:createText("New name:", { wordwrap = true })
+	row[3]:createText(ReadText(1811143915, 95), { wordwrap = true })
 	row[4]:setColSpan(3):createEditBox({ scaling = true, height = Helper.standardTextHeight }):setText(L.renameText, { })
 	row[4].handlers.onTextChanged = function(_, text)
 		L.renameText = text

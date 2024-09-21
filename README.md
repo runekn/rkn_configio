@@ -10,8 +10,9 @@ Replaces the simple dropdown to load stations, ships, or loadouts with a bigger 
 * Ship race filter: Now you can easily find the boron ships in your long list of blueprints.
 * Disable mod by menu: Don't like the new dialog for a specific menu (station plans, module loadout, ship loadout)? You can disable them individually.
 * Custom auto-generated loadout presets: Generate loadouts based on custom criteria, so you don't have to build every loadout from scratch.
+* Partial loading: Allows you to load ship presets that you would not normally be able to due to missing blueprints.
 
-### How does groups work?
+### Groups
 
 Let's say you have three station plans:
 
@@ -29,7 +30,7 @@ If we enable groups, and set the delimiter to slash '/', then the list will reor
  -         Big Boy
  ```
  
-### How does 'Flatten one-item group' work?
+#### 'Flatten one-item group' setting
 
 In the example in the previous section, we can see that "ARG/Wharf/Big Boy" takes up two rows when organized into groups, which is double of what it did without grouping. We could collapse the group, but this would still be strictly worse than ungrouped because we now can't see what the group contains.
 The option 'Flatten one-item group' just ungroups these items. Meaning that it would result in following structure:
@@ -43,7 +44,7 @@ The option 'Flatten one-item group' just ungroups these items. Meaning that it w
 
 The 'EnergyCells' group is left untouched because it contains more than one item. Note that 'Flatten one-item group' is recursive, meaning that if the group ARG also contained just one item after applying it, it too would be ungrouped.
 
-### How does 'Custom Auto-generated Preset' work?
+### Custom Auto-generated Preset
 
 You know those default loadout presets called "High Preset", "Medium Preset", etc? Have you ever wanted something like that, but with more freedom to define exactly how it chooses each loadout module? For example "High Preset, but only Argon modules". That's what this feature seeks to accomplish.
 
@@ -82,5 +83,6 @@ Use along-side VRO can break the "Race filter" during ship selection, unless thi
 
 ## Updates
 
+* 1.2: Added option for loading partial ship loadout. Add size and purpose filter in ship selection. Remove ship size dropdown. Add sorting dropdown. Add rename button for ship and station module loadouts. Remove 'other' race option in auto-preset editor. Disable race dropdown for thruster auto rule.
 * 1.1: Added auto-generated preset editor. Added custom delete confirmation dialog. Fixed delete and load buttons working despite being inactive.
 * 1.0: Initial release
