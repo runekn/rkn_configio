@@ -735,7 +735,7 @@ end
 
 -- Created by Eliptus
 -- Edited and integrated by Runekn
-function L.trimPartialLoadout(upgradeplan, upgradewares)
+function L.trimPartialLoadout(currentUpgradePlan, upgradeplan, upgradewares)
 	for type,plan in pairs(upgradeplan) do
 		local spec = Helper.findUpgradeType(type)
 		local wares = upgradewares[type]
@@ -753,7 +753,8 @@ function L.trimPartialLoadout(upgradeplan, upgradewares)
 		elseif spec.supertype == 'macro' or spec.supertype == 'virtualmacro' then
 			-- plan[slot]['macro'] = macro
 			for slot,info in pairs(plan) do
-				if not Utils.Any(wares, function(v, _) return v.macro == info.macro end) then
+				local currentMacro = currentUpgradePlan[type][slot].macro
+				if currentMacro ~= info.macro and not Utils.Any(wares, function(v, _) return v.macro == info.macro and v.isFromShipyard end) then
 					info.macro = ''
 					if info.count then
 						info.count = 0
@@ -762,9 +763,10 @@ function L.trimPartialLoadout(upgradeplan, upgradewares)
 			end
 
 		elseif spec.supertype == 'ammo' then
+			local missile = type == "missile" -- Don't preserve existing missiles that cannot be built at this shipyard. This is due to left bar sliders setting max value to 0 and thus crashing UI
 			-- plan[macro] = count
 			for macro,_ in pairs(plan) do
-				if not Utils.Any(wares, function(v, _) return v.macro == macro end) then
+				if not Utils.Any(wares, function(v, _) return v.macro == macro and (v.isFromShipyard or not missile) end) then
 					plan[macro] = 0
 				end
 			end

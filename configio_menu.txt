@@ -1187,22 +1187,20 @@ function L.onStationLoadoutLoad(menu, item)
 end
 
 function L.onShipLoadoutLoad(menu, item)
-	if not item.customPreset then
-		menu.dropdownLoadout(_, item.id)
-
-		if L.getLoadSettings().item_load_partial and item.partial then
-			L.trimPartialLoadout(menu.upgradeplan, menu.upgradewares)
-			menu.getDataAndDisplay(menu.upgradeplan, menu.crew)
+	if item.customPreset then
+		local upgradeplan = L.generateLoadoutUpgradePlan(menu, item.customPreset)
+		if menu.usemacro then
+			menu.captainSelected = true
 		end
-		return
+		menu.getDataAndDisplay(upgradeplan, nil)
+	elseif item.partial and L.getLoadSettings().item_load_partial then
+		local loadout = Helper.getLoadoutHelper2(C.GetLoadout2, C.GetLoadoutCounts2, "UILoadout2", menu.object, menu.macro, item.id)
+		local upgradeplan = Helper.convertLoadout(menu.object, menu.macro, loadout, menu.software, "UILoadout2")
+		L.trimPartialLoadout(menu.upgradeplan, upgradeplan, menu.upgradewares)
+		menu.getDataAndDisplay(upgradeplan, menu.crew)
+	else
+		menu.dropdownLoadout(_, item.id)
 	end
-
-	local upgradeplan = L.generateLoadoutUpgradePlan(menu, item.customPreset)
-
-	if menu.usemacro then
-		menu.captainSelected = true
-	end
-	menu.getDataAndDisplay(upgradeplan, nil)
 end
 
 function L.onLoadoutRemoved(defaultLoad, item)
