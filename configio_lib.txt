@@ -753,11 +753,18 @@ function L.trimPartialLoadout(currentUpgradePlan, upgradeplan, upgradewares)
 		elseif spec.supertype == 'macro' or spec.supertype == 'virtualmacro' then
 			-- plan[slot]['macro'] = macro
 			for slot,info in pairs(plan) do
-				local currentMacro = currentUpgradePlan[type][slot].macro
-				if currentMacro ~= info.macro and not Utils.Any(wares, function(v, _) return v.macro == info.macro and v.isFromShipyard end) then
-					info.macro = ''
-					if info.count then
-						info.count = 0
+				local alreadyBuilt = currentUpgradePlan[type][slot].macro == info.macro
+				local buildable = Utils.Any(wares, function(v, _) return v.macro == info.macro and v.isFromShipyard end)
+				if not buildable then
+					if alreadyBuilt then
+						DebugError("Setting " .. info.macro .. " to " .. tostring(currentUpgradePlan[type][slot].count))
+						info.count = currentUpgradePlan[type][slot].count
+					else
+						DebugError("Removing " .. info.macro)
+						info.macro = ''
+						if info.count then
+							info.count = 0
+						end
 					end
 				end
 			end
