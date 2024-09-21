@@ -52,6 +52,11 @@ function Util.DeepCopy(orig)
     return copy
 end
 
+function Util.AddFixedEmptyRow(table, height)
+    local row = table:addRow(nil, { fixed = true })
+	row[1]:createText(" ", { fontsize = 1, minRowHeight = height })
+end
+
 
 function Util.ArrayIndexOf(arr, v)
 	if not arr then

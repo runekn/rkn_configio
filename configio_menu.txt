@@ -457,13 +457,14 @@ function L.createLoadContext()
 		ltable:setColWidth(column, smallColWidth, false)
 	end
 	L.ltable = ltable
-	local row = ltable:addRow(false, { fixed = true })
-	row[1]:setColSpan(config.maxFolders + 1):createText(L.params.header, config.browserHeaderTextProperties)
+	ltable:addEmptyRow(config.browserHeaderTextProperties.height)
+	local row = ltable:addRow(false, { fixed = true, bgColor = config.browserHeaderTextProperties.titleColor } )
+	row[1]:setColSpan(2):createText("", { height = 3 } )
+	Utils.AddFixedEmptyRow(ltable, Helper.standardTextHeight / 3)
 
 	L.addFolderToList(ltable, listRoot, 1)
 
 	-- Create list buttons --
-	local tableColumns = 4
 	local btable = contextFrame:addTable(4, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = L.params.height - Helper.standardButtonHeight, x = browserX, width = browserWidth })
 	L.btable = btable
 	local row = btable:addRow(true, { fixed = true })
@@ -477,9 +478,10 @@ function L.createLoadContext()
 	row[4].handlers.onClick = L.params.closeContextMenu
 
 	-- Create expand/collapse all buttons --
-	local etable = contextFrame:addTable(3, { tabOrder = 5, x = browserX, y = config.browserHeaderTextProperties.y, width = smallColWidth * 9 })
+	local etable = contextFrame:addTable(4, { tabOrder = 5, x = browserX, y = config.browserHeaderTextProperties.y, width = browserWidth })
 	etable:setColWidth(1, smallColWidth, false)
 	etable:setColWidth(2, smallColWidth, false)
+	etable:setColWidth(3, smallColWidth * 7, false)
 	local row = etable:addRow(true, { })
 	row[1]:createButton({ mouseOverText = ReadText(1811143915, 20), active = L.getLoadSettings().folder_enabled }):setText("+", { halign = "center" })
 	row[1].handlers.onClick = function() L.buttonExpandAll(listRoot) end
@@ -488,6 +490,7 @@ function L.createLoadContext()
 	-- Create sorting dropdown
 	row[3]:createDropDown(L.params.sortOptions, { startOption = L.getState().sort or L.params.sortDefault, mouseOverText = ReadText(1811143915, 93), active = #L.params.sortOptions > 1 })
 	row[3].handlers.onDropDownConfirmed = L.dropdownSort
+	row[4]:createText(L.params.header, { font = config.browserHeaderTextProperties.font, fontsize = config.browserHeaderTextProperties.fontSize })
 
 	-- Create settings list --
 	local stable = contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = L.params.height, x = Helper.borderSize, width = config.loadSettingsWidth - Helper.borderSize * 2 })
