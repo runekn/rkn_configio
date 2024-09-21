@@ -54,8 +54,14 @@ function L.prepareBrowserStructure(itemList)
 			cwd = target
 			folder = next
 		end
-		-- Inser item to final folder --
-		table.insert(cwd.items, { type = "item", name = name, active = L.params.isItemActive(item), deleteable = item.deleteable, item = item })
+		-- Insert item to final folder --
+		table.insert(cwd.items, {
+			type = "item",
+			name = name,
+			active = L.params.isItemActive(item),
+			deleteable = item.deleteable,
+			renamable = L.params.isItemRenamable and L.params.isItemRenamable(item),
+			item = item })
 		::continue::
 	end
 
@@ -757,10 +763,8 @@ function L.trimPartialLoadout(currentUpgradePlan, upgradeplan, upgradewares)
 				local buildable = Utils.Any(wares, function(v, _) return v.macro == info.macro and v.isFromShipyard end)
 				if not buildable then
 					if alreadyBuilt then
-						DebugError("Setting " .. info.macro .. " to " .. tostring(currentUpgradePlan[type][slot].count))
 						info.count = currentUpgradePlan[type][slot].count
 					else
-						DebugError("Removing " .. info.macro)
 						info.macro = ''
 						if info.count then
 							info.count = 0
@@ -860,6 +864,21 @@ function L.sortShips(a, b, o)
 		return Helper.sortShipsByClassAndPurpose(a.item, b.item)
 	end
 	return a.name < b.name
+end
+
+function L.renameStationLoadout(menu, item, newName)
+	local loadout = Helper.getLoadoutHelper(C.GetLoadout, C.GetLoadoutCounts, 0, menu.loadoutModule.macro, item.id)
+	C.SaveLoadout(menu.loadoutModule.macro, loadout, "local", "player", false, newName, "") -- overwrite does update the name. Have to create brand new.
+	C.RemoveLoadout("local", menu.loadoutModule.macro, item.id)
+	menu.getPresetLoadouts()
+end
+
+function L.renameShipLoadout(menu, item, newName)
+	local loadout = Helper.getLoadoutHelper2(C.GetLoadout2, C.GetLoadoutCounts2, "UILoadout2", menu.object, menu.macro, item.id)
+	local macro = (menu.macro ~= "") and menu.macro or GetComponentData(ConvertStringToLuaID(tostring(menu.object)), "macro")
+	C.SaveLoadout2(macro, loadout, "local", "player", false, newName, "") -- overwrite does update the name. Have to create brand new.
+	C.RemoveLoadout("local", macro, item.id)
+	menu.getPresetLoadouts()
 end
 
 return L

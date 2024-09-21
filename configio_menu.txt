@@ -265,7 +265,9 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 			},
 			sortItems = function (a, b) return a.name < b.name end,
 			sortOptions = config.defaultSortOptions,
-			sortDefault = "name"
+			sortDefault = "name",
+			isItemRenamable = function(item) return not item.preset end,
+			onRename = function(item, newName) L.renameStationLoadout(menu, item, newName) end
 		}
 		L.autoSelectSearch = true
 		L.contextModule = nil
@@ -354,7 +356,9 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 			},
 			sortItems = function (a, b) return a.name < b.name end,
 			sortOptions = config.defaultSortOptions,
-			sortDefault = "name"
+			sortDefault = "name",
+			isItemRenamable = function(item) return not item.preset end,
+			onRename = function(item, newName) L.renameShipLoadout(menu, item, newName) end
 		}
 		L.autoSelectSearch = true
 		L.contextModule = nil
@@ -460,15 +464,17 @@ function L.createLoadContext()
 
 	-- Create list buttons --
 	local tableColumns = 4
-	local btable = contextFrame:addTable(tableColumns, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = L.params.height - Helper.standardButtonHeight, x = browserX, width = browserWidth })
+	local btable = contextFrame:addTable(4, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = L.params.height - Helper.standardButtonHeight, x = browserX, width = browserWidth })
 	L.btable = btable
 	local row = btable:addRow(true, { fixed = true })
-	row[tableColumns-2]:createButton({ active = L.isRowValidForLoad }):setText(ReadText(1811143915, 3), { halign = "center" })
-	row[tableColumns-2].handlers.onClick = L.buttonLoadItem
-	row[tableColumns-1]:createButton({ active = L.isRowValidForDeletion }):setText(ReadText(1811143915, 4), { halign = "center" })
-	row[tableColumns-1].handlers.onClick = L.buttonDeleteItem
-	row[tableColumns]:createButton({  }):setText(ReadText(1811143915, 5), { halign = "center" })
-	row[tableColumns].handlers.onClick = L.params.closeContextMenu
+	row[1]:createButton({ active = L.isRowValidForLoad }):setText(ReadText(1811143915, 3), { halign = "center" })
+	row[1].handlers.onClick = L.buttonLoadItem
+	row[2]:createButton({ active = L.isRowValidForRename }):setText("Rename", { halign = "center" })
+	row[2].handlers.onClick = L.buttonRenameItem
+	row[3]:createButton({ active = L.isRowValidForDeletion }):setText(ReadText(1811143915, 4), { halign = "center" })
+	row[3].handlers.onClick = L.buttonDeleteItem
+	row[4]:createButton({  }):setText(ReadText(1811143915, 5), { halign = "center" })
+	row[4].handlers.onClick = L.params.closeContextMenu
 
 	-- Create expand/collapse all buttons --
 	local etable = contextFrame:addTable(3, { tabOrder = 5, x = browserX, y = config.browserHeaderTextProperties.y, width = smallColWidth * 9 })
@@ -1046,12 +1052,49 @@ function L.createDeleteConfirmation(contextFrame, y, item)
 	end
 end
 
+function L.createRenameItemContext(contextFrame, y, item)
+	local htable = contextFrame:addTable(8, { tabOrder = 6, x = Helper.borderSize, y = y, width = L.params.width - Helper.borderSize * 2 })
+	local row = htable:addRow(false, { fixed = true })
+	row[1]:setColSpan(8):createText("Rename item", config.browserHeaderTextProperties) -- TODO: text
+
+	local row = htable:addRow(false, { fixed = true })
+	row[3]:createText("New name:", { wordwrap = true })
+	row[4]:setColSpan(3):createEditBox({ scaling = true, height = Helper.standardTextHeight }):setText(L.renameText, { })
+	row[4].handlers.onTextChanged = function(_, text)
+		L.renameText = text
+	end
+
+	local takenNames = {}
+	for _, l in ipairs(L.params.itemsList()) do
+		takenNames[l.name] = true
+	end
+
+	htable:addEmptyRow(Helper.standardTextHeight)
+	local row = htable:addRow(true, { fixed = true })
+	row[5]:createButton({ active = function() return not takenNames[L.renameText] end }):setText(ReadText(1811143915, 85), { halign = "center" })
+	row[5].handlers.onClick = function()
+		DebugError("confirm " .. L.renameText)
+		L.params.onRename(item, L.renameText)
+		L.contextModule = nil
+		L.refreshLoadFrame()
+	end
+	row[6]:createButton({ }):setText(ReadText(1811143915, 86), { halign = "center" })
+	row[6].handlers.onClick = function()
+		L.contextModule = nil
+		L.refreshLoadFrame()
+	end
+end
+
 function L.isRowValidForLoad()
 	return L.selectedEntry and L.selectedEntry.active
 end
 
 function L.isRowValidForDeletion()
 	return L.selectedEntry and L.selectedEntry.deleteable
+end
+
+function L.isRowValidForRename()
+	return L.selectedEntry and L.selectedEntry.renamable
 end
 
 function L.getSelectedRowCustomAutoPreset()
@@ -1068,6 +1111,14 @@ end
 function L.buttonLoadItem()
 	if L.isRowValidForLoad() then
 		L.params.onSelection(L.selectedEntry.item)
+	end
+end
+
+function L.buttonRenameItem()
+	if L.isRowValidForRename() then
+		L.renameText = L.selectedEntry.item.name
+		L.contextModule = function(contextFrame, y) L.createRenameItemContext(contextFrame, y, L.selectedEntry.item) end
+		L.refreshLoadFrame()
 	end
 end
 
