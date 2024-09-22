@@ -1076,7 +1076,6 @@ function L.createRenameItemContext(contextFrame, y, item)
 	local row = htable:addRow(true, { fixed = true })
 	row[5]:createButton({ active = function() return not takenNames[L.renameText] end }):setText(ReadText(1811143915, 85), { halign = "center" })
 	row[5].handlers.onClick = function()
-		DebugError("confirm " .. L.renameText)
 		L.params.onRename(item, L.renameText)
 		L.contextModule = nil
 		L.refreshLoadFrame()
