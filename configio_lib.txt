@@ -867,18 +867,28 @@ function L.sortShips(a, b, o)
 end
 
 function L.renameStationLoadout(menu, item, newName)
-	local loadout = Helper.getLoadoutHelper(C.GetLoadout, C.GetLoadoutCounts, 0, menu.loadoutModule.macro, item.id)
-	C.SaveLoadout(menu.loadoutModule.macro, loadout, "local", "player", false, newName, "") -- overwrite does update the name. Have to create brand new.
-	C.RemoveLoadout("local", menu.loadoutModule.macro, item.id)
-	menu.getPresetLoadouts()
+	if item.customPreset then
+		item.customPreset.name = newName
+		L.saveAutoPreset(item.customPreset, item.customPreset.id)
+	else
+		local loadout = Helper.getLoadoutHelper(C.GetLoadout, C.GetLoadoutCounts, 0, menu.loadoutModule.macro, item.id)
+		C.SaveLoadout(menu.loadoutModule.macro, loadout, "local", "player", false, newName, "") -- overwrite does update the name. Have to create brand new.
+		C.RemoveLoadout("local", menu.loadoutModule.macro, item.id)
+		menu.getPresetLoadouts()
+	end
 end
 
 function L.renameShipLoadout(menu, item, newName)
-	local loadout = Helper.getLoadoutHelper2(C.GetLoadout2, C.GetLoadoutCounts2, "UILoadout2", menu.object, menu.macro, item.id)
-	local macro = (menu.macro ~= "") and menu.macro or GetComponentData(ConvertStringToLuaID(tostring(menu.object)), "macro")
-	C.SaveLoadout2(macro, loadout, "local", "player", false, newName, "") -- overwrite does update the name. Have to create brand new.
-	C.RemoveLoadout("local", macro, item.id)
-	menu.getPresetLoadouts()
+	if item.customPreset then
+		item.customPreset.name = newName
+		L.saveAutoPreset(item.customPreset, item.customPreset.id)
+	else
+		local loadout = Helper.getLoadoutHelper2(C.GetLoadout2, C.GetLoadoutCounts2, "UILoadout2", menu.object, menu.macro, item.id)
+		local macro = (menu.macro ~= "") and menu.macro or GetComponentData(ConvertStringToLuaID(tostring(menu.object)), "macro")
+		C.SaveLoadout2(macro, loadout, "local", "player", false, newName, "") -- overwrite does update the name. Have to create brand new.
+		C.RemoveLoadout("local", macro, item.id)
+		menu.getPresetLoadouts()
+	end
 end
 
 return L
