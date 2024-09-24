@@ -13,7 +13,7 @@ local config = {
 	folderIdFormat = "rkn_configio.folder.%s.%s",
 	settingsBlackboardId = "$RKN_ConfigioSettings",
 	autoPresetsBlackboardId = "$RKN_ConfigioAutoPresets",
-	loadWidthMultiplier = 0.8,
+	loadWidthMultiplier = 0.85,
 	maxFolders = 6,
 	stationLoadHeight = 0.5 * Helper.viewHeight,
 	stationLoadoutLoadHeight = 0.35 * Helper.viewHeight,
@@ -28,6 +28,10 @@ local config = {
 		halign = "center",
 		cellBGColor = Color["row_background"],
 		titleColor = Color["row_title"],
+	},
+	buttonRowTextProperties = {
+		fontsize = Helper.standardFontSize * 1.2,
+		halign = "center"
 	},
 	folderTextProperties = {
 		font = Helper.titleFont,
@@ -469,9 +473,10 @@ function L.createLoadContext()
 	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
 	local browserWidth = L.params.width - config.loadSettingsWidth - Helper.borderSize * 2 - config.settingsBrowserSeparation
 	local browserX = config.loadSettingsWidth + Helper.borderSize + config.settingsBrowserSeparation
+	local buttonRowHeight = Helper.standardButtonHeight * 1.2
 
 	-- Create item list --
-	local ltable = contextFrame:addTable(config.maxFolders + 1, { wraparound = true, tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = L.params.height - Helper.standardButtonHeight, x = browserX, width = browserWidth })
+	local ltable = contextFrame:addTable(config.maxFolders + 1, { wraparound = true, tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = L.params.height - buttonRowHeight, x = browserX, width = browserWidth })
 	for column = 1, config.maxFolders do
 		ltable:setColWidth(column, smallColWidth, false)
 	end
@@ -484,18 +489,21 @@ function L.createLoadContext()
 	L.addFolderToList(ltable, listRoot, 1)
 
 	-- Create list buttons --
-	local btable = contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = L.params.height - Helper.standardButtonHeight, x = browserX, width = browserWidth })
+	local btable = contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = L.params.height - buttonRowHeight, x = browserX, width = browserWidth })
 	L.btable = btable
 	local row = btable:addRow(true, { fixed = true })
-	row[1]:createButton({ active = L.isRowValidForLoad }):setText(ReadText(1811143915, 3), { halign = "center" })
+	row[1]:createButton({ active = L.isRowValidForLoad, height = buttonRowHeight }):setText("\27[menu_import] " .. ReadText(1811143915, 3), config.buttonRowTextProperties)
 	row[1].handlers.onClick = L.buttonLoadItem
-	row[2]:createButton({ active = L.isRowValidForSave }):setText("Save As", { halign = "center" }) -- TODO: text
+	row[2]:createButton({ active = L.isRowValidForSave, height = buttonRowHeight }):setText("\27[menu_save] Save As", config.buttonRowTextProperties) -- TODO: text
 	row[2].handlers.onClick = L.buttonSaveItem
-	row[3]:createButton({ active = L.isRowValidForRename }):setText("Rename", { halign = "center" }) -- TODO: text
+	row[3]:createButton({ active = L.isRowValidForRename, height = buttonRowHeight }):setText("\27[menu_edit] Rename", config.buttonRowTextProperties) -- TODO: text
 	row[3].handlers.onClick = L.buttonRenameItem
-	row[4]:createButton({ active = L.isRowValidForDeletion }):setText(ReadText(1811143915, 4), { halign = "center" })
+	if L.params.settingKey == config.stationKey then
+		row[3].properties.mouseOverText = "Not available for station plans"
+	end
+	row[4]:createButton({ active = L.isRowValidForDeletion, height = buttonRowHeight }):setText("\27[menu_dismiss] " .. ReadText(1811143915, 4), config.buttonRowTextProperties)
 	row[4].handlers.onClick = L.buttonDeleteItem
-	row[5]:createButton({  }):setText(ReadText(1811143915, 5), { halign = "center" })
+	row[5]:createButton({ height = buttonRowHeight }):setText("\27[widget_cross_01] " .. ReadText(1811143915, 5), config.buttonRowTextProperties)
 	row[5].handlers.onClick = L.params.closeContextMenu
 
 	-- Create expand/collapse all buttons --
