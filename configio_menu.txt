@@ -1219,7 +1219,10 @@ end
 
 function L.viewCreated(layer, ...)
 	if layer == 2 then
-		L.getState().tables = table.pack(...)
+		local state = L.getState();
+		if state then
+			state.tables = table.pack(...)
+		end
 	end
 end
 

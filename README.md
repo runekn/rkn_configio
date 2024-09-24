@@ -83,6 +83,7 @@ Use along-side VRO can break the "Race filter" during ship selection, unless thi
 
 ## Updates
 
+* 1.2.1: Fixed unresponsive station map after opening a context menu.
 * 1.2: Added option for loading partial ship loadout. Add size and purpose filter in ship selection. Remove ship size dropdown. Add sorting dropdown. Add rename button for ship and station module loadouts. Remove 'other' race option in auto-preset editor. Disable race dropdown for thruster auto rule.
 * 1.1: Added auto-generated preset editor. Added custom delete confirmation dialog. Fixed delete and load buttons working despite being inactive.
 * 1.0: Initial release
