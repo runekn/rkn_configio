@@ -44,7 +44,7 @@ function L.prepareBrowserStructure(itemList)
 				break
 			end
 			-- Otherwise, path to folder --
-			folderPath = folderPath .. "/" .. folder
+			folderPath = folderPath == "" and folder or folderPath .. L.getLoadSettings().folder_delimiter .. folder
 			local target = cwd.folders[folder]
 			if not target then
 				target = { type = "folder", name = folder, fullname = folderPath, folders = {}, folders_arr = {}, items = {} }
@@ -61,6 +61,7 @@ function L.prepareBrowserStructure(itemList)
 			active = L.params.isItemActive(item),
 			deleteable = item.deleteable,
 			renamable = L.params.isItemRenamable and L.params.isItemRenamable(item),
+			savable = L.params.isItemSavable and L.params.isItemSavable(item),
 			item = item })
 		::continue::
 	end

@@ -212,7 +212,12 @@ function L.buttonStationTitleLoad(menu, contextLayer)
 			frameModules = { L.createSettings, L.createSearchField, L.createCPModulesFilter },
 			sortItems = function (a, b) return a.name < b.name end,
 			sortOptions = config.defaultSortOptions,
-			sortDefault = "name"
+			sortDefault = "name",
+			onSave = function(name, overwrite)
+				menu.currentCPName = name
+				menu.buttonSave(overwrite)
+			end,
+			isItemSavable = function(item) return true end
 		}
 		L.autoSelectSearch = true
 		L.contextModule = nil
@@ -267,7 +272,14 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 			sortOptions = config.defaultSortOptions,
 			sortDefault = "name",
 			isItemRenamable = function(item) return not item.preset end,
-			onRename = function(item, newName) L.renameStationLoadout(menu, item, newName) end
+			onRename = function(item, newName) L.renameStationLoadout(menu, item, newName) end,
+			onSave = function(name, overwrite)
+				menu.loadoutName = name
+				menu.loadout = nil
+				menu.checkLoadoutNameID() -- Will update menu.loadout
+				menu.buttonSaveLoadout(overwrite)
+			end,
+			isItemSavable = function(item) return (not item.preset) and not item.customPreset end
 		}
 		L.autoSelectSearch = true
 		L.contextModule = nil
@@ -358,7 +370,14 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 			sortOptions = config.defaultSortOptions,
 			sortDefault = "name",
 			isItemRenamable = function(item) return not item.preset end,
-			onRename = function(item, newName) L.renameShipLoadout(menu, item, newName) end
+			onRename = function(item, newName) L.renameShipLoadout(menu, item, newName) end,
+			onSave = function(name, overwrite)
+				menu.loadoutName = name
+				menu.loadout = nil
+				menu.checkLoadoutNameID() -- Will update menu.loadout
+				menu.buttonSave(overwrite)
+			end,
+			isItemSavable = function(item) return (not item.preset) and not item.customPreset end
 		}
 		L.autoSelectSearch = true
 		L.contextModule = nil
@@ -465,17 +484,19 @@ function L.createLoadContext()
 	L.addFolderToList(ltable, listRoot, 1)
 
 	-- Create list buttons --
-	local btable = contextFrame:addTable(4, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = L.params.height - Helper.standardButtonHeight, x = browserX, width = browserWidth })
+	local btable = contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = L.params.height - Helper.standardButtonHeight, x = browserX, width = browserWidth })
 	L.btable = btable
 	local row = btable:addRow(true, { fixed = true })
 	row[1]:createButton({ active = L.isRowValidForLoad }):setText(ReadText(1811143915, 3), { halign = "center" })
 	row[1].handlers.onClick = L.buttonLoadItem
-	row[2]:createButton({ active = L.isRowValidForRename }):setText("Rename", { halign = "center" })
-	row[2].handlers.onClick = L.buttonRenameItem
-	row[3]:createButton({ active = L.isRowValidForDeletion }):setText(ReadText(1811143915, 4), { halign = "center" })
-	row[3].handlers.onClick = L.buttonDeleteItem
-	row[4]:createButton({  }):setText(ReadText(1811143915, 5), { halign = "center" })
-	row[4].handlers.onClick = L.params.closeContextMenu
+	row[2]:createButton({ active = L.isRowValidForSave }):setText("Save As", { halign = "center" }) -- TODO: text
+	row[2].handlers.onClick = L.buttonSaveItem
+	row[3]:createButton({ active = L.isRowValidForRename }):setText("Rename", { halign = "center" }) -- TODO: text
+	row[3].handlers.onClick = L.buttonRenameItem
+	row[4]:createButton({ active = L.isRowValidForDeletion }):setText(ReadText(1811143915, 4), { halign = "center" })
+	row[4].handlers.onClick = L.buttonDeleteItem
+	row[5]:createButton({  }):setText(ReadText(1811143915, 5), { halign = "center" })
+	row[5].handlers.onClick = L.params.closeContextMenu
 
 	-- Create expand/collapse all buttons --
 	local etable = contextFrame:addTable(4, { tabOrder = 5, x = browserX, y = config.browserHeaderTextProperties.y, width = browserWidth })
@@ -1056,15 +1077,16 @@ function L.createDeleteConfirmation(contextFrame, y, item)
 end
 
 function L.createRenameItemContext(contextFrame, y, item)
+	local state = L.getState()
 	local htable = contextFrame:addTable(8, { tabOrder = 6, x = Helper.borderSize, y = y, width = L.params.width - Helper.borderSize * 2 })
 	local row = htable:addRow(false, { fixed = true })
 	row[1]:setColSpan(8):createText(ReadText(1811143915, 94), config.browserHeaderTextProperties)
 
 	local row = htable:addRow(false, { fixed = true })
 	row[3]:createText(ReadText(1811143915, 95), { wordwrap = true })
-	row[4]:setColSpan(3):createEditBox({ scaling = true, height = Helper.standardTextHeight }):setText(L.renameText, { })
+	L.params.contextMode.nameEditBox = row[4]:setColSpan(3):createEditBox({ scaling = true, height = Helper.standardTextHeight }):setText(state.renameText, { })
 	row[4].handlers.onTextChanged = function(_, text)
-		L.renameText = text
+		state.renameText = text
 	end
 
 	local takenNames = {}
@@ -1074,9 +1096,48 @@ function L.createRenameItemContext(contextFrame, y, item)
 
 	htable:addEmptyRow(Helper.standardTextHeight)
 	local row = htable:addRow(true, { fixed = true })
-	row[5]:createButton({ active = function() return not takenNames[L.renameText] end }):setText(ReadText(1811143915, 85), { halign = "center" })
+	row[5]:createButton({ active = function() return not takenNames[state.renameText] end }):setText(ReadText(1811143915, 85), { halign = "center" })
 	row[5].handlers.onClick = function()
-		L.params.onRename(item, L.renameText)
+		L.params.onRename(item, state.renameText)
+		L.contextModule = nil
+		L.refreshLoadFrame()
+	end
+	row[6]:createButton({ }):setText(ReadText(1811143915, 86), { halign = "center" })
+	row[6].handlers.onClick = function()
+		L.contextModule = nil
+		L.refreshLoadFrame()
+	end
+end
+
+function L.createSaveItemContext(contextFrame, y, item)
+	local state = L.getState()
+	local htable = contextFrame:addTable(8, { tabOrder = 6, x = Helper.borderSize, y = y, width = L.params.width - Helper.borderSize * 2 })
+	local row = htable:addRow(false, { fixed = true })
+	row[1]:setColSpan(8):createText("Save As", config.browserHeaderTextProperties)
+
+	local row = htable:addRow(false, { fixed = true })
+	row[3]:createText("Name:", { wordwrap = true })
+	L.params.contextMode.nameEditBox = row[4]:setColSpan(3):createEditBox({ scaling = true, height = Helper.standardTextHeight }):setText(state.saveText, { })
+	row[4].handlers.onTextChanged = function(_, text)
+		state.saveText = text
+	end
+
+	local takenNames = {}
+	for _, l in ipairs(L.params.itemsList()) do
+		takenNames[l.name] = L.params.isItemSavable(l)
+	end
+
+	htable:addEmptyRow(Helper.standardTextHeight)
+	local row = htable:addRow(true, { fixed = true })
+	row[4]:createButton({ active = function() return takenNames[state.saveText] == true end }):setText("Overwrite", { halign = "center" })
+	row[4].handlers.onClick = function()
+		L.params.onSave(state.saveText, true)
+		L.contextModule = nil
+		L.refreshLoadFrame()
+	end
+	row[5]:createButton({ active = function() return not takenNames[state.saveText] end }):setText("Save as new", { halign = "center" })
+	row[5].handlers.onClick = function()
+		L.params.onSave(state.saveText, false)
 		L.contextModule = nil
 		L.refreshLoadFrame()
 	end
@@ -1099,6 +1160,10 @@ function L.isRowValidForRename()
 	return L.selectedEntry and L.selectedEntry.renamable
 end
 
+function L.isRowValidForSave()
+	return L.selectedEntry and (L.selectedEntry.type == "folder" or L.selectedEntry.savable)
+end
+
 function L.getSelectedRowCustomAutoPreset()
 	return L.selectedEntry and L.selectedEntry.item and L.selectedEntry.item.customPreset
 end
@@ -1118,8 +1183,20 @@ end
 
 function L.buttonRenameItem()
 	if L.isRowValidForRename() then
-		L.renameText = L.selectedEntry.item.name
+		L.getState().renameText = L.selectedEntry.item.name
 		L.contextModule = function(contextFrame, y) L.createRenameItemContext(contextFrame, y, L.selectedEntry.item) end
+		L.refreshLoadFrame()
+	end
+end
+
+function L.buttonSaveItem()
+	if L.isRowValidForSave() then
+		if L.selectedEntry.type == "folder" then
+			L.getState().saveText = L.selectedEntry.fullname .. L.getLoadSettings().folder_delimiter
+		else
+			L.getState().saveText = L.selectedEntry.item.name
+		end
+		L.contextModule = function(contextFrame, y) L.createSaveItemContext(contextFrame, y) end
 		L.refreshLoadFrame()
 	end
 end
