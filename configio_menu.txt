@@ -1135,7 +1135,7 @@ function L.createSaveItemContext(contextFrame, y, item)
 		L.contextModule = nil
 		L.refreshLoadFrame()
 	end
-	row[5]:createButton({ active = function() return not takenNames[state.saveText] end }):setText("Save as new", { halign = "center" })
+	row[5]:createButton({ active = function() return takenNames[state.saveText] == nil end }):setText("Save as new", { halign = "center" })
 	row[5].handlers.onClick = function()
 		L.params.onSave(state.saveText, false)
 		L.contextModule = nil
