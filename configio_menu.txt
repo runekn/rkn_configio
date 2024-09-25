@@ -49,6 +49,7 @@ local config = {
 	autoPresetColor = { r = 225, g = 225, b = 0, a = 100 }, -- yellow
 	partialPresetColor = { r = 255, g = 100, b = 0, a = 100 }, -- orange
 	settingSwitchActiveColor = { r = 50, g = 125, b = 0, a = 100 }, -- dark green
+	settingSwitchInActiveColor = { r = 150, g = 25, b = 0, a = 100 }, -- dark red
 	shipSortOptions = {
 		{ id = "default", text = ReadText(1811143915, 92), displayremoveoption = false, icon = "" },
 		{ id = "name", text = ReadText(1811143915, 91), displayremoveoption = false, icon = "" }
@@ -527,7 +528,6 @@ function L.createLoadContext()
 	local stable = contextFrame:addTable(3, { tabOrder = 6, maxVisibleHeight = L.params.height, x = Helper.borderSize, width = config.loadSettingsWidth - Helper.borderSize * 2 })
 	stable:setColWidth(1, config.loadSettingsWidth * 0.7, false)
 	stable:setColWidth(2, config.loadSettingsWidth * 0.15 - Helper.borderSize * 2, false)
-	--stable:setColWidth(3, config.loadSettingsWidth * 0.15, false)
 
 	for _, frameModule in ipairs(L.params.frameModules) do
 		frameModule(stable)
@@ -580,13 +580,15 @@ function L.createSettings(stable)
 	local row = stable:addRow(false, { fixed = true })
 	row[1]:setColSpan(3):createText(ReadText(config.textId, 6), config.browserHeaderTextProperties)
 
-	L.createSettingsSwitch(stable, ReadText(config.textId, 7), "folder_enabled", true)
+	local row = L.createSettingsSwitch(stable, ReadText(config.textId, 7), "folder_enabled", true)
+	row[1].properties.mouseOverText = ReadText(config.textId, 13)
 
 	stable:addEmptyRow(Helper.standardTextHeight / 4)
 
 	local foldersActive = L.getLoadSettings().folder_enabled
 	local row = stable:addRow(true, { fixed = true })
 	row[1]:createText(ReadText(config.textId, 8), { color = (not foldersActive) and Color["text_inactive"] or nil })
+	row[1].properties.mouseOverText = ReadText(config.textId, 12)
 	local delimiterEditBoxText = L.getLoadSettings().folder_delimiter:gsub(" ", "(space)") -- Replace spaces with '(space)' so that it is easier to read
 	row[2]:setColSpan(2):createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(delimiterEditBoxText, { })
 	row[2].handlers.onEditBoxDeactivated = function(_, text, textchanged)
@@ -599,7 +601,6 @@ function L.createSettings(stable)
 			L.refreshLoadFrame()
 		end
 	end
-	row[2].properties.mouseOverText = ReadText(config.textId, 12)
 	row[2].properties.active = foldersActive
 
 	L.createSettingsSwitch(stable, L.params.optionItemNameText, "item_fullname", foldersActive)
@@ -623,7 +624,7 @@ function L.createSettingsSwitch(stable, text, setting, active)
 	local checked = L.getLoadSettings()[setting]
 	local row = stable:addRow(true, { fixed = true })
 	row[1]:createText(text, { color = (not active) and Color["text_inactive"] or nil })
-	row[2]:createButton({ bgColor = checked and config.settingSwitchActiveColor or nil }):setText("ON", { halign = "center" })
+	row[2]:createButton({ bgColor = checked and config.settingSwitchActiveColor or nil }):setText(ReadText(config.textId, 100), { halign = "center" })
 	row[2].handlers.onClick = function()
 		if not checked then
 			L.setLoadSetting(setting, true)
@@ -631,7 +632,7 @@ function L.createSettingsSwitch(stable, text, setting, active)
 		end
 	end
 	row[2].properties.active = active
-	row[3]:createButton({ bgColor = (not checked) and config.settingSwitchActiveColor or nil }):setText("OFF", { halign = "center" })
+	row[3]:createButton({ bgColor = (not checked) and config.settingSwitchInActiveColor or nil }):setText(ReadText(config.textId, 101), { halign = "center" })
 	row[3].handlers.onClick = function()
 		if checked then
 			L.setLoadSetting(setting, false)

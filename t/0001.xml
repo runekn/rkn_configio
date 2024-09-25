@@ -15,6 +15,7 @@
 		<t id="10">Display full group name</t>
 		<t id="11">Flatten one-item group</t>
 		<t id="12">The character that is used to split names by to create groups. Only one character allowed.</t>
+		<t id="13">Groups will organize the items into pseudo folders by shared prefixes.</t>
 		<t id="14">Groups with only one item will be removed, and the item moved to the parent group.</t>
 		<t id="15">Search</t>
 		<t id="16">Clear</t>
@@ -101,5 +102,7 @@
 		<t id="97">Save As</t>
 		<t id="98">Rename</t>
 		<t id="99">Not available for station plans</t>
+		<t id="100">ON</t>
+		<t id="101">OFF</t>
 	</page>
 </language>
