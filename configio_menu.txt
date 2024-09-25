@@ -49,16 +49,16 @@ local config = {
 	autoPresetColor = { r = 100, g = 225, b = 0, a = 100 }, -- green
 	partialPresetColor = { r = 255, g = 100, b = 0, a = 100 }, -- orange
 	shipSortOptions = {
-		{ id = "default", text = ReadText(config.textId, 92), displayremoveoption = false, icon = "" },
-		{ id = "name", text = ReadText(config.textId, 91), displayremoveoption = false, icon = "" }
+		{ id = "default", text = ReadText(1811143915, 92), displayremoveoption = false, icon = "" },
+		{ id = "name", text = ReadText(1811143915, 91), displayremoveoption = false, icon = "" }
 	},
 	defaultSortOptions = {
-		{ id = "name", text = ReadText(config.textId, 91), displayremoveoption = false, icon = "" }
+		{ id = "name", text = ReadText(1811143915, 91), displayremoveoption = false, icon = "" }
 	},
 	valueOptions = {
-		{ id = "low", text = ReadText(config.textId, 71), icon = "", displayremoveoption = false },
-		{ id = "medium", text = ReadText(config.textId, 72), icon = "", displayremoveoption = false },
-		{ id = "high", text = ReadText(config.textId, 73), icon = "", displayremoveoption = false }
+		{ id = "low", text = ReadText(1811143915, 71), icon = "", displayremoveoption = false },
+		{ id = "medium", text = ReadText(1811143915, 72), icon = "", displayremoveoption = false },
+		{ id = "high", text = ReadText(1811143915, 73), icon = "", displayremoveoption = false }
 	},
 	dockingComputerOptions = {
 		{ id = "none", text = "None", icon = "", displayremoveoption = false },
