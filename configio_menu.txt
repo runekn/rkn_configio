@@ -715,7 +715,7 @@ function L.addToShipFilter(table, options, selected, checked, buttonText, atLeas
 				end
 				local row = table:addRow(true, { })
 				row[1]:createText(op.text, { })
-				row[2]:setColSpan(2):createButton({  }):setText(buttonText, { halign = "center" })
+				row[2]:createButton({  }):setText(buttonText, { halign = "center" })
 				row[2].handlers.onClick = function () L.filterShipToggled(op.id, selected, not checked) end
 				atLeastOneAdded = true
 			end
@@ -1155,7 +1155,7 @@ end
 
 function L.isRowValidForSave()
 	--return L.selectedEntry and (L.selectedEntry.type == "folder" or L.selectedEntry.savable)
-	return true
+	return L.params.onSave ~= nil
 end
 
 function L.getSelectedRowCustomAutoPreset()
