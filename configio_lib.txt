@@ -802,7 +802,7 @@ function L.createShipOptions(menu)
 			local haslicence, icon, overridecolor, mouseovertext, limitstring = menu.checkLicence(macro, true)
 			local name, infolibrary, shiptypename, primarypurpose, shipicon, races = GetMacroData(macro, "name", "infolibrary", "shiptypename", "primarypurpose", "icon", "makerraceid")
 			local class = ffi.string(C.GetMacroClass(macro))
-			local text =  name .. " - " .. shiptypename .. limitstring
+			local text =  "\27[" .. shipicon .. "] " .. name .. " - " .. shiptypename .. limitstring
 			local hasBlueprint = C.GetNumBlueprints("", "", macro) > 0
 			if #races == 0 then
 				table.insert(races, "other")
@@ -815,7 +815,8 @@ function L.createShipOptions(menu)
 				mouseovertext = mouseovertext,
 				shipicon = shipicon,
 				hasBlueprint = hasBlueprint,
-				name = text,
+				shiptypename = shiptypename,
+				name = name .. limitstring,
 				objectid = "",
 				class = class,
 				purpose = primarypurpose,

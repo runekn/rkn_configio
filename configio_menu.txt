@@ -325,7 +325,7 @@ function L.buttonShipTitleLoad(menu, classOptions, shipOptions, contextLayer)
 				menu.dropdownShip(nil, item.id)
 			end,
 			listColumnWidth = Helper.scaleY(Helper.standardTextHeight) * 1.5,
-			listItemCreator = L.createShipListItem,
+			listItemCreator = function(row, column, item) L.createShipListItem(row, column, item, menu.isplayerowned) end,
 			contextLayer = contextLayer,
 			closeContextMenu = menu.closeContextMenu,
 			contextMode = menu.contextMode,
@@ -497,7 +497,6 @@ function L.createLoadContext()
 
 	-- Create item list --
 	L.getState().listColumns = math.min(math.floor((browserWidth - Helper.scrollbarWidth) / L.params.listColumnWidth), 12) -- max 13 columns allowed in a table...
-	DebugError(tostring(L.getState().listColumns))
 	local ltable = contextFrame:addTable(L.getState().listColumns + 1, { wraparound = true, tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = L.params.height - buttonRowHeight, x = browserX, width = browserWidth })
 	for column = 1, L.getState().listColumns do
 		ltable:setColWidth(column, L.params.listColumnWidth, false)
@@ -598,14 +597,25 @@ function L.createCommonListItem(row, column, item)
 	row[column].properties.mouseOverText = item.item.mouseovertext
 end
 
-function L.createShipListItem(row, column, item)
+function L.createShipListItem(row, column, item, isplayershipyard)
 	local text = L.getLoadSettings().item_fullname and item.item.name or item.name
+	local color
+	if L.params.getItemColor then
+		color = L.params.getItemColor(item)
+	end
+	if color then
+		text = Helper.convertColorToText(color) .. text
+	end
 	local blueprintIcon = item.item.hasBlueprint and "\27[rkn_configio_blueprint]" or Helper.convertColorToText(config.shipNotOwnedColor) .. "\27[widget_cross_01]"
-	row[column]:createText(blueprintIcon, config.itemTextProperties)
-	row[column].properties.mouseOverText = item.item.hasBlueprint and "Blueprint owned" or "Blueprint not owned"
-	row[column + 1]:createText("\27[" .. item.item.shipicon .. "]", config.itemTextProperties)
-	row[column + 2]:setColSpan(L.getState().listColumns - column):createText(text, config.itemTextProperties)
-	row[column + 2].properties.mouseOverText = item.item.mouseovertext
+	local startColumn = isplayershipyard and 1 or 2
+	if not isplayershipyard then
+		row[1]:createText(blueprintIcon, config.itemTextProperties)
+		row[1].properties.mouseOverText = item.item.hasBlueprint and "Blueprint owned" or "Blueprint not owned"
+	end
+	row[startColumn]:createText("\27[" .. item.item.shipicon .. "]", config.itemTextProperties)
+	row[startColumn + 1]:setColSpan(11 - (startColumn + 1)):createText(text, config.itemTextProperties)
+	row[startColumn + 1].properties.mouseOverText = item.item.mouseovertext
+	row[11]:setColSpan(3):createText(item.item.shiptypename, config.itemTextProperties)
 end
 
 function L.createSettings(stable)
