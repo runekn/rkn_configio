@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<diff>
+    <add sel="/icons">
+        <icon name="rkn_configio_blueprint" texture="extensions\rkn_configio\assets\fx\gui\textures\rkn_configio\rkn_configo_blueprint.tga" height="128" width="128"></icon>
+    </add>
+</diff>

@@ -16,6 +16,8 @@ local config = {
 	autoPresetsBlackboardId = "$RKN_ConfigioAutoPresets",
 	loadWidthMultiplier = 0.85,
 	maxFolders = 6,
+	standardListColumnWidth = Helper.scaleY(Helper.standardTextHeight),
+	shipNotOwnedColor = { r = 100, g = 100, b = 100, a = 100 }, -- dark grey
 	stationLoadHeight = 0.5 * Helper.viewHeight,
 	stationLoadoutLoadHeight = 0.35 * Helper.viewHeight,
 	loadSettingsWidth = Helper.scaleX(300),
@@ -41,7 +43,7 @@ local config = {
 		cellBGColor = Color["row_background"],
 		titleColor = { r = 128, g = 128, b = 128, a = 100 }
 	},
-	planTextProperties = {
+	itemTextProperties = {
 		height = math.floor(Helper.standardTextHeight + Helper.scaleY(1) * 2),
 		y = math.floor(Helper.scaleY(1)),
 	},
@@ -215,6 +217,8 @@ function L.buttonStationTitleLoad(menu, contextLayer)
 			onDeletion = function(item)
 				L.buttonDeleteCP(menu, item.id)
 			end,
+			listColumnWidth = config.standardListColumnWidth,
+			listItemCreator = L.createCommonListItem,
 			maxFolders = config.maxFolders,
 			itemFilter = L.filterItemByModules,
 			contextLayer = contextLayer,
@@ -261,6 +265,8 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 				menu.closeContextMenu()
 				L.onLoadoutRemoved(menu.dropdownRemovedLoadout, item)
 			end,
+			listColumnWidth = config.standardListColumnWidth,
+			listItemCreator = L.createCommonListItem,
 			maxFolders = config.maxFolders,
 			contextLayer = contextLayer,
 			closeContextMenu = menu.closeContextMenu,
@@ -318,6 +324,8 @@ function L.buttonShipTitleLoad(menu, classOptions, shipOptions, contextLayer)
 				menu.closeContextMenu()
 				menu.dropdownShip(nil, item.id)
 			end,
+			listColumnWidth = Helper.scaleY(Helper.standardTextHeight) * 1.5,
+			listItemCreator = L.createShipListItem,
 			contextLayer = contextLayer,
 			closeContextMenu = menu.closeContextMenu,
 			contextMode = menu.contextMode,
@@ -360,6 +368,8 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 				menu.closeContextMenu()
 				L.onLoadoutRemoved(menu.dropdownLoadoutRemoved, item)
 			end,
+			listColumnWidth = config.standardListColumnWidth,
+			listItemCreator = L.createCommonListItem,
 			contextLayer = contextLayer,
 			closeContextMenu = menu.closeContextMenu,
 			contextMode = menu.contextMode,
@@ -486,9 +496,11 @@ function L.createLoadContext()
 	local buttonRowHeight = Helper.standardButtonHeight * 1.2
 
 	-- Create item list --
-	local ltable = contextFrame:addTable(config.maxFolders + 1, { wraparound = true, tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = L.params.height - buttonRowHeight, x = browserX, width = browserWidth })
-	for column = 1, config.maxFolders do
-		ltable:setColWidth(column, smallColWidth, false)
+	L.getState().listColumns = math.min(math.floor((browserWidth - Helper.scrollbarWidth) / L.params.listColumnWidth), 12) -- max 13 columns allowed in a table...
+	DebugError(tostring(L.getState().listColumns))
+	local ltable = contextFrame:addTable(L.getState().listColumns + 1, { wraparound = true, tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = L.params.height - buttonRowHeight, x = browserX, width = browserWidth })
+	for column = 1, L.getState().listColumns do
+		ltable:setColWidth(column, L.params.listColumnWidth, false)
 	end
 	L.ltable = ltable
 	ltable:addEmptyRow(config.browserHeaderTextProperties.height)
@@ -559,7 +571,7 @@ function L.addFolderToList(ltable, root, column)
 		row[column]:createButton({ helpOverlayID = folder.fullname, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
 		row[column].handlers.onClick = function () return L.buttonExtendListEntry(folder.fullname, row.index) end
 		local text = L.getLoadSettings().folder_fullname and folder.fullname or folder.name
-		row[column + 1]:setColSpan(config.maxFolders - column + 1):createText(text, config.folderTextProperties)
+		row[column + 1]:setColSpan(L.getState().listColumns - column + 1):createText(text, config.folderTextProperties)
 		if isextended then
 			L.addFolderToList(ltable, folder, column + 1)
 		end
@@ -567,19 +579,33 @@ function L.addFolderToList(ltable, root, column)
 
 	for _, item in ipairs(root.items) do
 		local row = ltable:addRow(item, {  })
-		local text = L.getLoadSettings().item_fullname and item.item.name or item.name
-		local color
-		if not item.active then
-			color = config.inactiveColor
-		elseif L.params.getItemColor then
-			color = L.params.getItemColor(item)
-		end
-		if color then
-			text = Helper.convertColorToText(color) .. text
-		end
-		row[column]:setColSpan(config.maxFolders - column + 2):createText(text, config.planTextProperties)
-		row[column].properties.mouseOverText = item.item.mouseovertext
+		L.params.listItemCreator(row, column, item)
 	end
+end
+
+function L.createCommonListItem(row, column, item)
+	local text = L.getLoadSettings().item_fullname and item.item.name or item.name
+	local color
+	if not item.active then
+		color = config.inactiveColor
+	elseif L.params.getItemColor then
+		color = L.params.getItemColor(item)
+	end
+	if color then
+		text = Helper.convertColorToText(color) .. text
+	end
+	row[column]:setColSpan(L.getState().listColumns - column + 2):createText(text, config.itemTextProperties)
+	row[column].properties.mouseOverText = item.item.mouseovertext
+end
+
+function L.createShipListItem(row, column, item)
+	local text = L.getLoadSettings().item_fullname and item.item.name or item.name
+	local blueprintIcon = item.item.hasBlueprint and "\27[rkn_configio_blueprint]" or Helper.convertColorToText(config.shipNotOwnedColor) .. "\27[widget_cross_01]"
+	row[column]:createText(blueprintIcon, config.itemTextProperties)
+	row[column].properties.mouseOverText = item.item.hasBlueprint and "Blueprint owned" or "Blueprint not owned"
+	row[column + 1]:createText("\27[" .. item.item.shipicon .. "]", config.itemTextProperties)
+	row[column + 2]:setColSpan(L.getState().listColumns - column):createText(text, config.itemTextProperties)
+	row[column + 2].properties.mouseOverText = item.item.mouseovertext
 end
 
 function L.createSettings(stable)
