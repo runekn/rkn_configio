@@ -104,5 +104,7 @@
 		<t id="99">Not available for station plans</t>
 		<t id="100">ON</t>
 		<t id="101">OFF</t>
+		<t id="102">Blueprint owned</t>
+		<t id="103">Blueprint not owned</t>
 	</page>
 </language>

@@ -607,15 +607,15 @@ function L.createShipListItem(row, column, item, isplayershipyard)
 	if color then
 		text = Helper.convertColorToText(color) .. text
 	end
-	local blueprintIcon = item.item.hasBlueprint and "\27[rkn_configio_blueprint]" or Helper.convertColorToText(config.shipNotOwnedColor) .. "\27[rkn_configio_no_blueprint]"
-	local startColumn = isplayershipyard and 1 or 2
 	if not isplayershipyard then
-		row[1]:createText(blueprintIcon, config.itemTextProperties)
-		row[1].properties.mouseOverText = item.item.hasBlueprint and "Blueprint owned" or "Blueprint not owned"
+		local blueprintIcon = item.item.hasBlueprint and "\27[rkn_configio_blueprint]" or Helper.convertColorToText(config.shipNotOwnedColor) .. "\27[rkn_configio_no_blueprint]"
+		row[column]:createText(blueprintIcon, config.itemTextProperties)
+		row[column].properties.mouseOverText = item.item.hasBlueprint and ReadText(config.textId, 102) or ReadText(config.textId, 103)
+		column = column + 1
 	end
-	row[startColumn]:createText("\27[" .. item.item.shipicon .. "]", config.itemTextProperties)
-	row[startColumn + 1]:setColSpan(11 - (startColumn + 1)):createText(text, config.itemTextProperties)
-	row[startColumn + 1].properties.mouseOverText = item.item.mouseovertext
+	row[column]:createText("\27[" .. item.item.shipicon .. "]", config.itemTextProperties)
+	row[column + 1]:setColSpan(11 - (column + 1)):createText(text, config.itemTextProperties)
+	row[column + 1].properties.mouseOverText = item.item.mouseovertext
 	row[11]:setColSpan(3):createText(item.item.shiptypename, config.itemTextProperties)
 end
 

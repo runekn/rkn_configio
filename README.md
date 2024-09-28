@@ -85,6 +85,7 @@ Does not support resolutions lower than 1920x1080
 
 ## Updates
 
+* 1.4: Improved ship selection list. Now shows icons for the ship and whether you own the blueprint.
 * 1.3: Added 'Save As' button. Remade settings switches. Added icons to button row.
 * 1.2.1: Fixed unresponsive station map after opening a context menu.
 * 1.2: Added option for loading partial ship loadout. Add size and purpose filter in ship selection. Remove ship size dropdown. Add sorting dropdown. Add rename button for ship and station module loadouts. Remove 'other' race option in auto-preset editor. Disable race dropdown for thruster auto rule.
