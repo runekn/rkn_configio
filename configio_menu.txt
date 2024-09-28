@@ -606,7 +606,7 @@ function L.createShipListItem(row, column, item, isplayershipyard)
 	if color then
 		text = Helper.convertColorToText(color) .. text
 	end
-	local blueprintIcon = item.item.hasBlueprint and "\27[rkn_configio_blueprint]" or Helper.convertColorToText(config.shipNotOwnedColor) .. "\27[widget_cross_01]"
+	local blueprintIcon = item.item.hasBlueprint and "\27[rkn_configio_blueprint]" or Helper.convertColorToText(config.shipNotOwnedColor) .. "\27[rkn_configio_no_blueprint]"
 	local startColumn = isplayershipyard and 1 or 2
 	if not isplayershipyard then
 		row[1]:createText(blueprintIcon, config.itemTextProperties)

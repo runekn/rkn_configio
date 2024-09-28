@@ -2,5 +2,6 @@
 <diff>
     <add sel="/icons">
         <icon name="rkn_configio_blueprint" texture="extensions\rkn_configio\assets\fx\gui\textures\rkn_configio\rkn_configo_blueprint.tga" height="128" width="128"></icon>
+        <icon name="rkn_configio_no_blueprint" texture="extensions\rkn_configio\assets\fx\gui\textures\rkn_configio\rkn_configo_no_blueprint.tga" height="128" width="128"></icon>
     </add>
 </diff>

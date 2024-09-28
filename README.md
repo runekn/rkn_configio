@@ -77,6 +77,8 @@ This mod is NOT guaranteed to be compatible with other mods that make changes to
 
 Use along-side VRO can break the "Race filter" during ship selection, unless this is also installed: [Maker-race fix for VRO](https://www.nexusmods.com/x4foundations/mods/1523/)
 
+Does not support resolutions lower than 1920x1080
+
 ## Thanks to
 * netUpb/fikrethos: for feedback and help with code.
 * Eliptus: author of partial loadout, which I was given permission to incorporate.
