@@ -865,6 +865,25 @@ function L.getShipRaces(shipOptions)
 	return races
 end
 
+function L.clearFilterIfNotAvailable(filter, options)
+	if not filter then
+		return
+	end
+	for id, _ in pairs(filter) do
+		local found = false
+		for _, op in ipairs(options) do
+			if id == op.id then
+				found = true
+				break
+			end
+		end
+		if not found then
+			DebugError("Clearing filter id=" .. tostring(id))
+			filter[id] = nil
+		end
+	end
+end
+
 function L.sortShips(a, b, o)
 	if o == "default" then
 		return Helper.sortShipsByClassAndPurpose(a.item, b.item)

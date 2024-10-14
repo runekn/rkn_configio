@@ -313,6 +313,8 @@ function L.buttonShipTitleLoad(menu, classOptions, shipOptions, contextLayer)
 		menu.closeContextMenu()
 	else
 		menu.displayContextFrame("loadCS", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		local shipPurposeOptions = L.getShipPurposes(shipOptions)
+		local shipRaceOptions = L.getShipRaces(shipOptions)
 		L.params = {
 			settingKey = config.shipKey,
 			x = menu.contextMode.x,
@@ -335,13 +337,16 @@ function L.buttonShipTitleLoad(menu, classOptions, shipOptions, contextLayer)
 			itemFilter = L.filterShip,
 			isItemActive = function(_) return true end,
 			getItemColor = function(item) return item.item.overridecolor end,
-			frameModules = { L.createSearchField, function(stable) L.createShipFilters(stable, classOptions, L.getShipPurposes(shipOptions), L.getShipRaces(shipOptions)) end },
+			frameModules = { L.createSearchField, function(stable) L.createShipFilters(stable, classOptions, shipPurposeOptions, shipRaceOptions) end },
 			sortItems = L.sortShips,
 			sortOptions = config.shipSortOptions,
 			sortDefault = "default"
 		}
 		L.autoSelectSearch = true
 		L.contextModule = nil
+		L.clearFilterIfNotAvailable(L.getState().filter.sizes, classOptions)
+		L.clearFilterIfNotAvailable(L.getState().filter.purposes, shipPurposeOptions)
+		L.clearFilterIfNotAvailable(L.getState().filter.races, shipRaceOptions)
 		L.createLoadContext()
 	end
 end
