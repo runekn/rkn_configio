@@ -255,7 +255,7 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
 			height = config.stationLoadoutLoadHeight,
-			itemsList = function() return L.addCustomAutoPresets(config.stationLoadoutKey, menu.loadouts) end,
+			itemsList = function() return L.addPartialFlag(L.addCustomAutoPresets(config.stationLoadoutKey, Utils.DeepCopy(menu.loadouts))) end,
 			header = ReadText(config.textId, 22),
 			optionItemNameText = ReadText(config.textId, 24),
 			onSelection = function(item)
@@ -280,6 +280,8 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 			getItemColor = function(item)
 				if item.item.preset or item.item.customPreset then
 					return config.autoPresetColor
+				elseif item.item.partial then
+					return config.partialPresetColor
 				end
 				return nil
 			end,
@@ -662,7 +664,7 @@ function L.createSettings(stable)
 
 	L.createSettingsSwitch(stable, ReadText(config.textId, 33), "item_hide_inactive", true)
 
-	if L.params.settingKey == config.shipLoadoutKey then
+	if L.params.settingKey == config.shipLoadoutKey or L.params.settingKey == config.stationLoadoutKey then
 		local row = L.createSettingsSwitch(stable, ReadText(config.textId, 89), "item_load_partial", true)
 		row[1].properties.mouseOverText = ReadText(config.textId, 90)
 	end
@@ -1340,19 +1342,25 @@ function L.viewCreated(layer, ...)
 end
 
 function L.onStationLoadoutLoad(menu, item)
-	if not item.customPreset then
+	if item.customPreset then
+		local upgradeplan = L.generateLoadoutUpgradePlan(menu, item.customPreset)
+		menu.getUpgradeData(upgradeplan)
+		if menu.holomap and (menu.holomap ~= 0) then
+			Helper.callLoadoutFunction(menu.constructionplan[menu.loadoutMode].upgradeplan, nil, function (loadout, _) return C.UpdateObjectConfigurationMap(menu.holomap, menu.container, menu.loadoutModule.component, menu.loadoutModule.macro, true, loadout) end)
+		end
+		menu.displayMenu()
+	elseif item.partial and L.getLoadSettings().item_load_partial then
+		local loadout = Helper.getLoadoutHelper(C.GetLoadout, C.GetLoadoutCounts, 0, menu.loadoutModule.macro, item.id)
+		local upgradeplan = Helper.convertLoadout(menu.loadoutModule.component, menu.loadoutModule.macro, loadout, nil)
+		L.trimPartialLoadout(menu.constructionplan[menu.loadoutMode].upgradeplan, upgradeplan, menu.upgradewares, false)
+		menu.getUpgradeData(upgradeplan)
+		if menu.holomap and (menu.holomap ~= 0) then
+			Helper.callLoadoutFunction(menu.constructionplan[menu.loadoutMode].upgradeplan, nil, function (loadout, _) return C.UpdateObjectConfigurationMap(menu.holomap, menu.container, menu.loadoutModule.component, menu.loadoutModule.macro, true, loadout) end)
+		end
+		menu.displayMenu()
+	else
 		menu.dropdownLoadout(_, item.id)
-		return
 	end
-
-	local upgradeplan = L.generateLoadoutUpgradePlan(menu, item.customPreset)
-
-	menu.getUpgradeData(upgradeplan)
-	if menu.holomap and (menu.holomap ~= 0) then
-		Helper.callLoadoutFunction(menu.constructionplan[menu.loadoutMode].upgradeplan, nil, function (loadout, _) return C.UpdateObjectConfigurationMap(menu.holomap, menu.container, menu.loadoutModule.component, menu.loadoutModule.macro, true, loadout) end)
-	end
-
-	menu.displayMenu()
 end
 
 function L.onShipLoadoutLoad(menu, item)
@@ -1365,7 +1373,7 @@ function L.onShipLoadoutLoad(menu, item)
 	elseif item.partial and L.getLoadSettings().item_load_partial then
 		local loadout = Helper.getLoadoutHelper2(C.GetLoadout2, C.GetLoadoutCounts2, "UILoadout2", menu.object, menu.macro, item.id)
 		local upgradeplan = Helper.convertLoadout(menu.object, menu.macro, loadout, menu.software, "UILoadout2")
-		L.trimPartialLoadout(menu.upgradeplan, upgradeplan, menu.upgradewares)
+		L.trimPartialLoadout(menu.upgradeplan, upgradeplan, menu.upgradewares, true)
 		menu.getDataAndDisplay(upgradeplan, menu.crew)
 	else
 		menu.dropdownLoadout(_, item.id)
