@@ -85,6 +85,7 @@ Does not support resolutions lower than 1920x1080
 
 ## Updates
 
+* 1.4.1: Fixed hidden filter removing all ships in ship selection. Added partial loadout loading to station modules.
 * 1.4: Improved ship selection list. Now shows icons for the ship and whether you own the blueprint.
 * 1.3: Added 'Save As' button. Remade settings switches. Added icons to button row.
 * 1.2.1: Fixed unresponsive station map after opening a context menu.
