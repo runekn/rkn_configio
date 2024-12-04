@@ -807,6 +807,12 @@ function L.createShipOptions(menu)
 			if #races == 0 then
 				table.insert(races, "other")
 			end
+			local modicon = nil
+			-- TODO: get working
+			--local modquality = C.GetHighestEquipmentModQuality(macro)
+			--if modquality > 0 then
+				--modicon = " \27[mods_grade_0" .. modquality .. "]"
+			--end
 			table.insert(shipOptions, {
 				id = macro,
 				text = text,
@@ -823,7 +829,8 @@ function L.createShipOptions(menu)
 				races = races,
 				helpOverlayID = "shipconfig_shipoptions_" .. macro,
 				helpOverlayText = " ",
-				helpOverlayHighlightOnly = true
+				helpOverlayHighlightOnly = true,
+				modicon = modicon
 			})
 		end
 	end

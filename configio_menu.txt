@@ -328,6 +328,7 @@ function L.buttonShipTitleLoad(menu, classOptions, shipOptions, contextLayer)
 			header = ReadText(config.textId, 30),
 			onSelection = function(item)
 				menu.closeContextMenu()
+				menu.prepareModWares()
 				menu.dropdownShip(nil, item.id)
 			end,
 			listColumnWidth = Helper.scaleY(Helper.standardTextHeight) * 1.5,
