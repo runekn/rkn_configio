@@ -743,23 +743,19 @@ end
 -- Created by Eliptus
 -- Edited and integrated by Runekn
 function L.trimPartialLoadout(currentUpgradePlan, upgradeplan, upgradewares, isShipyard)
-	DebugError(Utils.SerializeTable(upgradewares))
 	for type,plan in pairs(upgradeplan) do
 		local spec = Helper.findUpgradeType(type)
 		local wares = upgradewares[type]
-		DebugError(type)
 
 		local groupSuffix = "group"
 		if type:sub(-#groupSuffix) == groupSuffix then
 			local slotType = type:sub(1, #type - #groupSuffix)
 			spec = Helper.findUpgradeType(slotType)
 			wares = upgradewares[slotType]
-			DebugError("ungrouping: " .. slotType)
 		end
 
 		if spec == nil or wares == nil then
 			-- skip
-			DebugError("skip")
 
 		elseif spec.supertype == 'macro' or spec.supertype == 'virtualmacro' then
 			-- plan[slot]['macro'] = macro
@@ -770,7 +766,6 @@ function L.trimPartialLoadout(currentUpgradePlan, upgradeplan, upgradewares, isS
 					if alreadyBuilt then
 						info.count = currentUpgradePlan[type][slot].count
 					else
-						DebugError("removing " .. info.macro)
 						info.macro = ''
 						if info.count then
 							info.count = 0
