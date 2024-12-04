@@ -73,6 +73,8 @@ function rkn_menu.createTitleBar(frame)
 		-- redo
 		row[5]:createButton({ active = function () return (#menu.undoStack > 1) and (menu.undoIndex > 1) end, height = menu.titleData.height, mouseOverText = ReadText(1026, 7904) .. Helper.formatOptionalShortcut(" (%s)", "action", 279) }):setIcon("menu_redo")
 		row[5].handlers.onClick = function () return menu.undoHelper(false) end
+
+		ftable:addConnection(1, 3, true)
 	else
 		local ftable = frame:addTable(7, { tabOrder = 4, height = 0, x = menu.titleData.offsetX, y = menu.titleData.offsetY, scaling = false, reserveScrollBar = false })
 		if ((menu.macro == "") and (menu.object == 0)) then
@@ -140,6 +142,8 @@ function rkn_menu.createTitleBar(frame)
 		-- redo
 		row[7]:createButton({ active = function () return (#menu.undoStack > 1) and (menu.undoIndex > 1) end, height = menu.titleData.height, mouseOverText = ReadText(1026, 7904) .. Helper.formatOptionalShortcut(" (%s)", "action", 279) }):setIcon("menu_redo")
 		row[7].handlers.onClick = function () return menu.undoHelper(false) end
+
+		ftable:addConnection(1, 3, true)
 	end
 
 	menu.topRows.ship = nil

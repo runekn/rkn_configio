@@ -111,6 +111,7 @@ function L.createStationTitleBarButton(row, menu, sc_config, loadOptions)
 		row[2].handlers.onClick = function() L.buttonStationTitleLoad(menu, sc_config.contextLayer) end
 	else
 		row[2]:createDropDown(loadOptions, { textOverride = ReadText(1001, 7904), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize }):setTextProperties(sc_config.dropDownTextProperties)
+		row[2].handlers.onDropDownActivated = function () menu.noupdate = true end
 		row[2].handlers.onDropDownConfirmed = menu.dropdownLoad
 		row[2].handlers.onDropDownRemoved = menu.dropdownRemovedCP
 	end
@@ -120,7 +121,7 @@ function L.createRefreshStationTitleBarButton(menu, text, loadOptions)
 	-- No need for refreshing if enabled --
 	if not L.isModEnabledForType(config.stationKey) then
 		local desc = Helper.createDropDown(loadOptions, "", text, nil, true, true, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize)
-		Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, nil, menu.dropdownLoad, menu.dropdownRemovedCP)
+		Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, function () menu.noupdate = true end, menu.dropdownLoad, menu.dropdownRemovedCP)
 	end
 end
 

@@ -62,6 +62,7 @@ function rkn_menu.createTitleBar(frame)
 		table.sort(loadOptions, function (a, b) return a.text < b.text end)
 		------- Runekn's Changes Start Here! ----------
 		--row[2]:createDropDown(loadOptions, { textOverride = ReadText(1001, 7904), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize }):setTextProperties(config.dropDownTextProperties)
+		--row[2].handlers.onDropDownActivated = function () menu.noupdate = true end
 		--row[2].handlers.onDropDownConfirmed = menu.dropdownLoad
 		--row[2].handlers.onDropDownRemoved = menu.dropdownRemovedCP
 
@@ -151,7 +152,7 @@ function rkn_menu.refreshTitleBar()
 		-- dropdown
 		------- Runekn's Changes Start Here! ----------
 		--local desc = Helper.createDropDown(loadOptions, "", text, nil, true, true, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize)
-		--Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, nil, menu.dropdownLoad, menu.dropdownRemovedCP)
+		--Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, function () menu.noupdate = true end, menu.dropdownLoad, menu.dropdownRemovedCP)
 
 		ConfigioLib.createRefreshStationTitleBarButton(menu, text, loadOptions)
 		------- Runekn's Changes Stop Here! ----------
