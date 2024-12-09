@@ -85,7 +85,8 @@ Does not support resolutions lower than 1920x1080
 
 ## Updates
 
-* 1.4.3: Fix 7.5 compatibility
+* 1.4.4: Fix 7.5 compatibility
+* 1.4.3: Fixed UI when playing with 1440 vertical resolution
 * 1.4.2: Fixed "Rename ship using loadout name" not working for partial or custom auto presets.
 * 1.4.1: Fixed hidden filter removing all ships in ship selection. Added partial loadout loading to station modules.
 * 1.4: Improved ship selection list. Now shows icons for the ship and whether you own the blueprint.

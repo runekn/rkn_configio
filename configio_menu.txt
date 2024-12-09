@@ -23,12 +23,17 @@ local config = {
 	shipLoadHeight = 0.4 * Helper.viewHeight,
 	loadSettingsWidth = Helper.scaleX(300),
 	settingsBrowserSeparation = Helper.borderSize * 10,
+	loadButtonTextProperties = {
+		halign = "center",
+		font = Helper.standardFont,
+		fontsize = Helper.scaleFont(Helper.standardFont, Helper.standardFontSize),
+	},
 	browserHeaderTextProperties = {
 		font = Helper.headerRow1Font,
 		fontsize = Helper.headerRow1FontSize,
 		x = Helper.headerRow1Offsetx,
-		y = math.floor((Helper.scaleY(30) - Helper.scaleY(Helper.headerRow1Height)) / 2 + Helper.scaleY(Helper.headerRow1Offsety)),
-		height = Helper.scaleY(30),
+		y = math.floor((Helper.headerRow1Height * 1.5 - Helper.headerRow1Height) / 2 + Helper.headerRow1Offsety),
+		height = Helper.headerRow1Height * 1.5,
 		halign = "center",
 		cellBGColor = Color["row_background"],
 		titleColor = Color["row_title"],
@@ -107,7 +112,7 @@ end
 
 function L.createStationTitleBarButton(row, menu, sc_config, loadOptions)
 	if L.isModEnabledForType(config.stationKey) then
-		row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(config.textId, 1), { halign = "center" })
+		row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(config.textId, 1), config.loadButtonTextProperties)
 		row[2].handlers.onClick = function() L.buttonStationTitleLoad(menu, sc_config.contextLayer) end
 	else
 		row[2]:createDropDown(loadOptions, { textOverride = ReadText(1001, 7904), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize }):setTextProperties(sc_config.dropDownTextProperties)
@@ -127,7 +132,7 @@ end
 
 function L.createStationLoadoutTitleBarButton(row, menu, sc_config, loadoutOptions)
 	if L.isModEnabledForType(config.stationLoadoutKey) then
-		row[2]:setColSpan(6):createButton({ helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(config.textId, 22), { halign = "center" })
+		row[2]:setColSpan(6):createButton({ helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(config.textId, 22), config.loadButtonTextProperties)
 		row[2].handlers.onClick = function() L.buttonStationLoadoutTitleLoad(menu, sc_config.contextLayer) end
 	else
 		row[2]:setColSpan(6):createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), optionWidth = menu.titleData.dropdownWidth + 6 * (menu.titleData.height + Helper.borderSize) }):setTextProperties(sc_config.dropDownTextProperties)
@@ -163,7 +168,7 @@ function L.createShipTitleBarButton(row, menu, sc_config, classOptions, shipOpti
 			local haslicence, icon, overridecolor, mouseovertext = menu.checkLicence(menu.macro, true)
 			text = Helper.convertColorToText(overridecolor) .. text
 		end
-		row[1]:setColSpan(2):createButton({ active = not menu.isReadOnly, height = menu.titleData.height, mouseOverText = mouseOverText }):setText(text, { halign = "center"  })
+		row[1]:setColSpan(2):createButton({ active = not menu.isReadOnly, height = menu.titleData.height, mouseOverText = mouseOverText }):setText(text, config.loadButtonTextProperties)
 		row[1].handlers.onClick = function() L.buttonShipTitleLoad(menu, classOptions, shipOptions, sc_config.contextLayer) end
 		return dropdownDummy
 	else
@@ -187,7 +192,7 @@ end
 
 function L.createShipLoadoutTitleBarButton(row, menu, sc_config, active, loadoutOptions)
 	if L.isModEnabledForType(config.shipLoadoutKey) then
-		row[3]:createButton({ active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), height = menu.titleData.height, width = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setText(ReadText(1001, 7905), { halign = "center" })
+		row[3]:createButton({ active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), height = menu.titleData.height, width = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setText(ReadText(1001, 7905), config.loadButtonTextProperties)
 		row[3].handlers.onClick = function() L.buttonShipLoadoutTitleLoad(menu, sc_config.contextLayer) end
 	else
 		row[3]:createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setTextProperties(sc_config.dropDownTextProperties)
@@ -842,7 +847,8 @@ function L.createAutoPresetEditorContext()
 
 	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
 	local optionsWidth = (L.params.width / 2) - Helper.borderSize * 2
-	local c1table = contextFrame:addTable(6, { tabOrder = 6, x = Helper.borderSize, y = config.browserHeaderTextProperties.height + Helper.borderSize * 3, width = optionsWidth, maxVisibleHeight  = L.params.height })
+	local optionsY = row:getHeight() + Helper.borderSize * 3;
+	local c1table = contextFrame:addTable(6, { tabOrder = 6, x = Helper.borderSize, y = optionsY, width = optionsWidth, maxVisibleHeight  = L.params.height })
 	c1table:setColWidth(1, smallColWidth, false)
 	c1table:setColWidth(2, smallColWidth, false)
 	c1table:setColWidth(3, smallColWidth, false)
@@ -899,7 +905,7 @@ function L.createAutoPresetEditorContext()
 	end
 
 
-	local c2table = contextFrame:addTable(3, { tabOrder = 6, x = Helper.borderSize * 2 + (L.params.width / 2), y = config.browserHeaderTextProperties.height + Helper.borderSize * 3, width = optionsWidth, maxVisibleHeight  = L.params.height })
+	local c2table = contextFrame:addTable(3, { tabOrder = 6, x = Helper.borderSize * 2 + (L.params.width / 2), y = optionsY, width = optionsWidth, maxVisibleHeight  = L.params.height })
 	c2table:setColWidth(1, smallColWidth, false)
 
 	if L.params.editorShipLoadout then
