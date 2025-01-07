@@ -235,7 +235,7 @@ function L.buttonStationTitleLoad(menu, contextLayer)
 			menu = menu,
 			isItemActive = function(item) return item.active end,
 			frameModules = { L.createSettings, L.createSearchField, L.createCPModulesFilter },
-			sortItems = function (a, b) return a.name < b.name end,
+			sortItems = L.compareItemNames,
 			sortOptions = config.defaultSortOptions,
 			sortDefault = "name",
 			onSave = function(name, overwrite)
@@ -297,7 +297,7 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 				L.createSearchField,
 				function(s) L.createAutoPresetEditorButtons(s) end
 			},
-			sortItems = function (a, b) return a.name < b.name end,
+			sortItems = L.compareItemNames,
 			sortOptions = config.defaultSortOptions,
 			sortDefault = "name",
 			isItemRenamable = function(item) return not item.preset end,
@@ -405,7 +405,7 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 				L.createSearchField,
 				function(s) L.createAutoPresetEditorButtons(s) end
 			},
-			sortItems = function (a, b) return a.name < b.name end,
+			sortItems = L.compareItemNames,
 			sortOptions = config.defaultSortOptions,
 			sortDefault = "name",
 			isItemRenamable = function(item) return not item.preset end,

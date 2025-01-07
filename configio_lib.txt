@@ -894,7 +894,7 @@ function L.sortShips(a, b, o)
 	if o == "default" then
 		return Helper.sortShipsByClassAndPurpose(a.item, b.item)
 	end
-	return a.name < b.name
+	return L.compareItemNames(a,b)
 end
 
 function L.renameStationLoadout(menu, item, newName)
@@ -920,6 +920,10 @@ function L.renameShipLoadout(menu, item, newName)
 		C.RemoveLoadout("local", macro, item.id)
 		menu.getPresetLoadouts()
 	end
+end
+
+function L.compareItemNames(a, b)
+	return a.name:lower() < b.name:lower()
 end
 
 return L
