@@ -85,6 +85,7 @@ Does not support resolutions lower than 1920x1080
 
 ## Updates
 
+* 1.4.5: Add production modules to station plan mouse-over text
 * 1.4.4: Ignore case when sorting by name
 * 1.4.3: Fixed UI when playing with 1440 vertical resolution
 * 1.4.2: Fixed "Rename ship using loadout name" not working for partial or custom auto presets.
