@@ -56,6 +56,7 @@ local config = {
 	inactiveColor = { r = 128, g = 128, b = 128, a = 100 }, -- dark gray
 	autoPresetColor = { r = 225, g = 225, b = 0, a = 100 }, -- yellow
 	partialPresetColor = { r = 255, g = 100, b = 0, a = 100 }, -- orange
+	stationPlanMissingBlueprintsColor = { r = 255, g = 25, b = 25, a = 100 }, -- red
 	settingSwitchActiveTextProperties = {
 		font = Helper.standardFontBold,
 		color = { r = 100, g = 225, b = 0, a = 100 }, -- green
@@ -217,7 +218,7 @@ function L.buttonStationTitleLoad(menu, contextLayer)
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
 			height = config.stationLoadHeight,
-			itemsList = function() return menu.constructionplans end,
+			itemsList = function() return L.addStationPlanMouseover(Utils.DeepCopy(menu.constructionplans)) end,
 			header = ReadText(config.textId, 2),
 			optionItemNameText = ReadText(config.textId, 9),
 			onSelection = function(item) menu.dropdownLoad(nil, item.id) end,
@@ -1423,6 +1424,33 @@ end
 function L.dropdownSort(_, id)
 	L.getState().sort = id
 	L.refreshLoadFrame()
+end
+
+function L.addStationPlanMouseover(plans)
+	for _, plan in ipairs(plans) do
+		-- Make missing blueprints text red
+		if plan.mouseovertext and not plan.active then
+			plan.mouseovertext = Helper.convertColorToText(config.stationPlanMissingBlueprintsColor) .. plan.mouseovertext .. "\27X"
+		end
+
+		-- Add "Contains production modules" list
+		local atLeastOne = false;
+		local text = ReadText(config.textId, 104)
+		for _, module in ipairs(L.getAllProductionModules()) do
+			local hasmacros = Helper.textArrayHelper({ module.macro }, function (numtexts, texts) return C.CheckConstructionPlanForMacros(plan.id, texts, numtexts) end)
+			if (hasmacros) then
+				atLeastOne = true
+				text = text .. "\n· " .. module.name
+			end
+		end
+		if (atLeastOne) then
+			if plan.mouseovertext then
+				text = plan.mouseovertext .. "\n\n" .. text
+			end
+			plan.mouseovertext = text
+		end
+	end
+	return plans
 end
 
 

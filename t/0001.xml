@@ -106,5 +106,6 @@
 		<t id="101">OFF</t>
 		<t id="102">Blueprint owned</t>
 		<t id="103">Blueprint not owned</t>
+		<t id="104">Contains production modules:</t>
 	</page>
 </language>
