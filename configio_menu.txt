@@ -68,7 +68,8 @@ local config = {
 	},
 	shipSortOptions = {
 		{ id = "default", text = ReadText(1811143915, 92), displayremoveoption = false, icon = "" },
-		{ id = "name", text = ReadText(1811143915, 91), displayremoveoption = false, icon = "" }
+		{ id = "name", text = ReadText(1811143915, 91), displayremoveoption = false, icon = "" },
+		{ id = "type", text = ReadText(1811143915, 105), displayremoveoption = false, icon = "" }
 	},
 	defaultSortOptions = {
 		{ id = "name", text = ReadText(1811143915, 91), displayremoveoption = false, icon = "" }

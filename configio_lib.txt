@@ -13,7 +13,14 @@ local config = {
 	shipLoadoutKey = "ship_loadout",
 	folderIdFormat = "rkn_configio.folder.%s.%s",
 	settingsBlackboardId = "$RKN_ConfigioSettings",
-	autoPresetsBlackboardId = "$RKN_ConfigioAutoPresets"
+	autoPresetsBlackboardId = "$RKN_ConfigioAutoPresets",
+	shipSizeOrder = {
+		ship_xl = 0,
+		ship_l = 1,
+		ship_m = 2,
+		ship_s = 3,
+		ship_xs = 4
+	}
 }
 
 function L.prepareBrowserStructure(itemList)
@@ -893,6 +900,8 @@ end
 function L.sortShips(a, b, o)
 	if o == "default" then
 		return Helper.sortShipsByClassAndPurpose(a.item, b.item)
+	elseif o == "type" then
+		return L.compareShipType(a,b)
 	end
 	return L.compareItemNames(a,b)
 end
@@ -924,6 +933,16 @@ end
 
 function L.compareItemNames(a, b)
 	return a.name:lower() < b.name:lower()
+end
+
+function L.compareShipType(a, b)
+	if a.item.shiptypename == b.item.shiptypename then
+		if a.item.class == b.item.class then
+			return L.compareItemNames(a,b)
+		end
+		return config.shipSizeOrder[a.item.class] < config.shipSizeOrder[b.item.class]
+	end
+	return a.item.shiptypename < b.item.shiptypename
 end
 
 return L
