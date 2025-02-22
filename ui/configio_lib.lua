@@ -923,5 +923,3 @@ function RKN_Configio.compareShipType(a, b)
 	end
 	return a.item.shiptypename < b.item.shiptypename
 end
-
-return L

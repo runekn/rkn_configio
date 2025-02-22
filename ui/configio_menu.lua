@@ -1355,5 +1355,3 @@ end
 
 
 init()
-
-return L
