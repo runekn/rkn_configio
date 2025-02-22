@@ -1,4 +1,5 @@
 RKN_Configio = {
+    params = {},
     config = {
         textId = 1811143915,
         stationKey = "station",

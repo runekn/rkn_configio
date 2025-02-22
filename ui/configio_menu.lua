@@ -3,8 +3,6 @@ local ffi = require("ffi")
 local C = ffi.C
 
 local function init()
-	RKN_Configio.params = {}
-
 	-- Set settings for extension options menu on game start --
 	RKN_Configio.getLoadSettings(1)
 	SetNPCBlackboard(RKN_Configio.getPlayerId(), RKN_Configio.config.settingsBlackboardId, RKN_Configio.settings)
