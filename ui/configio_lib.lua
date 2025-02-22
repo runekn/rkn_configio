@@ -2,40 +2,19 @@
 local ffi = require("ffi")
 local C = ffi.C
 
-local Utils = require("extensions.rkn_configio.utils")
-
-local L = {}
-
-local config = {
-	stationKey = "station",
-	stationLoadoutKey = "station_loadout",
-	shipKey = "ship",
-	shipLoadoutKey = "ship_loadout",
-	folderIdFormat = "rkn_configio.folder.%s.%s",
-	settingsBlackboardId = "$RKN_ConfigioSettings",
-	autoPresetsBlackboardId = "$RKN_ConfigioAutoPresets",
-	shipSizeOrder = {
-		ship_xl = 0,
-		ship_l = 1,
-		ship_m = 2,
-		ship_s = 3,
-		ship_xs = 4
-	}
-}
-
-function L.prepareBrowserStructure(itemList)
+function RKN_Configio.prepareBrowserStructure(itemList)
 	-- First we build the folder structure --
 	local root = { type = "folder", name = "root", folders = {}, folders_arr = {}, items = {} }
 	for _, item in ipairs(itemList) do
-		if not L.filterItem(item) then
+		if not RKN_Configio.filterItem(item) then
 			goto continue
 		end
 		local cwd = root
 		-- iterate through item folders --
-		local nextMatch = string.gmatch(item.name, "[^" .. Utils.EscapeGmatch(L.getLoadSettings().folder_delimiter) .. "]+")
+		local nextMatch = string.gmatch(item.name, "[^" .. RKN_Configio_Utils.EscapeGmatch(RKN_Configio.getLoadSettings().folder_delimiter) .. "]+")
 		local folder = nextMatch()
 		local name = item.name
-		local levelsLeft = L.getLoadSettings().folder_enabled and L.params.maxFolders or 0
+		local levelsLeft = RKN_Configio.getLoadSettings().folder_enabled and RKN_Configio.params.maxFolders or 0
 		local folderPath = ""
 		while 1==1 do
 			-- Check if this is the item name --
@@ -51,7 +30,7 @@ function L.prepareBrowserStructure(itemList)
 				break
 			end
 			-- Otherwise, path to folder --
-			folderPath = folderPath == "" and folder or folderPath .. L.getLoadSettings().folder_delimiter .. folder
+			folderPath = folderPath == "" and folder or folderPath .. RKN_Configio.getLoadSettings().folder_delimiter .. folder
 			local target = cwd.folders[folder]
 			if not target then
 				target = { type = "folder", name = folder, fullname = folderPath, folders = {}, folders_arr = {}, items = {} }
@@ -65,43 +44,43 @@ function L.prepareBrowserStructure(itemList)
 		table.insert(cwd.items, {
 			type = "item",
 			name = name,
-			active = L.params.isItemActive(item),
+			active = RKN_Configio.params.isItemActive(item),
 			deleteable = item.deleteable,
-			renamable = L.params.isItemRenamable and L.params.isItemRenamable(item),
-			savable = L.params.isItemSavable and L.params.isItemSavable(item),
+			renamable = RKN_Configio.params.isItemRenamable and RKN_Configio.params.isItemRenamable(item),
+			savable = RKN_Configio.params.isItemSavable and RKN_Configio.params.isItemSavable(item),
 			item = item })
 		::continue::
 	end
 
-	if L.getLoadSettings().folder_flatten_single_item then
-		L.undentSingleItems(root)
+	if RKN_Configio.getLoadSettings().folder_flatten_single_item then
+		RKN_Configio.undentSingleItems(root)
 	end
 
 	-- Now we sort all folders --
-	L.sortFolder(root)
+	RKN_Configio.sortFolder(root)
 
 	return root
 end
 
-function L.filterItem(item)
-	local search = L.getState().filter.search
+function RKN_Configio.filterItem(item)
+	local search = RKN_Configio.getState().filter.search
 	if search and search ~= "" then
 		local searchMatch = item.name:lower():find(search:lower())
 		if not searchMatch then
 			return false
 		end
 	end
-	if L.getLoadSettings().item_hide_inactive and not L.params.isItemActive(item) then
+	if RKN_Configio.getLoadSettings().item_hide_inactive and not RKN_Configio.params.isItemActive(item) then
 		return false
 	end
-	if L.params.itemFilter and (not L.params.itemFilter(item)) then
+	if RKN_Configio.params.itemFilter and (not RKN_Configio.params.itemFilter(item)) then
 		return false
 	end
 	return true
 end
 
-function L.filterItemByModules(item)
-	local selectedMacros = L.getState().filter.macros
+function RKN_Configio.filterItemByModules(item)
+	local selectedMacros = RKN_Configio.getState().filter.macros
 	if selectedMacros and #selectedMacros > 0 then
 		local hasmacros = Helper.textArrayHelper(selectedMacros, function (numtexts, texts) return C.CheckConstructionPlanForMacros(item.id, texts, numtexts) end)
 		if not hasmacros then
@@ -111,10 +90,10 @@ function L.filterItemByModules(item)
 	return true
 end
 
-function L.filterShip(item)
-	local selectedRaces = L.getState().filter.races
-	local selectedSizes = L.getState().filter.sizes
-	local selectedPurposes = L.getState().filter.purposes
+function RKN_Configio.filterShip(item)
+	local selectedRaces = RKN_Configio.getState().filter.races
+	local selectedSizes = RKN_Configio.getState().filter.sizes
+	local selectedPurposes = RKN_Configio.getState().filter.purposes
 	if selectedRaces and next(selectedRaces) ~= nil then
 		for _,r in ipairs(item.races) do
 			if selectedRaces[r] then
@@ -137,13 +116,13 @@ function L.filterShip(item)
 	return true
 end
 
-function L.undentSingleItems(folder, parent)
+function RKN_Configio.undentSingleItems(folder, parent)
 	local canDelete = true
 	local atLeastOneSubFolder = false
 	-- recursive --
-	Utils.ArrayRemove(folder.folders_arr, function(t, i, j)
+	RKN_Configio_Utils.ArrayRemove(folder.folders_arr, function(t, i, j)
 		local subfolder = folder.folders_arr[i];
-		local keepSubFolder = L.undentSingleItems(subfolder, folder)
+		local keepSubFolder = RKN_Configio.undentSingleItems(subfolder, folder)
 		canDelete = canDelete and not keepSubFolder
 		atLeastOneSubFolder = atLeastOneSubFolder or keepSubFolder
 		return keepSubFolder
@@ -157,23 +136,23 @@ function L.undentSingleItems(folder, parent)
 		table.insert(parent.items, item)
 		table.remove(folder.items, 1)
 
-		item.name = folder.name .. L.getLoadSettings().folder_delimiter .. item.name
+		item.name = folder.name .. RKN_Configio.getLoadSettings().folder_delimiter .. item.name
 	elseif itemCount > 1 then
 		canDelete = false
 	end
 	return not canDelete
 end
 
-function L.sortFolder(folder)
-	local sortOption = L.getState().sort or L.params.sortDefault
-	table.sort(folder.items, function (a,b) return L.params.sortItems(a, b, sortOption) end)
+function RKN_Configio.sortFolder(folder)
+	local sortOption = RKN_Configio.getState().sort or RKN_Configio.params.sortDefault
+	table.sort(folder.items, function (a,b) return RKN_Configio.params.sortItems(a, b, sortOption) end)
 	table.sort(folder.folders_arr, function (a, b) return a.name < b.name end)
 	for _, innerFolder in ipairs(folder.folders_arr) do
-		L.sortFolder(innerFolder)
+		RKN_Configio.sortFolder(innerFolder)
 	end
 end
 
-function L.getAllWaresByTag(tag)
+function RKN_Configio.getAllWaresByTag(tag)
 	-- uint32_t GetNumWares(const char* tags, bool research, const char* licenceownerid, const char* exclusiontags);
 	-- uint32_t GetWares(const char** result, uint32_t resultlen, const char* tags, bool research, const char* licenceownerid, const char* exclusiontags);
 	local result = {}
@@ -187,10 +166,10 @@ function L.getAllWaresByTag(tag)
 	return result
 end
 
-function L.getAllProductionModules()
-	if not L.allProductionModules then
+function RKN_Configio.getAllProductionModules()
+	if not RKN_Configio.allProductionModules then
 		local result = {}
-		for _, ware in ipairs(L.getAllWaresByTag("module")) do
+		for _, ware in ipairs(RKN_Configio.getAllWaresByTag("module")) do
 			local name, macro = GetWareData(ware, "name", "component")
 			local moduletype = GetMacroData(macro, "infolibrary")
 
@@ -200,15 +179,15 @@ function L.getAllProductionModules()
 			end
 		end
 		table.sort(result, function (a, b) return a.name < b.name end)
-		L.allProductionModules = result
+		RKN_Configio.allProductionModules = result
 	end
-	return L.allProductionModules
+	return RKN_Configio.allProductionModules
 end
 
-function L.getAllWeapons()
-	if not L.allWeapons then
+function RKN_Configio.getAllWeapons()
+	if not RKN_Configio.allWeapons then
 		local result = {}
-		for _, ware in ipairs(L.getAllWaresByTag("weapon")) do
+		for _, ware in ipairs(RKN_Configio.getAllWaresByTag("weapon")) do
 			local name, macro = GetWareData(ware, "name", "component")
 			
 			local isAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
@@ -219,15 +198,15 @@ function L.getAllWeapons()
 		end
 		
 		table.sort(result, function (a, b) return a.text < b.text end)
-		L.allWeapons = result
+		RKN_Configio.allWeapons = result
 	end
-	return L.allWeapons
+	return RKN_Configio.allWeapons
 end
 
-function L.getAllTurrets()
+function RKN_Configio.getAllTurrets()
 	local mTurrets = {}
 	local lTurrets = {}
-    for _, ware in ipairs(L.getAllWaresByTag("turret")) do
+    for _, ware in ipairs(RKN_Configio.getAllWaresByTag("turret")) do
         local name, macro = GetWareData(ware, "name", "component")
 		
 		local isAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
@@ -249,12 +228,12 @@ function L.getAllTurrets()
 	return mTurrets, lTurrets
 end
 
-function L.getAllShields()
+function RKN_Configio.getAllShields()
 	local mShields = {}
 	local lShields = {}
 	local xlShields = {}
 	local sShields = {}
-    for _, ware in ipairs(L.getAllWaresByTag("shield")) do
+    for _, ware in ipairs(RKN_Configio.getAllWaresByTag("shield")) do
         local name, macro = GetWareData(ware, "name", "component")
 		
 		local isAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
@@ -282,9 +261,9 @@ function L.getAllShields()
 	return sShields, mShields, lShields, xlShields
 end
 
-function L.getAllEngines()
+function RKN_Configio.getAllEngines()
 	local result = {}
-    for _, ware in ipairs(L.getAllWaresByTag("engine")) do
+    for _, ware in ipairs(RKN_Configio.getAllWaresByTag("engine")) do
         local name, macro = GetWareData(ware, "name", "component")
 		
 		local isAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
@@ -298,9 +277,9 @@ function L.getAllEngines()
 	return result
 end
 
-function L.getAllThrusters()
+function RKN_Configio.getAllThrusters()
 	local result = {}
-    for _, ware in ipairs(L.getAllWaresByTag("thruster")) do
+    for _, ware in ipairs(RKN_Configio.getAllWaresByTag("thruster")) do
         local name, macro = GetWareData(ware, "name", "component")
 		
 		local isAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
@@ -314,8 +293,8 @@ function L.getAllThrusters()
 	return result
 end
 
-function L.getRaceNameMap()
-	if not L.raceNameMap then
+function RKN_Configio.getRaceNameMap()
+	if not RKN_Configio.raceNameMap then
 		local races = {}
 		local n = C.GetNumAllRaces()
 		local buf = ffi.new("RaceInfo[?]", n)
@@ -325,22 +304,22 @@ function L.getRaceNameMap()
 			local name = ffi.string(buf[i].name)
 			races[id] = name
 		end
-		L.raceNameMap = races
+		RKN_Configio.raceNameMap = races
 	end
-	return L.raceNameMap
+	return RKN_Configio.raceNameMap
 end
 
-function L.getAllShipFilterRaces()
-	local races = L.getRaceNameMap()
+function RKN_Configio.getAllShipFilterRaces()
+	local races = RKN_Configio.getRaceNameMap()
 	table.sort(races, function (a, b) return a.name < b.name end)
 	table.insert(races, { name = "Other", id = "other" })
 	return races
 end
 
-function L.getAllAutoPresetRaces()
-	if not L.allAutoPresetRaces then
+function RKN_Configio.getAllAutoPresetRaces()
+	if not RKN_Configio.allAutoPresetRaces then
 		local skip = { khaak = true, drone = true, xenon = true }
-		local raceMap = L.getRaceNameMap()
+		local raceMap = RKN_Configio.getRaceNameMap()
 		local races = {}
 		for id,name in pairs(raceMap) do
 			if not skip[id] then
@@ -348,16 +327,16 @@ function L.getAllAutoPresetRaces()
 			end
 		end
 		table.sort(races, function (a, b) return a.name < b.name end)
-		L.allAutoPresetRaces = races
+		RKN_Configio.allAutoPresetRaces = races
 	end
-	return L.allAutoPresetRaces
+	return RKN_Configio.allAutoPresetRaces
 end
 
-function L.getState()
-	if not L.state then
-		L.state = { }
-		for _,key in ipairs({config.stationKey, config.stationLoadoutKey, config.shipLoadoutKey, config.shipKey}) do
-			L.state[key] = {
+function RKN_Configio.getState()
+	if not RKN_Configio.state then
+		RKN_Configio.state = { }
+		for _,key in ipairs({RKN_Configio.config.stationKey, RKN_Configio.config.stationLoadoutKey, RKN_Configio.config.shipLoadoutKey, RKN_Configio.config.shipKey}) do
+			RKN_Configio.state[key] = {
 				filter = {
 					macros = {},
 					races = {},
@@ -370,21 +349,21 @@ function L.getState()
 			}
 		end
 	end
-	return L.state[L.params.settingKey]
+	return RKN_Configio.state[RKN_Configio.params.settingKey]
 end
 
-function L.getPlayerId()
-	if not L.playerID then
-		L.playerID = ConvertStringTo64Bit(tostring(C.GetPlayerID()))
+function RKN_Configio.getPlayerId()
+	if not RKN_Configio.playerID then
+		RKN_Configio.playerID = ConvertStringTo64Bit(tostring(C.GetPlayerID()))
 	end
-	return L.playerID
+	return RKN_Configio.playerID
 end
 
-function L.getLoadSettings(key)
+function RKN_Configio.getLoadSettings(key)
 	if not key then
-		key = L.params.settingKey
+		key = RKN_Configio.params.settingKey
 	end
-	if not L.settings then
+	if not RKN_Configio.settings then
 		local default = {
 			folder_enabled = false,
 			folder_delimiter = "/",
@@ -396,32 +375,32 @@ function L.getLoadSettings(key)
 			enabled = true,
 		}
 		local allDefault = {
-			[config.stationKey] = Utils.ShallowCopy(default),
-			[config.stationLoadoutKey] = Utils.ShallowCopy(default),
-			[config.shipKey] = Utils.ShallowCopy(default),
-			[config.shipLoadoutKey] = Utils.ShallowCopy(default)
+			[RKN_Configio.config.stationKey] = RKN_Configio_Utils.ShallowCopy(default),
+			[RKN_Configio.config.stationLoadoutKey] = RKN_Configio_Utils.ShallowCopy(default),
+			[RKN_Configio.config.shipKey] = RKN_Configio_Utils.ShallowCopy(default),
+			[RKN_Configio.config.shipLoadoutKey] = RKN_Configio_Utils.ShallowCopy(default)
 		}
-		if not L.getPlayerId() then
+		if not RKN_Configio.getPlayerId() then
 			return allDefault
 		end
-		local all = GetNPCBlackboard(L.getPlayerId(), config.settingsBlackboardId)
+		local all = GetNPCBlackboard(RKN_Configio.getPlayerId(), RKN_Configio.config.settingsBlackboardId)
 		local r
 		if not all then
 			r = allDefault
 		else
 			r = {
-				[config.stationKey] = L.convertLoadSettings(all[config.stationKey], default),
-				[config.stationLoadoutKey] = L.convertLoadSettings(all[config.stationLoadoutKey], default),
-				[config.shipKey] = L.convertLoadSettings(all[config.shipKey], default),
-				[config.shipLoadoutKey] = L.convertLoadSettings(all[config.shipLoadoutKey], default)
+				[RKN_Configio.config.stationKey] = RKN_Configio.convertLoadSettings(all[RKN_Configio.config.stationKey], default),
+				[RKN_Configio.config.stationLoadoutKey] = RKN_Configio.convertLoadSettings(all[RKN_Configio.config.stationLoadoutKey], default),
+				[RKN_Configio.config.shipKey] = RKN_Configio.convertLoadSettings(all[RKN_Configio.config.shipKey], default),
+				[RKN_Configio.config.shipLoadoutKey] = RKN_Configio.convertLoadSettings(all[RKN_Configio.config.shipLoadoutKey], default)
 			}
 		end
-		L.settings = r
+		RKN_Configio.settings = r
 	end
-	return L.settings[key]
+	return RKN_Configio.settings[key]
 end
 
-function L.convertLoadSettings(s, default)
+function RKN_Configio.convertLoadSettings(s, default)
 	if not s then
 		return default
 	end
@@ -439,14 +418,14 @@ function L.convertLoadSettings(s, default)
 	return r
 end
 
-function L.setLoadSetting(key, value)
-	L.getLoadSettings()
-	L.settings[L.params.settingKey][key] = value
-	SetNPCBlackboard(L.getPlayerId(), config.settingsBlackboardId, L.settings)
+function RKN_Configio.setLoadSetting(key, value)
+	RKN_Configio.getLoadSettings()
+	RKN_Configio.settings[RKN_Configio.params.settingKey][key] = value
+	SetNPCBlackboard(RKN_Configio.getPlayerId(), RKN_Configio.config.settingsBlackboardId, RKN_Configio.settings)
 end
 
-function L.addCustomAutoPresets(key, loadouts)
-	local autoPresets = L.getAutoPresets(key)
+function RKN_Configio.addCustomAutoPresets(key, loadouts)
+	local autoPresets = RKN_Configio.getAutoPresets(key)
 	if next(autoPresets) ~= nil then
 		for id, preset in pairs(autoPresets) do
 			table.insert(loadouts, { customPreset = preset, id = id, name = preset.name, deleteable = true, active = true })
@@ -455,7 +434,7 @@ function L.addCustomAutoPresets(key, loadouts)
 	return loadouts
 end
 
-function L.getAutoPresetByName(autoPresets, name)
+function RKN_Configio.getAutoPresetByName(autoPresets, name)
 	for id, preset in pairs(autoPresets) do
 		if preset.name == name then
 			return preset
@@ -464,26 +443,26 @@ function L.getAutoPresetByName(autoPresets, name)
 	return nil
 end
 
-function L.getAutoPresets(key)
-	local autoPresets = GetNPCBlackboard(L.getPlayerId(), config.autoPresetsBlackboardId)
+function RKN_Configio.getAutoPresets(key)
+	local autoPresets = GetNPCBlackboard(RKN_Configio.getPlayerId(), RKN_Configio.config.autoPresetsBlackboardId)
 	if autoPresets then
 		return autoPresets[key] or {}
 	end
 	return {}
 end
 
-function L.saveAutoPreset(preset, id)
+function RKN_Configio.saveAutoPreset(preset, id)
 	if not preset or not preset.name or preset.name == "" then
 		return
 	end
-	local autoPresets = GetNPCBlackboard(L.getPlayerId(), config.autoPresetsBlackboardId)
+	local autoPresets = GetNPCBlackboard(RKN_Configio.getPlayerId(), RKN_Configio.config.autoPresetsBlackboardId)
 	if not autoPresets then
 		autoPresets = { idCounter = 0 }
 	end
-	local autoPresetsForKey = autoPresets[L.params.settingKey]
+	local autoPresetsForKey = autoPresets[RKN_Configio.params.settingKey]
 	if not autoPresetsForKey then
 		autoPresetsForKey = {}
-		autoPresets[L.params.settingKey] = autoPresetsForKey
+		autoPresets[RKN_Configio.params.settingKey] = autoPresetsForKey
 	end
 	if not id then
 		id = autoPresets.idCounter + 1
@@ -491,10 +470,10 @@ function L.saveAutoPreset(preset, id)
 		preset.id = id
 	end
 	autoPresetsForKey["rknconfigio_auto_" .. tostring(id)] = preset
-	SetNPCBlackboard(L.getPlayerId(), config.autoPresetsBlackboardId, autoPresets)
+	SetNPCBlackboard(RKN_Configio.getPlayerId(), RKN_Configio.config.autoPresetsBlackboardId, autoPresets)
 end
 
-function L.generateLoadoutUpgradePlan(menu, presetTemplate)
+function RKN_Configio.generateLoadoutUpgradePlan(menu, presetTemplate)
 	local upgradeplan = {
 		drone = { },
 		thruster = { },
@@ -516,9 +495,9 @@ function L.generateLoadoutUpgradePlan(menu, presetTemplate)
 		if #group.turret.possiblemacros > 0 then
 			local chosenMacro
 			if group.turret.slotsize == "medium" then
-				chosenMacro = L.chooseMacroByRules(menu, group.turret.possiblemacros, presetTemplate.mturrets)
+				chosenMacro = RKN_Configio.chooseMacroByRules(menu, group.turret.possiblemacros, presetTemplate.mturrets)
 			elseif group.turret.slotsize == "large" then
-				chosenMacro = L.chooseMacroByRules(menu, group.turret.possiblemacros, presetTemplate.lturrets)
+				chosenMacro = RKN_Configio.chooseMacroByRules(menu, group.turret.possiblemacros, presetTemplate.lturrets)
 			end
 			if chosenMacro then
 				table.insert(upgradeplan.turretgroup, { path = group.path, group = group.group, count = group.turret.total, macro = chosenMacro })
@@ -527,18 +506,18 @@ function L.generateLoadoutUpgradePlan(menu, presetTemplate)
 		if #group.shield.possiblemacros > 0 then
 			local chosenMacro
 			if group.shield.slotsize == "medium" then
-				chosenMacro = L.chooseMacroByRules(menu, group.shield.possiblemacros, presetTemplate.mshields)
+				chosenMacro = RKN_Configio.chooseMacroByRules(menu, group.shield.possiblemacros, presetTemplate.mshields)
 			elseif group.shield.slotsize == "large" then
-				chosenMacro = L.chooseMacroByRules(menu, group.shield.possiblemacros, presetTemplate.lshields)
+				chosenMacro = RKN_Configio.chooseMacroByRules(menu, group.shield.possiblemacros, presetTemplate.lshields)
 			elseif group.shield.slotsize == "extralarge" then
-				chosenMacro = L.chooseMacroByRules(menu, group.shield.possiblemacros, presetTemplate.xlshields)
+				chosenMacro = RKN_Configio.chooseMacroByRules(menu, group.shield.possiblemacros, presetTemplate.xlshields)
 			end
 			if chosenMacro then
 				table.insert(upgradeplan.shieldgroup, { path = group.path, group = group.group, count = group.shield.total, macro = chosenMacro })
 			end
 		end
 		if #group.engine.possiblemacros > 0 then
-			local chosenMacro = L.chooseMacroByRules(menu, group.engine.possiblemacros, presetTemplate.engines)
+			local chosenMacro = RKN_Configio.chooseMacroByRules(menu, group.engine.possiblemacros, presetTemplate.engines)
 			if chosenMacro then
 				table.insert(upgradeplan.enginegroup, { path = group.path, group = group.group, count = group.engine.total, macro = chosenMacro })
 				for i = 1, group.engine.total do
@@ -554,13 +533,13 @@ function L.generateLoadoutUpgradePlan(menu, presetTemplate)
 				if type == "shield" then
 					local chosenMacro
 					if slot.slotsize == "small" then
-						chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.sshields)
+						chosenMacro = RKN_Configio.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.sshields)
 					elseif slot.slotsize == "medium" then
-						chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.mshields)
+						chosenMacro = RKN_Configio.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.mshields)
 					elseif slot.slotsize == "large" then
-						chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.lshields)
+						chosenMacro = RKN_Configio.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.lshields)
 					elseif slot.slotsize == "extralarge" then
-						chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.xlshields)
+						chosenMacro = RKN_Configio.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.xlshields)
 					else
 						-- Internal shields from VRO has no slotsize and only one available macro
 						chosenMacro = slot.possiblemacros[1]
@@ -569,27 +548,27 @@ function L.generateLoadoutUpgradePlan(menu, presetTemplate)
 						upgradeplan.shield[i] = { macro = chosenMacro }
 					end
 				elseif type == "weapon" then
-					local chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.weapons)
+					local chosenMacro = RKN_Configio.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.weapons)
 					if chosenMacro then
 						upgradeplan.weapon[i] = { macro = chosenMacro }
 					end
 				elseif type == "engine" and #upgradeplan.enginegroup == 0 then
-					local chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.engines)
+					local chosenMacro = RKN_Configio.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.engines)
 					if chosenMacro then
 						upgradeplan.engine[i] = { macro = chosenMacro }
 					end
 				elseif type == "turret" then
 					local chosenMacro
 					if slot.slotsize == "medium" then
-						chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.mturrets)
+						chosenMacro = RKN_Configio.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.mturrets)
 					elseif slot.slotsize == "large" then
-						chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.lturrets)
+						chosenMacro = RKN_Configio.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.lturrets)
 					end
 					if chosenMacro then
 						upgradeplan.turret[i] = { macro = chosenMacro }
 					end
 				elseif type == "thruster" then
-					local chosenMacro = L.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.thrusters)
+					local chosenMacro = RKN_Configio.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.thrusters)
 					if chosenMacro then
 						upgradeplan.thruster[i] = { macro = chosenMacro }
 					end
@@ -598,7 +577,7 @@ function L.generateLoadoutUpgradePlan(menu, presetTemplate)
 		end
 	end
 
-	if L.params.settingKey == config.shipLoadoutKey then
+	if RKN_Configio.params.settingKey == RKN_Configio.config.shipLoadoutKey then
 		if presetTemplate.software.docking.id ~= "none" then
 			upgradeplan.software[1] = presetTemplate.software.docking.id
 		end
@@ -617,35 +596,35 @@ function L.generateLoadoutUpgradePlan(menu, presetTemplate)
 		upgradeplan.software[2] = "software_flightassistmk1"
 		if menu.crew then
 			local crewCapacity = menu.crew.capacity
-			upgradeplan.crew.service = L.getProportionateCount(crewCapacity, presetTemplate.crew.crew)
-			upgradeplan.crew.marine = L.getProportionateCount(crewCapacity, presetTemplate.crew.marines)
+			upgradeplan.crew.service = RKN_Configio.getProportionateCount(crewCapacity, presetTemplate.crew.crew)
+			upgradeplan.crew.marine = RKN_Configio.getProportionateCount(crewCapacity, presetTemplate.crew.marines)
 		end
 		local droneCapacity = GetMacroUnitStorageCapacity(menu.macro)
 		if droneCapacity > 0 then
-			upgradeplan.drone.ship_gen_xs_cargodrone_empty_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.cargo)
+			upgradeplan.drone.ship_gen_xs_cargodrone_empty_01_a_macro = RKN_Configio.getProportionateCount(droneCapacity, presetTemplate.drones.cargo)
 			if C.IsUnitMacroCompatible(menu.object, menu.macro, "ship_gen_s_miningdrone_solid_01_a_macro") then
-				upgradeplan.drone.ship_gen_s_miningdrone_solid_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.mining)
+				upgradeplan.drone.ship_gen_s_miningdrone_solid_01_a_macro = RKN_Configio.getProportionateCount(droneCapacity, presetTemplate.drones.mining)
 			elseif C.IsUnitMacroCompatible(menu.object, menu.macro, "ship_gen_s_miningdrone_liquid_01_a_macro") then
-				upgradeplan.drone.ship_gen_s_miningdrone_liquid_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.mining)
+				upgradeplan.drone.ship_gen_s_miningdrone_liquid_01_a_macro = RKN_Configio.getProportionateCount(droneCapacity, presetTemplate.drones.mining)
 			end
-			upgradeplan.drone.ship_gen_s_fightingdrone_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.defence)
-			upgradeplan.drone.ship_gen_xs_repairdrone_01_a_macro = L.getProportionateCount(droneCapacity, presetTemplate.drones.repair)
+			upgradeplan.drone.ship_gen_s_fightingdrone_01_a_macro = RKN_Configio.getProportionateCount(droneCapacity, presetTemplate.drones.defence)
+			upgradeplan.drone.ship_gen_xs_repairdrone_01_a_macro = RKN_Configio.getProportionateCount(droneCapacity, presetTemplate.drones.repair)
 		end
 		local deployCapacity = C.GetMacroDeployableCapacity(menu.macro)
 		if deployCapacity > 0 then
-			upgradeplan.deployable.eq_arg_satellite_02_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.advsatellite)
-			upgradeplan.deployable.eq_arg_satellite_01_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.satellite)
-			upgradeplan.deployable.env_deco_nav_beacon_t1_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.navbeacon)
-			upgradeplan.deployable.eq_arg_resourceprobe_01_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.resprobe)
-			upgradeplan.deployable.ship_gen_xs_lasertower_01_a_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.lastower1)
-			upgradeplan.deployable.ship_gen_s_lasertower_01_a_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.lastower2)
-			upgradeplan.deployable.weapon_gen_mine_03_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.ffmine)
-			upgradeplan.deployable.weapon_gen_mine_01_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.mine)
-			upgradeplan.deployable.weapon_gen_mine_02_macro = L.getProportionateCount(deployCapacity, presetTemplate.deployables.trackmine)
+			upgradeplan.deployable.eq_arg_satellite_02_macro = RKN_Configio.getProportionateCount(deployCapacity, presetTemplate.deployables.advsatellite)
+			upgradeplan.deployable.eq_arg_satellite_01_macro = RKN_Configio.getProportionateCount(deployCapacity, presetTemplate.deployables.satellite)
+			upgradeplan.deployable.env_deco_nav_beacon_t1_macro = RKN_Configio.getProportionateCount(deployCapacity, presetTemplate.deployables.navbeacon)
+			upgradeplan.deployable.eq_arg_resourceprobe_01_macro = RKN_Configio.getProportionateCount(deployCapacity, presetTemplate.deployables.resprobe)
+			upgradeplan.deployable.ship_gen_xs_lasertower_01_a_macro = RKN_Configio.getProportionateCount(deployCapacity, presetTemplate.deployables.lastower1)
+			upgradeplan.deployable.ship_gen_s_lasertower_01_a_macro = RKN_Configio.getProportionateCount(deployCapacity, presetTemplate.deployables.lastower2)
+			upgradeplan.deployable.weapon_gen_mine_03_macro = RKN_Configio.getProportionateCount(deployCapacity, presetTemplate.deployables.ffmine)
+			upgradeplan.deployable.weapon_gen_mine_01_macro = RKN_Configio.getProportionateCount(deployCapacity, presetTemplate.deployables.mine)
+			upgradeplan.deployable.weapon_gen_mine_02_macro = RKN_Configio.getProportionateCount(deployCapacity, presetTemplate.deployables.trackmine)
 		end
 		local counterCapacity = C.GetDefaultCountermeasureStorageCapacity(menu.macro)
 		if counterCapacity > 0 then
-			upgradeplan.countermeasure.countermeasure_flares_01_macro = L.getProportionateCount(counterCapacity, presetTemplate.countermeasure.flares)
+			upgradeplan.countermeasure.countermeasure_flares_01_macro = RKN_Configio.getProportionateCount(counterCapacity, presetTemplate.countermeasure.flares)
 		end
 		--C.GetMacroMissileCapacity(currentmacro)
 	end
@@ -653,20 +632,20 @@ function L.generateLoadoutUpgradePlan(menu, presetTemplate)
 	return upgradeplan
 end
 
-function L.getProportionateCount(totalCapacity, preset)
+function RKN_Configio.getProportionateCount(totalCapacity, preset)
 	if not preset then
 		return 0
 	end
 	return math.floor(totalCapacity * (preset / 100))
 end
 
-function L.chooseMacroByRules(menu, possiblemacros, rules)
+function RKN_Configio.chooseMacroByRules(menu, possiblemacros, rules)
 	for _, rule in ipairs(rules) do
 		local macro
 		if rule.type == "exact" then
-			macro = L.chooseMacroByExactRule(possiblemacros, rule)
+			macro = RKN_Configio.chooseMacroByExactRule(possiblemacros, rule)
 		elseif rule.type == "auto" then
-			macro = L.chooseMacroByAutoRule(menu, possiblemacros, rule)
+			macro = RKN_Configio.chooseMacroByAutoRule(menu, possiblemacros, rule)
 		end
 		if macro then
 			return macro
@@ -675,7 +654,7 @@ function L.chooseMacroByRules(menu, possiblemacros, rules)
 	return nil
 end
 
-function L.chooseMacroByExactRule(possiblemacros, rule)
+function RKN_Configio.chooseMacroByExactRule(possiblemacros, rule)
 	if not rule.macro then
 		return nil
 	end
@@ -687,7 +666,7 @@ function L.chooseMacroByExactRule(possiblemacros, rule)
 	return nil
 end
 
-function L.chooseMacroByAutoRule(menu, possiblemacros, rule)
+function RKN_Configio.chooseMacroByAutoRule(menu, possiblemacros, rule)
 	if not rule.race or not rule.value then
 		return nil
 	end
@@ -696,8 +675,8 @@ function L.chooseMacroByAutoRule(menu, possiblemacros, rule)
 	local filteredMacros = {}
 	for _, macro in ipairs(possiblemacros) do
 		local macroRaces, ware = GetMacroData(macro, "makerraceid", "ware")
-		if rule.race == "any" or Utils.ArrayIndexOf(macroRaces, rule.race) then
-			if L.params.settingKey == config.shipLoadoutKey then
+		if rule.race == "any" or RKN_Configio_Utils.ArrayIndexOf(macroRaces, rule.race) then
+			if RKN_Configio.params.settingKey == RKN_Configio.config.shipLoadoutKey then
 				local tradelicence = GetWareData(ware, "tradelicence")
 				if menu.isplayerowned or (not tradelicence) or tradelicence == "" or HasLicence("player", tradelicence, menu.containerowner) then
 					table.insert(filteredMacros, { macro = macro })
@@ -734,8 +713,8 @@ end
 
 -- Created by Eliptus
 -- Edited and integrated by Runekn
-function L.addPartialFlag(loadouts)
-	if L.getLoadSettings().item_load_partial then
+function RKN_Configio.addPartialFlag(loadouts)
+	if RKN_Configio.getLoadSettings().item_load_partial then
 		for _, loadout in ipairs(loadouts) do
 			if not loadout.active then
 				loadout.name = loadout.name
@@ -749,7 +728,7 @@ end
 
 -- Created by Eliptus
 -- Edited and integrated by Runekn
-function L.trimPartialLoadout(currentUpgradePlan, upgradeplan, upgradewares, isShipyard)
+function RKN_Configio.trimPartialLoadout(currentUpgradePlan, upgradeplan, upgradewares, isShipyard)
 	for type,plan in pairs(upgradeplan) do
 		local spec = Helper.findUpgradeType(type)
 		local wares = upgradewares[type]
@@ -768,7 +747,7 @@ function L.trimPartialLoadout(currentUpgradePlan, upgradeplan, upgradewares, isS
 			-- plan[slot]['macro'] = macro
 			for slot,info in pairs(plan) do
 				local alreadyBuilt = currentUpgradePlan[type][slot].macro == info.macro
-				local buildable = Utils.Any(wares, function(v, _) return v.macro == info.macro and (v.isFromShipyard or not isShipyard) end)
+				local buildable = RKN_Configio_Utils.Any(wares, function(v, _) return v.macro == info.macro and (v.isFromShipyard or not isShipyard) end)
 				if not buildable then
 					if alreadyBuilt then
 						info.count = currentUpgradePlan[type][slot].count
@@ -785,7 +764,7 @@ function L.trimPartialLoadout(currentUpgradePlan, upgradeplan, upgradewares, isS
 			local missile = type == "missile" -- Don't preserve existing missiles that cannot be built at this shipyard. This is due to left bar sliders setting max value to 0 and thus crashing UI
 			-- plan[macro] = count
 			for macro,_ in pairs(plan) do
-				if not Utils.Any(wares, function(v, _) return v.macro == macro and (v.isFromShipyard or not missile) end) then
+				if not RKN_Configio_Utils.Any(wares, function(v, _) return v.macro == macro and (v.isFromShipyard or not missile) end) then
 					plan[macro] = 0
 				end
 			end
@@ -793,7 +772,7 @@ function L.trimPartialLoadout(currentUpgradePlan, upgradeplan, upgradewares, isS
 		elseif spec.supertype == 'software' then
 			-- plan[slot] = ware
 			for slot,ware in pairs(plan) do
-				if not Utils.Any(wares, function(v, _) return v.ware == ware end) then
+				if not RKN_Configio_Utils.Any(wares, function(v, _) return v.ware == ware end) then
 					plan[slot] = ''
 				end
 			end
@@ -802,7 +781,7 @@ function L.trimPartialLoadout(currentUpgradePlan, upgradeplan, upgradewares, isS
 	end
 end
 
-function L.createShipOptions(menu)
+function RKN_Configio.createShipOptions(menu)
 	local shipOptions = {}
 	for _, shipmacros in pairs(menu.availableshipmacrosbyclass) do
 		for _, macro in ipairs(shipmacros) do
@@ -844,7 +823,7 @@ function L.createShipOptions(menu)
 	return shipOptions
 end
 
-function L.getShipPurposes(shipOptions)
+function RKN_Configio.getShipPurposes(shipOptions)
 	local purposes = {}
 	for _, ship in ipairs(shipOptions) do
 		if not purposes[ship.purpose] then
@@ -856,9 +835,9 @@ function L.getShipPurposes(shipOptions)
 	return purposes
 end
 
-function L.getShipRaces(shipOptions)
+function RKN_Configio.getShipRaces(shipOptions)
 	local races = {}
-	local raceNameMap = L.getRaceNameMap()
+	local raceNameMap = RKN_Configio.getRaceNameMap()
 	for _, ship in ipairs(shipOptions) do
 		for _, race in ipairs(ship.races) do
 			if not races[race] then
@@ -879,7 +858,7 @@ function L.getShipRaces(shipOptions)
 	return races
 end
 
-function L.clearFilterIfNotAvailable(filter, options)
+function RKN_Configio.clearFilterIfNotAvailable(filter, options)
 	if not filter then
 		return
 	end
@@ -897,19 +876,19 @@ function L.clearFilterIfNotAvailable(filter, options)
 	end
 end
 
-function L.sortShips(a, b, o)
+function RKN_Configio.sortShips(a, b, o)
 	if o == "default" then
 		return Helper.sortShipsByClassAndPurpose(a.item, b.item)
 	elseif o == "type" then
-		return L.compareShipType(a,b)
+		return RKN_Configio.compareShipType(a,b)
 	end
-	return L.compareItemNames(a,b)
+	return RKN_Configio.compareItemNames(a,b)
 end
 
-function L.renameStationLoadout(menu, item, newName)
+function RKN_Configio.renameStationLoadout(menu, item, newName)
 	if item.customPreset then
 		item.customPreset.name = newName
-		L.saveAutoPreset(item.customPreset, item.customPreset.id)
+		RKN_Configio.saveAutoPreset(item.customPreset, item.customPreset.id)
 	else
 		local loadout = Helper.getLoadoutHelper(C.GetLoadout, C.GetLoadoutCounts, 0, menu.loadoutModule.macro, item.id)
 		C.SaveLoadout(menu.loadoutModule.macro, loadout, "local", "player", false, newName, "") -- overwrite does not update the name. Have to create brand new.
@@ -918,10 +897,10 @@ function L.renameStationLoadout(menu, item, newName)
 	end
 end
 
-function L.renameShipLoadout(menu, item, newName)
+function RKN_Configio.renameShipLoadout(menu, item, newName)
 	if item.customPreset then
 		item.customPreset.name = newName
-		L.saveAutoPreset(item.customPreset, item.customPreset.id)
+		RKN_Configio.saveAutoPreset(item.customPreset, item.customPreset.id)
 	else
 		local loadout = Helper.getLoadoutHelper2(C.GetLoadout2, C.GetLoadoutCounts2, "UILoadout2", menu.object, menu.macro, item.id)
 		local macro = (menu.macro ~= "") and menu.macro or GetComponentData(ConvertStringToLuaID(tostring(menu.object)), "macro")
@@ -931,18 +910,16 @@ function L.renameShipLoadout(menu, item, newName)
 	end
 end
 
-function L.compareItemNames(a, b)
+function RKN_Configio.compareItemNames(a, b)
 	return a.name:lower() < b.name:lower()
 end
 
-function L.compareShipType(a, b)
+function RKN_Configio.compareShipType(a, b)
 	if a.item.shiptypename == b.item.shiptypename then
 		if a.item.class == b.item.class then
-			return L.compareItemNames(a,b)
+			return RKN_Configio.compareItemNames(a,b)
 		end
-		return config.shipSizeOrder[a.item.class] < config.shipSizeOrder[b.item.class]
+		return RKN_Configio.config.shipSizeOrder[a.item.class] < RKN_Configio.config.shipSizeOrder[b.item.class]
 	end
 	return a.item.shiptypename < b.item.shiptypename
 end
-
-return L

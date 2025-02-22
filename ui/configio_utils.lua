@@ -1,10 +1,10 @@
-Util = {}
+RKN_Configio_Utils = {}
 
-function Util.EscapeGmatch(s)
+function RKN_Configio_Utils.EscapeGmatch(s)
     return (s:gsub('[%-%.%+%[%]%(%)%$%^%%%?%*]','%%%1'))
 end
 
-function Util.ArrayRemove(t, fnKeep)
+function RKN_Configio_Utils.ArrayRemove(t, fnKeep)
     local j, n = 1, #t;
 
     for i=1,n do
@@ -23,7 +23,7 @@ function Util.ArrayRemove(t, fnKeep)
     return t;
 end
 
-function Util.ShallowCopy(orig)
+function RKN_Configio_Utils.ShallowCopy(orig)
     local orig_type = type(orig)
     local copy
     if orig_type == 'table' then
@@ -37,28 +37,28 @@ function Util.ShallowCopy(orig)
     return copy
 end
 
-function Util.DeepCopy(orig)
+function RKN_Configio_Utils.DeepCopy(orig)
     local orig_type = type(orig)
     local copy
     if orig_type == 'table' then
         copy = {}
         for orig_key, orig_value in next, orig, nil do
-            copy[Util.DeepCopy(orig_key)] = Util.DeepCopy(orig_value)
+            copy[RKN_Configio_Utils.DeepCopy(orig_key)] = RKN_Configio_Utils.DeepCopy(orig_value)
         end
-        setmetatable(copy, Util.DeepCopy(getmetatable(orig)))
+        setmetatable(copy, RKN_Configio_Utils.DeepCopy(getmetatable(orig)))
     else -- number, string, boolean, etc
         copy = orig
     end
     return copy
 end
 
-function Util.AddFixedEmptyRow(table, height)
+function RKN_Configio_Utils.AddFixedEmptyRow(table, height)
     local row = table:addRow(nil, { fixed = true })
 	row[1]:createText(" ", { fontsize = 1, minRowHeight = height })
 end
 
 
-function Util.ArrayIndexOf(arr, v)
+function RKN_Configio_Utils.ArrayIndexOf(arr, v)
 	if not arr then
 		return nil
 	end
@@ -71,7 +71,7 @@ function Util.ArrayIndexOf(arr, v)
 end
 
 -- For debugging --
-function Util.SerializeTable(val, name, skipnewlines, depth)
+function RKN_Configio_Utils.SerializeTable(val, name, skipnewlines, depth)
     skipnewlines = skipnewlines or false
     depth = depth or 0
 
@@ -83,7 +83,7 @@ function Util.SerializeTable(val, name, skipnewlines, depth)
         tmp = tmp .. "{" .. (not skipnewlines and "\n" or "")
 
         for k, v in pairs(val) do
-            tmp =  tmp .. Util.SerializeTable(v, k, skipnewlines, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
+            tmp =  tmp .. RKN_Configio_Utils.SerializeTable(v, k, skipnewlines, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
         end
 
         tmp = tmp .. string.rep(" ", depth) .. "}"
@@ -100,22 +100,22 @@ function Util.SerializeTable(val, name, skipnewlines, depth)
     return tmp
 end
 
-function Util.DebugSplit(s)
+function RKN_Configio_Utils.DebugSplit(s)
 	if s:len() > 8192 then
 		local a = s:sub(1, 8192)
 		local b = s:sub(8192)
 		DebugError(a)
-		Util.DebugSplit(b)
+		RKN_Configio_Utils.DebugSplit(b)
 	else
 		DebugError(s)
 	end
 end
 
-function Util.Any(table, f)
-	return Util.First(table, f) ~= nil
+function RKN_Configio_Utils.Any(table, f)
+	return RKN_Configio_Utils.First(table, f) ~= nil
 end
 
-function Util.First(tbl, f)
+function RKN_Configio_Utils.First(tbl, f)
 	for k,v in pairs(tbl) do
 		if f(v, k) then
 			return {k, v}
@@ -123,5 +123,3 @@ function Util.First(tbl, f)
 	end
 	return nil
 end
-
-return Util
