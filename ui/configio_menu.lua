@@ -2,8 +2,8 @@
 local ffi = require("ffi")
 local C = ffi.C
 
-local L = require("extensions.rkn_configio.configio_lib")
-local Utils = require("extensions.rkn_configio.utils")
+local L = require("extensions.rkn_configio.ui.configio_lib")
+local Utils = require("extensions.rkn_configio.ui.utils")
 
 local config = {
 	textId = 1811143915,

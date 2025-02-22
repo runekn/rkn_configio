@@ -2,7 +2,7 @@
 local ffi = require("ffi")
 local C = ffi.C
 
-local Utils = require("extensions.rkn_configio.utils")
+local Utils = require("extensions.rkn_configio.ui.utils")
 
 local L = {}
 

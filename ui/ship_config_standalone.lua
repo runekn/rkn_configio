@@ -4,9 +4,9 @@
 local ffi = require("ffi")
 local C = ffi.C
 
-local Lib = require("extensions.sn_mod_support_apis.lua_library")
-local ConfigioLib = require("extensions.rkn_configio.configio_menu")
-local Utils = require("extensions.rkn_configio.utils")
+--local Lib = require("extensions.sn_mod_support_apis.lua_library")
+local ConfigioLib = require("extensions.rkn_configio.ui.configio_menu")
+local Utils = require("extensions.rkn_configio.ui.utils")
 
 local rkn_menu = {}
 local menu = {}
@@ -28,7 +28,7 @@ local config = {
 }
 
 local function init()
-	menu = Lib.Get_Egosoft_Menu("ShipConfigurationMenu")
+	menu = Helper.getMenu("ShipConfigurationMenu")
 	menu.createTitleBar = rkn_menu.createTitleBar
 	menu.onRowChanged = rkn_menu.onRowChanged
 	menu.onSelectElement = rkn_menu.onSelectElement

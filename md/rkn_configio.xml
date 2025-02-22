@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <mdscript name="rkn_configio" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
 	<cues>
-		<cue name="OnLuaLoaderReady">
+		<!--<cue name="OnLuaLoaderReady">
 			<conditions>
 				<event_ui_triggered screen="'Lua_Loader'" control="'Ready'" />
 			</conditions>
@@ -17,7 +17,7 @@
 				<reset_cue cue="OnLuaLoaderReady" />
 				<reset_cue cue="this" />
 			</actions>
-		</cue>
+		</cue>-->
 
 		<cue name="StartSMO" instantiate="true">
 			<conditions>

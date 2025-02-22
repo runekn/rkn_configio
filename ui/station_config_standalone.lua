@@ -4,8 +4,8 @@
 local ffi = require("ffi")
 local C = ffi.C
 
-local Lib = require("extensions.sn_mod_support_apis.lua_library")
-local ConfigioLib = require("extensions.rkn_configio.configio_menu")
+--local Lib = require("extensions.sn_mod_support_apis.lua_library")
+local ConfigioLib = require("extensions.rkn_configio.ui.configio_menu")
 
 local rkn_menu = {}
 local menu = {}
@@ -23,7 +23,7 @@ local config = {
 }
 
 local function init()
-	menu = Lib.Get_Egosoft_Menu("StationConfigurationMenu")
+	menu = Helper.getMenu("StationConfigurationMenu")
 	menu.createTitleBar = rkn_menu.createTitleBar
 	menu.refreshTitleBar = rkn_menu.refreshTitleBar
 	menu.onRowChanged = rkn_menu.onRowChanged
