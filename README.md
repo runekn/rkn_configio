@@ -85,6 +85,7 @@ Does not support resolutions lower than 1920x1080
 
 ## Updates
 
+* 1.4.7: Use new official lua declaration to avoid requiring disabled UI protection mode
 * 1.4.6: Fix 7.5 compatibility. Add "Type" ship sorting option.
 * 1.4.5: Add production modules to station plan mouse-over text
 * 1.4.4: Ignore case when sorting by name
