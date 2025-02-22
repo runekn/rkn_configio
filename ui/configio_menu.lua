@@ -2,120 +2,19 @@
 local ffi = require("ffi")
 local C = ffi.C
 
-local L = require("extensions.rkn_configio.ui.configio_lib")
-local Utils = require("extensions.rkn_configio.ui.utils")
-
-local config = {
-	textId = 1811143915,
-	stationKey = "station",
-	stationLoadoutKey = "station_loadout",
-	shipKey = "ship",
-	shipLoadoutKey = "ship_loadout",
-	folderIdFormat = "rkn_configio.folder.%s.%s",
-	settingsBlackboardId = "$RKN_ConfigioSettings",
-	autoPresetsBlackboardId = "$RKN_ConfigioAutoPresets",
-	loadWidthMultiplier = 0.85,
-	maxFolders = 6,
-	standardListColumnWidth = Helper.scaleY(Helper.standardTextHeight),
-	shipNotOwnedColor = { r = 100, g = 100, b = 100, a = 100 }, -- dark grey
-	stationLoadHeight = 0.5 * Helper.viewHeight,
-	stationLoadoutLoadHeight = 0.35 * Helper.viewHeight,
-	shipLoadHeight = 0.4 * Helper.viewHeight,
-	loadSettingsWidth = Helper.scaleX(300),
-	settingsBrowserSeparation = Helper.borderSize * 10,
-	loadButtonTextProperties = {
-		halign = "center",
-		font = Helper.standardFont,
-		fontsize = Helper.scaleFont(Helper.standardFont, Helper.standardFontSize),
-	},
-	browserHeaderTextProperties = {
-		font = Helper.headerRow1Font,
-		fontsize = Helper.headerRow1FontSize,
-		x = Helper.headerRow1Offsetx,
-		y = math.floor((Helper.headerRow1Height * 1.5 - Helper.headerRow1Height) / 2 + Helper.headerRow1Offsety),
-		height = Helper.headerRow1Height * 1.5,
-		halign = "center",
-		cellBGColor = Color["row_background"],
-		titleColor = Color["row_title"],
-	},
-	buttonRowTextProperties = {
-		fontsize = Helper.standardFontSize * 1.2,
-		halign = "center"
-	},
-	folderTextProperties = {
-		font = Helper.titleFont,
-		fontsize = Helper.standardFontSize,
-		height = Helper.subHeaderHeight,
-		cellBGColor = Color["row_background"],
-		titleColor = { r = 128, g = 128, b = 128, a = 100 }
-	},
-	itemTextProperties = {
-		height = math.floor(Helper.standardTextHeight + Helper.scaleY(1) * 2),
-		y = math.floor(Helper.scaleY(1)),
-	},
-	inactiveColor = { r = 128, g = 128, b = 128, a = 100 }, -- dark gray
-	autoPresetColor = { r = 225, g = 225, b = 0, a = 100 }, -- yellow
-	partialPresetColor = { r = 255, g = 100, b = 0, a = 100 }, -- orange
-	stationPlanMissingBlueprintsColor = { r = 255, g = 25, b = 25, a = 100 }, -- red
-	settingSwitchActiveTextProperties = {
-		font = Helper.standardFontBold,
-		color = { r = 100, g = 225, b = 0, a = 100 }, -- green
-		halign = "center"
-	},
-	settingSwitchInActiveTextProperties = {
-		color = { r = 192, g = 192, b = 192, a = 100 }, -- light grey
-		halign = "center"
-	},
-	shipSortOptions = {
-		{ id = "default", text = ReadText(1811143915, 92), displayremoveoption = false, icon = "" },
-		{ id = "name", text = ReadText(1811143915, 91), displayremoveoption = false, icon = "" },
-		{ id = "type", text = ReadText(1811143915, 105), displayremoveoption = false, icon = "" }
-	},
-	defaultSortOptions = {
-		{ id = "name", text = ReadText(1811143915, 91), displayremoveoption = false, icon = "" }
-	},
-	valueOptions = {
-		{ id = "low", text = ReadText(1811143915, 71), icon = "", displayremoveoption = false },
-		{ id = "medium", text = ReadText(1811143915, 72), icon = "", displayremoveoption = false },
-		{ id = "high", text = ReadText(1811143915, 73), icon = "", displayremoveoption = false }
-	},
-	dockingComputerOptions = {
-		{ id = "none", text = "None", icon = "", displayremoveoption = false },
-		{ id = "software_dockmk1", text = "Mk1", icon = "", displayremoveoption = false },
-		{ id = "software_dockmk2", text = "Mk2", icon = "", displayremoveoption = false }
-	},
-	longRangeScannerOptions = {
-		{ id = "software_scannerlongrangemk1", text = "Mk1", icon = "", displayremoveoption = false },
-		{ id = "software_scannerlongrangemk2", text = "Mk2", icon = "", displayremoveoption = false }
-	},
-	objectScannerOptions = {
-		{ id = "software_scannerobjectmk1", text = "Basic", icon = "", displayremoveoption = false },
-		{ id = "software_scannerobjectmk2", text = "Police", icon = "", displayremoveoption = false }
-	},
-	targetingComputerOptions = {
-		{ id = "none", text = "None", icon = "", displayremoveoption = false },
-		{ id = "software_targetmk1", text = "Mk1", icon = "", displayremoveoption = false }
-	},
-	tradingComputerOptions = {
-		{ id = "none", text = "None", icon = "", displayremoveoption = false },
-		{ id = "software_trademk1", text = "Mk1", icon = "", displayremoveoption = false }
-	}
-}
-
-
 local function init()
-	L.params = {}
+	RKN_Configio.params = {}
 
 	-- Set settings for extension options menu on game start --
-	L.getLoadSettings(1)
-	SetNPCBlackboard(L.getPlayerId(), config.settingsBlackboardId, L.settings)
+	RKN_Configio.getLoadSettings(1)
+	SetNPCBlackboard(RKN_Configio.getPlayerId(), RKN_Configio.config.settingsBlackboardId, RKN_Configio.settings)
 end
 
 
-function L.createStationTitleBarButton(row, menu, sc_config, loadOptions)
-	if L.isModEnabledForType(config.stationKey) then
-		row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(config.textId, 1), config.loadButtonTextProperties)
-		row[2].handlers.onClick = function() L.buttonStationTitleLoad(menu, sc_config.contextLayer) end
+function RKN_Configio.createStationTitleBarButton(row, menu, sc_config, loadOptions)
+	if RKN_Configio.isModEnabledForType(RKN_Configio.config.stationKey) then
+		row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(RKN_Configio.config.textId, 1), RKN_Configio.config.loadButtonTextProperties)
+		row[2].handlers.onClick = function() RKN_Configio.buttonStationTitleLoad(menu, sc_config.contextLayer) end
 	else
 		row[2]:createDropDown(loadOptions, { textOverride = ReadText(1001, 7904), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize }):setTextProperties(sc_config.dropDownTextProperties)
 		row[2].handlers.onDropDownActivated = function () menu.noupdate = true end
@@ -124,18 +23,18 @@ function L.createStationTitleBarButton(row, menu, sc_config, loadOptions)
 	end
 end
 
-function L.createRefreshStationTitleBarButton(menu, text, loadOptions)
+function RKN_Configio.createRefreshStationTitleBarButton(menu, text, loadOptions)
 	-- No need for refreshing if enabled --
-	if not L.isModEnabledForType(config.stationKey) then
+	if not RKN_Configio.isModEnabledForType(RKN_Configio.config.stationKey) then
 		local desc = Helper.createDropDown(loadOptions, "", text, nil, true, true, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize)
 		Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, function () menu.noupdate = true end, menu.dropdownLoad, menu.dropdownRemovedCP)
 	end
 end
 
-function L.createStationLoadoutTitleBarButton(row, menu, sc_config, loadoutOptions)
-	if L.isModEnabledForType(config.stationLoadoutKey) then
-		row[2]:setColSpan(6):createButton({ helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(config.textId, 22), config.loadButtonTextProperties)
-		row[2].handlers.onClick = function() L.buttonStationLoadoutTitleLoad(menu, sc_config.contextLayer) end
+function RKN_Configio.createStationLoadoutTitleBarButton(row, menu, sc_config, loadoutOptions)
+	if RKN_Configio.isModEnabledForType(RKN_Configio.config.stationLoadoutKey) then
+		row[2]:setColSpan(6):createButton({ helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(RKN_Configio.config.textId, 22), RKN_Configio.config.loadButtonTextProperties)
+		row[2].handlers.onClick = function() RKN_Configio.buttonStationLoadoutTitleLoad(menu, sc_config.contextLayer) end
 	else
 		row[2]:setColSpan(6):createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), optionWidth = menu.titleData.dropdownWidth + 6 * (menu.titleData.height + Helper.borderSize) }):setTextProperties(sc_config.dropDownTextProperties)
 		row[2].handlers.onDropDownConfirmed = menu.dropdownLoadout
@@ -143,19 +42,19 @@ function L.createStationLoadoutTitleBarButton(row, menu, sc_config, loadoutOptio
 	end
 end
 
-function L.createRefreshStationLoadoutTitleBarButton(menu, text, loadoutOptions)
+function RKN_Configio.createRefreshStationLoadoutTitleBarButton(menu, text, loadoutOptions)
 	-- No need for refreshing if enabled --
-	if not L.isModEnabledForType(config.stationKey) then
+	if not RKN_Configio.isModEnabledForType(RKN_Configio.config.stationKey) then
 		local desc = Helper.createDropDown(loadoutOptions, "", text, nil, true, next(menu.loadouts) ~= nil, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + 4 * (menu.titleData.height + Helper.borderSize))
 		Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, nil, menu.dropdownLoadout, menu.dropdownRemovedLoadout)
 	end
 end
 
-function L.createShipTitleBarButton(row, menu, sc_config, classOptions, shipOptions, curShipOption)
-	if L.isModEnabledForType(config.shipKey) and menu.mode ~= "upgrade" then
-		local shipOptions = L.createShipOptions(menu)
+function RKN_Configio.createShipTitleBarButton(row, menu, sc_config, classOptions, shipOptions, curShipOption)
+	if RKN_Configio.isModEnabledForType(RKN_Configio.config.shipKey) and menu.mode ~= "upgrade" then
+		local shipOptions = RKN_Configio.createShipOptions(menu)
 		local dropdownDummy = { properties = { text = { }, icon = {} } }
-		local text = ReadText(config.textId, 30)
+		local text = ReadText(RKN_Configio.config.textId, 30)
 		local mouseOverText = ""
 		if menu.macro and menu.macro ~= "" then
 			for _,o in ipairs(shipOptions) do
@@ -170,8 +69,8 @@ function L.createShipTitleBarButton(row, menu, sc_config, classOptions, shipOpti
 			local haslicence, icon, overridecolor, mouseovertext = menu.checkLicence(menu.macro, true)
 			text = Helper.convertColorToText(overridecolor) .. text
 		end
-		row[1]:setColSpan(2):createButton({ active = not menu.isReadOnly, height = menu.titleData.height, mouseOverText = mouseOverText }):setText(text, config.loadButtonTextProperties)
-		row[1].handlers.onClick = function() L.buttonShipTitleLoad(menu, classOptions, shipOptions, sc_config.contextLayer) end
+		row[1]:setColSpan(2):createButton({ active = not menu.isReadOnly, height = menu.titleData.height, mouseOverText = mouseOverText }):setText(text, RKN_Configio.config.loadButtonTextProperties)
+		row[1].handlers.onClick = function() RKN_Configio.buttonShipTitleLoad(menu, classOptions, shipOptions, sc_config.contextLayer) end
 		return dropdownDummy
 	else
 		-- class
@@ -192,10 +91,10 @@ function L.createShipTitleBarButton(row, menu, sc_config, classOptions, shipOpti
 	end
 end
 
-function L.createShipLoadoutTitleBarButton(row, menu, sc_config, active, loadoutOptions)
-	if L.isModEnabledForType(config.shipLoadoutKey) then
-		row[3]:createButton({ active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), height = menu.titleData.height, width = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setText(ReadText(1001, 7905), config.loadButtonTextProperties)
-		row[3].handlers.onClick = function() L.buttonShipLoadoutTitleLoad(menu, sc_config.contextLayer) end
+function RKN_Configio.createShipLoadoutTitleBarButton(row, menu, sc_config, active, loadoutOptions)
+	if RKN_Configio.isModEnabledForType(RKN_Configio.config.shipLoadoutKey) then
+		row[3]:createButton({ active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), height = menu.titleData.height, width = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setText(ReadText(1001, 7905), RKN_Configio.config.loadButtonTextProperties)
+		row[3].handlers.onClick = function() RKN_Configio.buttonShipLoadoutTitleLoad(menu, sc_config.contextLayer) end
 	else
 		row[3]:createDropDown(loadoutOptions, { textOverride = ReadText(1001, 7905), active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")) and (next(menu.loadouts) ~= nil), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize, optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, mouseOverText = (menu.mode == "customgamestart") and (ColorText["text_warning"] .. ReadText(1026, 8022)) or "" }):setTextProperties(sc_config.dropDownTextProperties)
 		row[3].handlers.onDropDownConfirmed = menu.dropdownLoadout
@@ -203,42 +102,42 @@ function L.createShipLoadoutTitleBarButton(row, menu, sc_config, active, loadout
 	end
 end
 
-function L.isModEnabledForType(type)
-	L.settings = nil -- Detect changes from extension options menu
-	return L.getLoadSettings(type).enabled
+function RKN_Configio.isModEnabledForType(type)
+	RKN_Configio.settings = nil -- Detect changes from extension options menu
+	return RKN_Configio.getLoadSettings(type).enabled
 end
 
-function L.buttonStationTitleLoad(menu, contextLayer)
+function RKN_Configio.buttonStationTitleLoad(menu, contextLayer)
 	if menu.contextMode and (menu.contextMode.mode == "loadCP") then
 		menu.closeContextMenu()
 	else
-		menu.displayContextFrame("loadCP", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
-		L.params = {
-			settingKey = config.stationKey,
+		menu.displayContextFrame("loadCP", menu.titleData.width * RKN_Configio.config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - RKN_Configio.config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		RKN_Configio.params = {
+			settingKey = RKN_Configio.config.stationKey,
 			x = menu.contextMode.x,
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
-			height = config.stationLoadHeight,
-			itemsList = function() return L.addStationPlanMouseover(Utils.DeepCopy(menu.constructionplans)) end,
-			header = ReadText(config.textId, 2),
-			optionItemNameText = ReadText(config.textId, 9),
+			height = RKN_Configio.config.stationLoadHeight,
+			itemsList = function() return RKN_Configio.addStationPlanMouseover(RKN_Configio_Utils.DeepCopy(menu.constructionplans)) end,
+			header = ReadText(RKN_Configio.config.textId, 2),
+			optionItemNameText = ReadText(RKN_Configio.config.textId, 9),
 			onSelection = function(item) menu.dropdownLoad(nil, item.id) end,
 			onDeletion = function(item)
-				L.buttonDeleteCP(menu, item.id)
+				RKN_Configio.buttonDeleteCP(menu, item.id)
 			end,
-			listColumnWidth = config.standardListColumnWidth,
-			listItemCreator = L.createCommonListItem,
-			maxFolders = config.maxFolders,
-			itemFilter = L.filterItemByModules,
+			listColumnWidth = RKN_Configio.config.standardListColumnWidth,
+			listItemCreator = RKN_Configio.createCommonListItem,
+			maxFolders = RKN_Configio.config.maxFolders,
+			itemFilter = RKN_Configio.filterItemByModules,
 			contextLayer = contextLayer,
 			closeContextMenu = menu.closeContextMenu,
 			contextMode = menu.contextMode,
 			setContextFrame = function(f) menu.contextFrame = f end,
 			menu = menu,
 			isItemActive = function(item) return item.active end,
-			frameModules = { L.createSettings, L.createSearchField, L.createCPModulesFilter },
-			sortItems = L.compareItemNames,
-			sortOptions = config.defaultSortOptions,
+			frameModules = { RKN_Configio.createSettings, RKN_Configio.createSearchField, RKN_Configio.createCPModulesFilter },
+			sortItems = RKN_Configio.compareItemNames,
+			sortOptions = RKN_Configio.config.defaultSortOptions,
 			sortDefault = "name",
 			onSave = function(name, overwrite)
 				menu.currentCPName = name
@@ -246,37 +145,37 @@ function L.buttonStationTitleLoad(menu, contextLayer)
 			end,
 			isItemSavable = function(item) return true end
 		}
-		L.autoSelectSearch = true
-		L.contextModule = nil
-		L.createLoadContext()
+		RKN_Configio.autoSelectSearch = true
+		RKN_Configio.contextModule = nil
+		RKN_Configio.createLoadContext()
 	end
 end
 
-function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
+function RKN_Configio.buttonStationLoadoutTitleLoad(menu, contextLayer)
 	if menu.contextMode and (menu.contextMode.mode == "loadCL") then
 		menu.closeContextMenu()
 	else
-		menu.displayContextFrame("loadCL", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
-		L.params = {
-			settingKey = config.stationLoadoutKey,
+		menu.displayContextFrame("loadCL", menu.titleData.width * RKN_Configio.config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - RKN_Configio.config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		RKN_Configio.params = {
+			settingKey = RKN_Configio.config.stationLoadoutKey,
 			x = menu.contextMode.x,
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
-			height = config.stationLoadoutLoadHeight,
-			itemsList = function() return L.addPartialFlag(L.addCustomAutoPresets(config.stationLoadoutKey, Utils.DeepCopy(menu.loadouts))) end,
-			header = ReadText(config.textId, 22),
-			optionItemNameText = ReadText(config.textId, 24),
+			height = RKN_Configio.config.stationLoadoutLoadHeight,
+			itemsList = function() return RKN_Configio.addPartialFlag(RKN_Configio.addCustomAutoPresets(RKN_Configio.config.stationLoadoutKey, RKN_Configio_Utils.DeepCopy(menu.loadouts))) end,
+			header = ReadText(RKN_Configio.config.textId, 22),
+			optionItemNameText = ReadText(RKN_Configio.config.textId, 24),
 			onSelection = function(item)
 				menu.closeContextMenu()
-				L.onStationLoadoutLoad(menu, item)
+				RKN_Configio.onStationLoadoutLoad(menu, item)
 			end,
 			onDeletion = function(item)
 				menu.closeContextMenu()
-				L.onLoadoutRemoved(menu.dropdownRemovedLoadout, item)
+				RKN_Configio.onLoadoutRemoved(menu.dropdownRemovedLoadout, item)
 			end,
-			listColumnWidth = config.standardListColumnWidth,
-			listItemCreator = L.createCommonListItem,
-			maxFolders = config.maxFolders,
+			listColumnWidth = RKN_Configio.config.standardListColumnWidth,
+			listItemCreator = RKN_Configio.createCommonListItem,
+			maxFolders = RKN_Configio.config.maxFolders,
 			contextLayer = contextLayer,
 			closeContextMenu = menu.closeContextMenu,
 			contextMode = menu.contextMode,
@@ -287,23 +186,23 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 			isItemActive = function(item) return item.active or (item.preset and true or false) end,
 			getItemColor = function(item)
 				if item.item.preset or item.item.customPreset then
-					return config.autoPresetColor
+					return RKN_Configio.config.autoPresetColor
 				elseif item.item.partial then
-					return config.partialPresetColor
+					return RKN_Configio.config.partialPresetColor
 				end
 				return nil
 			end,
-			onOpenPresetEditor = function() L.buttonStationLoadoutTitleAutoPresets(menu, contextLayer) end,
+			onOpenPresetEditor = function() RKN_Configio.buttonStationLoadoutTitleAutoPresets(menu, contextLayer) end,
 			frameModules = {
-				L.createSettings,
-				L.createSearchField,
-				function(s) L.createAutoPresetEditorButtons(s) end
+				RKN_Configio.createSettings,
+				RKN_Configio.createSearchField,
+				function(s) RKN_Configio.createAutoPresetEditorButtons(s) end
 			},
-			sortItems = L.compareItemNames,
-			sortOptions = config.defaultSortOptions,
+			sortItems = RKN_Configio.compareItemNames,
+			sortOptions = RKN_Configio.config.defaultSortOptions,
 			sortDefault = "name",
 			isItemRenamable = function(item) return not item.preset end,
-			onRename = function(item, newName) L.renameStationLoadout(menu, item, newName) end,
+			onRename = function(item, newName) RKN_Configio.renameStationLoadout(menu, item, newName) end,
 			onSave = function(name, overwrite)
 				menu.loadoutName = name
 				menu.loadout = nil
@@ -312,81 +211,81 @@ function L.buttonStationLoadoutTitleLoad(menu, contextLayer)
 			end,
 			isItemSavable = function(item) return (not item.preset) and not item.customPreset end
 		}
-		L.autoSelectSearch = true
-		L.contextModule = nil
-		L.createLoadContext()
+		RKN_Configio.autoSelectSearch = true
+		RKN_Configio.contextModule = nil
+		RKN_Configio.createLoadContext()
 	end
 end
 
-function L.buttonShipTitleLoad(menu, classOptions, shipOptions, contextLayer)
+function RKN_Configio.buttonShipTitleLoad(menu, classOptions, shipOptions, contextLayer)
 	if menu.contextMode and (menu.contextMode.mode == "loadCS") then
 		menu.closeContextMenu()
 	else
-		menu.displayContextFrame("loadCS", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
-		local shipPurposeOptions = L.getShipPurposes(shipOptions)
-		local shipRaceOptions = L.getShipRaces(shipOptions)
-		L.params = {
-			settingKey = config.shipKey,
+		menu.displayContextFrame("loadCS", menu.titleData.width * RKN_Configio.config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - RKN_Configio.config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		local shipPurposeOptions = RKN_Configio.getShipPurposes(shipOptions)
+		local shipRaceOptions = RKN_Configio.getShipRaces(shipOptions)
+		RKN_Configio.params = {
+			settingKey = RKN_Configio.config.shipKey,
 			x = menu.contextMode.x,
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
-			height = config.shipLoadHeight,
+			height = RKN_Configio.config.shipLoadHeight,
 			itemsList = function() return shipOptions end,
-			header = ReadText(config.textId, 30),
+			header = ReadText(RKN_Configio.config.textId, 30),
 			onSelection = function(item)
 				menu.closeContextMenu()
 				menu.prepareModWares()
 				menu.dropdownShip(nil, item.id)
 			end,
 			listColumnWidth = Helper.scaleY(Helper.standardTextHeight) * 1.5,
-			listItemCreator = function(row, column, item) L.createShipListItem(row, column, item, menu.isplayerowned) end,
+			listItemCreator = function(row, column, item) RKN_Configio.createShipListItem(row, column, item, menu.isplayerowned) end,
 			contextLayer = contextLayer,
 			closeContextMenu = menu.closeContextMenu,
 			contextMode = menu.contextMode,
 			setContextFrame = function(f) menu.contextFrame = f end,
 			menu = menu,
-			itemFilter = L.filterShip,
+			itemFilter = RKN_Configio.filterShip,
 			isItemActive = function(_) return true end,
 			getItemColor = function(item) return item.item.overridecolor end,
-			frameModules = { L.createSearchField, function(stable) L.createShipFilters(stable, classOptions, shipPurposeOptions, shipRaceOptions) end },
-			sortItems = L.sortShips,
-			sortOptions = config.shipSortOptions,
+			frameModules = { RKN_Configio.createSearchField, function(stable) RKN_Configio.createShipFilters(stable, classOptions, shipPurposeOptions, shipRaceOptions) end },
+			sortItems = RKN_Configio.sortShips,
+			sortOptions = RKN_Configio.config.shipSortOptions,
 			sortDefault = "default"
 		}
-		L.autoSelectSearch = true
-		L.contextModule = nil
-		L.clearFilterIfNotAvailable(L.getState().filter.sizes, classOptions)
-		L.clearFilterIfNotAvailable(L.getState().filter.purposes, shipPurposeOptions)
-		L.clearFilterIfNotAvailable(L.getState().filter.races, shipRaceOptions)
-		L.createLoadContext()
+		RKN_Configio.autoSelectSearch = true
+		RKN_Configio.contextModule = nil
+		RKN_Configio.clearFilterIfNotAvailable(RKN_Configio.getState().filter.sizes, classOptions)
+		RKN_Configio.clearFilterIfNotAvailable(RKN_Configio.getState().filter.purposes, shipPurposeOptions)
+		RKN_Configio.clearFilterIfNotAvailable(RKN_Configio.getState().filter.races, shipRaceOptions)
+		RKN_Configio.createLoadContext()
 	end
 end
 
-function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
+function RKN_Configio.buttonShipLoadoutTitleLoad(menu, contextLayer)
 	if menu.contextMode and (menu.contextMode.mode == "loadCL") then
 		menu.closeContextMenu()
 	else
-		menu.displayContextFrame("loadCL", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
-		L.params = {
-			settingKey = config.shipLoadoutKey,
+		menu.displayContextFrame("loadCL", menu.titleData.width * RKN_Configio.config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - RKN_Configio.config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		RKN_Configio.params = {
+			settingKey = RKN_Configio.config.shipLoadoutKey,
 			x = menu.contextMode.x,
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
-			height = config.stationLoadoutLoadHeight,
-			itemsList = function() return L.addPartialFlag(L.addCustomAutoPresets(config.shipLoadoutKey, Utils.DeepCopy(menu.loadouts))) end,
-			header = ReadText(config.textId, 22),
-			optionItemNameText = ReadText(config.textId, 24),
+			height = RKN_Configio.config.stationLoadoutLoadHeight,
+			itemsList = function() return RKN_Configio.addPartialFlag(RKN_Configio.addCustomAutoPresets(RKN_Configio.config.shipLoadoutKey, RKN_Configio_Utils.DeepCopy(menu.loadouts))) end,
+			header = ReadText(RKN_Configio.config.textId, 22),
+			optionItemNameText = ReadText(RKN_Configio.config.textId, 24),
 			onSelection = function(item)
 				menu.closeContextMenu()
-				L.onShipLoadoutLoad(menu, item)
+				RKN_Configio.onShipLoadoutLoad(menu, item)
 			end,
-			maxFolders = config.maxFolders,
+			maxFolders = RKN_Configio.config.maxFolders,
 			onDeletion = function(item)
 				menu.closeContextMenu()
-				L.onLoadoutRemoved(menu.dropdownLoadoutRemoved, item)
+				RKN_Configio.onLoadoutRemoved(menu.dropdownLoadoutRemoved, item)
 			end,
-			listColumnWidth = config.standardListColumnWidth,
-			listItemCreator = L.createCommonListItem,
+			listColumnWidth = RKN_Configio.config.standardListColumnWidth,
+			listItemCreator = RKN_Configio.createCommonListItem,
 			contextLayer = contextLayer,
 			closeContextMenu = menu.closeContextMenu,
 			contextMode = menu.contextMode,
@@ -395,23 +294,23 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 			isItemActive = function(item) return item.active or (item.preset and true or false) end,
 			getItemColor = function(item)
 				if item.item.preset or item.item.customPreset then
-					return config.autoPresetColor
+					return RKN_Configio.config.autoPresetColor
 				elseif item.item.partial then
-					return config.partialPresetColor
+					return RKN_Configio.config.partialPresetColor
 				end
 				return nil
 			end,
-			onOpenPresetEditor = function() L.buttonShipLoadoutTitleAutoPresets(menu, contextLayer) end,
+			onOpenPresetEditor = function() RKN_Configio.buttonShipLoadoutTitleAutoPresets(menu, contextLayer) end,
 			frameModules = {
-				L.createSettings,
-				L.createSearchField,
-				function(s) L.createAutoPresetEditorButtons(s) end
+				RKN_Configio.createSettings,
+				RKN_Configio.createSearchField,
+				function(s) RKN_Configio.createAutoPresetEditorButtons(s) end
 			},
-			sortItems = L.compareItemNames,
-			sortOptions = config.defaultSortOptions,
+			sortItems = RKN_Configio.compareItemNames,
+			sortOptions = RKN_Configio.config.defaultSortOptions,
 			sortDefault = "name",
 			isItemRenamable = function(item) return not item.preset end,
-			onRename = function(item, newName) L.renameShipLoadout(menu, item, newName) end,
+			onRename = function(item, newName) RKN_Configio.renameShipLoadout(menu, item, newName) end,
 			onSave = function(name, overwrite)
 				menu.loadoutName = name
 				menu.loadout = nil
@@ -420,235 +319,235 @@ function L.buttonShipLoadoutTitleLoad(menu, contextLayer)
 			end,
 			isItemSavable = function(item) return (not item.preset) and not item.customPreset end
 		}
-		L.autoSelectSearch = true
-		L.contextModule = nil
-		L.createLoadContext()
+		RKN_Configio.autoSelectSearch = true
+		RKN_Configio.contextModule = nil
+		RKN_Configio.createLoadContext()
 	end
 end
 
-function L.buttonStationLoadoutTitleAutoPresets(menu, contextLayer)
+function RKN_Configio.buttonStationLoadoutTitleAutoPresets(menu, contextLayer)
 	if menu.contextMode and (menu.contextMode.mode == "autoPreset") then
 		menu.closeContextMenu()
 	else
-		menu.displayContextFrame("autoPreset", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
-		local allMTurrets, allLTurrets = L.getAllTurrets()
-		local allSShields, allMShields, allLShields, allXLShields = L.getAllShields()
-		L.params = {
-			settingKey = config.stationLoadoutKey,
+		menu.displayContextFrame("autoPreset", menu.titleData.width * RKN_Configio.config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - RKN_Configio.config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		local allMTurrets, allLTurrets = RKN_Configio.getAllTurrets()
+		local allSShields, allMShields, allLShields, allXLShields = RKN_Configio.getAllShields()
+		RKN_Configio.params = {
+			settingKey = RKN_Configio.config.stationLoadoutKey,
 			x = menu.contextMode.x,
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
-			height = config.stationLoadoutLoadHeight,
+			height = RKN_Configio.config.stationLoadoutLoadHeight,
 			contextLayer = contextLayer,
 			closeContextMenu = menu.closeContextMenu,
 			contextMode = menu.contextMode,
 			setContextFrame = function(f) menu.contextFrame = f end,
 			menu = menu,
 			editorShipLoadout = false,
-			onSave = function() L.buttonStationLoadoutTitleLoad(menu, contextLayer) end,
-			weaponsOptions = L.getAllWeapons(),
+			onSave = function() RKN_Configio.buttonStationLoadoutTitleLoad(menu, contextLayer) end,
+			weaponsOptions = RKN_Configio.getAllWeapons(),
 			mTurretOptions = allMTurrets,
 			lTurretOptions = allLTurrets,
 			sShieldsOptions = allSShields,
 			mShieldOptions = allMShields,
 			lShieldOptions = allLShields
 		}
-		L.createAutoPresetEditorContext()
+		RKN_Configio.createAutoPresetEditorContext()
 	end
 end
 
-function L.buttonShipLoadoutTitleAutoPresets(menu, contextLayer)
+function RKN_Configio.buttonShipLoadoutTitleAutoPresets(menu, contextLayer)
 	if menu.contextMode and (menu.contextMode.mode == "autoPreset") then
 		menu.closeContextMenu()
 	else
-		menu.displayContextFrame("autoPreset", menu.titleData.width * config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
-		local allMTurrets, allLTurrets = L.getAllTurrets()
-		local allSShields, allMShields, allLShields, allXLShields = L.getAllShields()
-		L.params = {
-			settingKey = config.shipLoadoutKey,
+		menu.displayContextFrame("autoPreset", menu.titleData.width * RKN_Configio.config.loadWidthMultiplier, menu.titleData.offsetX + (menu.titleData.width * (1 - RKN_Configio.config.loadWidthMultiplier) / 2), menu.titleData.offsetY + menu.titleData.height + Helper.borderSize)
+		local allMTurrets, allLTurrets = RKN_Configio.getAllTurrets()
+		local allSShields, allMShields, allLShields, allXLShields = RKN_Configio.getAllShields()
+		RKN_Configio.params = {
+			settingKey = RKN_Configio.config.shipLoadoutKey,
 			x = menu.contextMode.x,
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
-			height = config.stationLoadHeight,
+			height = RKN_Configio.config.stationLoadHeight,
 			contextLayer = contextLayer,
 			closeContextMenu = menu.closeContextMenu,
 			contextMode = menu.contextMode,
 			setContextFrame = function(f) menu.contextFrame = f end,
 			menu = menu,
 			editorShipLoadout = true,
-			onSave = function() L.buttonShipLoadoutTitleLoad(menu, contextLayer) end,
+			onSave = function() RKN_Configio.buttonShipLoadoutTitleLoad(menu, contextLayer) end,
 			mTurretOptions = allMTurrets,
 			lTurretOptions = allLTurrets,
 			sShieldsOptions = allSShields,
 			mShieldOptions = allMShields,
 			lShieldOptions = allLShields,
 			xlShieldOptions = allXLShields,
-			engineOptions = L.getAllEngines(),
-			thrusterOptions = L.getAllThrusters(),
-			weaponOptions = L.getAllWeapons()
+			engineOptions = RKN_Configio.getAllEngines(),
+			thrusterOptions = RKN_Configio.getAllThrusters(),
+			weaponOptions = RKN_Configio.getAllWeapons()
 		}
-		L.createAutoPresetEditorContext()
+		RKN_Configio.createAutoPresetEditorContext()
 	end
 end
 
-function L.createLoadContext()
-	local listRoot = L.prepareBrowserStructure(L.params.itemsList())
+function RKN_Configio.createLoadContext()
+	local listRoot = RKN_Configio.prepareBrowserStructure(RKN_Configio.params.itemsList())
 
-	Helper.removeAllWidgetScripts(L.params.menu, L.params.contextLayer)
+	Helper.removeAllWidgetScripts(RKN_Configio.params.menu, RKN_Configio.params.contextLayer)
 
-	local contextFrame = Helper.createFrameHandle(L.params.menu, {
-		layer = L.params.contextLayer,
+	local contextFrame = Helper.createFrameHandle(RKN_Configio.params.menu, {
+		layer = RKN_Configio.params.contextLayer,
 		standardButtons = {},
-		width = L.params.width,
-		x = L.params.x,
-		y = L.params.y,
+		width = RKN_Configio.params.width,
+		x = RKN_Configio.params.x,
+		y = RKN_Configio.params.y,
 		autoFrameHeight = true,
 	})
-	L.params.setContextFrame(contextFrame)
+	RKN_Configio.params.setContextFrame(contextFrame)
 	contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
 
 	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
-	local browserWidth = L.params.width - config.loadSettingsWidth - Helper.borderSize * 2 - config.settingsBrowserSeparation
-	local browserX = config.loadSettingsWidth + Helper.borderSize + config.settingsBrowserSeparation
+	local browserWidth = RKN_Configio.params.width - RKN_Configio.config.loadSettingsWidth - Helper.borderSize * 2 - RKN_Configio.config.settingsBrowserSeparation
+	local browserX = RKN_Configio.config.loadSettingsWidth + Helper.borderSize + RKN_Configio.config.settingsBrowserSeparation
 	local buttonRowHeight = Helper.standardButtonHeight * 1.2
 
 	-- Create item list --
-	L.getState().listColumns = math.min(math.floor((browserWidth - Helper.scrollbarWidth) / L.params.listColumnWidth), 12) -- max 13 columns allowed in a table...
-	local ltable = contextFrame:addTable(L.getState().listColumns + 1, { wraparound = true, tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = L.params.height - buttonRowHeight, x = browserX, width = browserWidth })
-	for column = 1, L.getState().listColumns do
-		ltable:setColWidth(column, L.params.listColumnWidth, false)
+	RKN_Configio.getState().listColumns = math.min(math.floor((browserWidth - Helper.scrollbarWidth) / RKN_Configio.params.listColumnWidth), 12) -- max 13 columns allowed in a table...
+	local ltable = contextFrame:addTable(RKN_Configio.getState().listColumns + 1, { wraparound = true, tabOrder = 6, reserveScrollBar = true, maxVisibleHeight = RKN_Configio.params.height - buttonRowHeight, x = browserX, width = browserWidth })
+	for column = 1, RKN_Configio.getState().listColumns do
+		ltable:setColWidth(column, RKN_Configio.params.listColumnWidth, false)
 	end
-	L.ltable = ltable
-	ltable:addEmptyRow(config.browserHeaderTextProperties.height)
-	local row = ltable:addRow(false, { fixed = true, bgColor = config.browserHeaderTextProperties.titleColor } )
+	RKN_Configio.ltable = ltable
+	ltable:addEmptyRow(RKN_Configio.config.browserHeaderTextProperties.height)
+	local row = ltable:addRow(false, { fixed = true, bgColor = RKN_Configio.config.browserHeaderTextProperties.titleColor } )
 	row[1]:setColSpan(2):createText("", { height = 3 } )
-	Utils.AddFixedEmptyRow(ltable, Helper.standardTextHeight / 3)
+	RKN_Configio_Utils.AddFixedEmptyRow(ltable, Helper.standardTextHeight / 3)
 
-	L.addFolderToList(ltable, listRoot, 1)
+	RKN_Configio.addFolderToList(ltable, listRoot, 1)
 
 	-- Create list buttons --
-	local btable = contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = L.params.height - buttonRowHeight, x = browserX, width = browserWidth })
-	L.btable = btable
+	local btable = contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = RKN_Configio.params.height - buttonRowHeight, x = browserX, width = browserWidth })
+	RKN_Configio.btable = btable
 	local row = btable:addRow(true, { fixed = true })
-	row[1]:createButton({ active = L.isRowValidForLoad, height = buttonRowHeight }):setText("\27[menu_import] " .. ReadText(config.textId, 3), config.buttonRowTextProperties)
-	row[1].handlers.onClick = L.buttonLoadItem
-	row[2]:createButton({ active = L.isRowValidForSave, height = buttonRowHeight }):setText("\27[menu_save]" .. ReadText(config.textId, 97), config.buttonRowTextProperties) -- TODO: text
-	row[2].handlers.onClick = L.buttonSaveItem
-	row[3]:createButton({ active = L.isRowValidForRename, height = buttonRowHeight }):setText("\27[menu_edit] " .. ReadText(config.textId, 98), config.buttonRowTextProperties) -- TODO: text
-	row[3].handlers.onClick = L.buttonRenameItem
-	if L.params.settingKey == config.stationKey then
-		row[3].properties.mouseOverText = ReadText(config.textId, 99)
+	row[1]:createButton({ active = RKN_Configio.isRowValidForLoad, height = buttonRowHeight }):setText("\27[menu_import] " .. ReadText(RKN_Configio.config.textId, 3), RKN_Configio.config.buttonRowTextProperties)
+	row[1].handlers.onClick = RKN_Configio.buttonLoadItem
+	row[2]:createButton({ active = RKN_Configio.isRowValidForSave, height = buttonRowHeight }):setText("\27[menu_save]" .. ReadText(RKN_Configio.config.textId, 97), RKN_Configio.config.buttonRowTextProperties) -- TODO: text
+	row[2].handlers.onClick = RKN_Configio.buttonSaveItem
+	row[3]:createButton({ active = RKN_Configio.isRowValidForRename, height = buttonRowHeight }):setText("\27[menu_edit] " .. ReadText(RKN_Configio.config.textId, 98), RKN_Configio.config.buttonRowTextProperties) -- TODO: text
+	row[3].handlers.onClick = RKN_Configio.buttonRenameItem
+	if RKN_Configio.params.settingKey == RKN_Configio.config.stationKey then
+		row[3].properties.mouseOverText = ReadText(RKN_Configio.config.textId, 99)
 	end
-	row[4]:createButton({ active = L.isRowValidForDeletion, height = buttonRowHeight }):setText("\27[menu_dismiss] " .. ReadText(config.textId, 4), config.buttonRowTextProperties)
-	row[4].handlers.onClick = L.buttonDeleteItem
-	row[5]:createButton({ height = buttonRowHeight }):setText("\27[widget_cross_01] " .. ReadText(config.textId, 5), config.buttonRowTextProperties)
-	row[5].handlers.onClick = L.params.closeContextMenu
+	row[4]:createButton({ active = RKN_Configio.isRowValidForDeletion, height = buttonRowHeight }):setText("\27[menu_dismiss] " .. ReadText(RKN_Configio.config.textId, 4), RKN_Configio.config.buttonRowTextProperties)
+	row[4].handlers.onClick = RKN_Configio.buttonDeleteItem
+	row[5]:createButton({ height = buttonRowHeight }):setText("\27[widget_cross_01] " .. ReadText(RKN_Configio.config.textId, 5), RKN_Configio.config.buttonRowTextProperties)
+	row[5].handlers.onClick = RKN_Configio.params.closeContextMenu
 
 	-- Create expand/collapse all buttons --
-	local etable = contextFrame:addTable(4, { tabOrder = 5, x = browserX, y = config.browserHeaderTextProperties.y, width = browserWidth })
+	local etable = contextFrame:addTable(4, { tabOrder = 5, x = browserX, y = RKN_Configio.config.browserHeaderTextProperties.y, width = browserWidth })
 	etable:setColWidth(1, smallColWidth, false)
 	etable:setColWidth(2, smallColWidth, false)
 	etable:setColWidth(3, smallColWidth * 7, false)
 	local row = etable:addRow(true, { })
-	row[1]:createButton({ mouseOverText = ReadText(config.textId, 20), active = foldersActive }):setText("+", { halign = "center" })
-	row[1].handlers.onClick = function() L.buttonExpandAll(listRoot) end
-	row[2]:createButton({ mouseOverText = ReadText(config.textId, 21), active = foldersActive }):setText("-", { halign = "center" })
-	row[2].handlers.onClick = L.buttonCollapseAll
+	row[1]:createButton({ mouseOverText = ReadText(RKN_Configio.config.textId, 20), active = foldersActive }):setText("+", { halign = "center" })
+	row[1].handlers.onClick = function() RKN_Configio.buttonExpandAll(listRoot) end
+	row[2]:createButton({ mouseOverText = ReadText(RKN_Configio.config.textId, 21), active = foldersActive }):setText("-", { halign = "center" })
+	row[2].handlers.onClick = RKN_Configio.buttonCollapseAll
 	-- Create sorting dropdown
-	row[3]:createDropDown(L.params.sortOptions, { startOption = L.getState().sort or L.params.sortDefault, mouseOverText = ReadText(config.textId, 93), active = #L.params.sortOptions > 1 })
-	row[3].handlers.onDropDownConfirmed = L.dropdownSort
-	row[4]:createText(L.params.header, { font = config.browserHeaderTextProperties.font, fontsize = config.browserHeaderTextProperties.fontSize })
+	row[3]:createDropDown(RKN_Configio.params.sortOptions, { startOption = RKN_Configio.getState().sort or RKN_Configio.params.sortDefault, mouseOverText = ReadText(RKN_Configio.config.textId, 93), active = #RKN_Configio.params.sortOptions > 1 })
+	row[3].handlers.onDropDownConfirmed = RKN_Configio.dropdownSort
+	row[4]:createText(RKN_Configio.params.header, { font = RKN_Configio.config.browserHeaderTextProperties.font, fontsize = RKN_Configio.config.browserHeaderTextProperties.fontSize })
 
 	-- Create settings list --
-	local stable = contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = L.params.height, x = Helper.borderSize, width = config.loadSettingsWidth - Helper.borderSize * 2 })
-	stable:setColWidth(1, config.loadSettingsWidth * 0.7, false)
+	local stable = contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = RKN_Configio.params.height, x = Helper.borderSize, width = RKN_Configio.config.loadSettingsWidth - Helper.borderSize * 2 })
+	stable:setColWidth(1, RKN_Configio.config.loadSettingsWidth * 0.7, false)
 
-	for _, frameModule in ipairs(L.params.frameModules) do
+	for _, frameModule in ipairs(RKN_Configio.params.frameModules) do
 		frameModule(stable)
 	end
 
-	if L.contextModule ~= nil then
-		L.contextModule(contextFrame, L.params.height + Helper.standardButtonHeight)
+	if RKN_Configio.contextModule ~= nil then
+		RKN_Configio.contextModule(contextFrame, RKN_Configio.params.height + Helper.standardButtonHeight)
 	end
 
-	if L.getState().topRow then
-		ltable:setTopRow(L.getState().topRow.listTable)
-		stable:setTopRow(L.getState().topRow.settingsTable)
+	if RKN_Configio.getState().topRow then
+		ltable:setTopRow(RKN_Configio.getState().topRow.listTable)
+		stable:setTopRow(RKN_Configio.getState().topRow.settingsTable)
 	end
-	ltable:setSelectedRow(L.getState().selectedRow)
+	ltable:setSelectedRow(RKN_Configio.getState().selectedRow)
 
 	contextFrame:display()
 end
 
-function L.addFolderToList(ltable, root, column)
+function RKN_Configio.addFolderToList(ltable, root, column)
 	for _, folder in ipairs(root.folders_arr) do
 		local row = ltable:addRow(folder, {  })
-		local isextended = L.getState().expandedFolders[config.folderIdFormat:format(L.params.settingKey, folder.fullname)]
+		local isextended = RKN_Configio.getState().expandedFolders[RKN_Configio.config.folderIdFormat:format(RKN_Configio.params.settingKey, folder.fullname)]
 		row[column]:createButton({ helpOverlayID = folder.fullname, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
-		row[column].handlers.onClick = function () return L.buttonExtendListEntry(folder.fullname, row.index) end
-		local text = L.getLoadSettings().folder_fullname and folder.fullname or folder.name
-		row[column + 1]:setColSpan(L.getState().listColumns - column + 1):createText(text, config.folderTextProperties)
+		row[column].handlers.onClick = function () return RKN_Configio.buttonExtendListEntry(folder.fullname, row.index) end
+		local text = RKN_Configio.getLoadSettings().folder_fullname and folder.fullname or folder.name
+		row[column + 1]:setColSpan(RKN_Configio.getState().listColumns - column + 1):createText(text, RKN_Configio.config.folderTextProperties)
 		if isextended then
-			L.addFolderToList(ltable, folder, column + 1)
+			RKN_Configio.addFolderToList(ltable, folder, column + 1)
 		end
 	end
 
 	for _, item in ipairs(root.items) do
 		local row = ltable:addRow(item, {  })
-		L.params.listItemCreator(row, column, item)
+		RKN_Configio.params.listItemCreator(row, column, item)
 	end
 end
 
-function L.createCommonListItem(row, column, item)
-	local text = L.getLoadSettings().item_fullname and item.item.name or item.name
+function RKN_Configio.createCommonListItem(row, column, item)
+	local text = RKN_Configio.getLoadSettings().item_fullname and item.item.name or item.name
 	local color
 	if not item.active then
-		color = config.inactiveColor
-	elseif L.params.getItemColor then
-		color = L.params.getItemColor(item)
+		color = RKN_Configio.config.inactiveColor
+	elseif RKN_Configio.params.getItemColor then
+		color = RKN_Configio.params.getItemColor(item)
 	end
 	if color then
 		text = Helper.convertColorToText(color) .. text
 	end
-	row[column]:setColSpan(L.getState().listColumns - column + 2):createText(text, config.itemTextProperties)
+	row[column]:setColSpan(RKN_Configio.getState().listColumns - column + 2):createText(text, RKN_Configio.config.itemTextProperties)
 	row[column].properties.mouseOverText = item.item.mouseovertext
 end
 
-function L.createShipListItem(row, column, item, isplayershipyard)
-	local text = L.getLoadSettings().item_fullname and item.item.name or item.name
+function RKN_Configio.createShipListItem(row, column, item, isplayershipyard)
+	local text = RKN_Configio.getLoadSettings().item_fullname and item.item.name or item.name
 	local color
-	if L.params.getItemColor then
-		color = L.params.getItemColor(item)
+	if RKN_Configio.params.getItemColor then
+		color = RKN_Configio.params.getItemColor(item)
 	end
 	if color then
 		text = Helper.convertColorToText(color) .. text
 	end
 	if not isplayershipyard then
-		local blueprintIcon = item.item.hasBlueprint and "\27[rkn_configio_blueprint]" or Helper.convertColorToText(config.shipNotOwnedColor) .. "\27[rkn_configio_no_blueprint]"
-		row[column]:createText(blueprintIcon, config.itemTextProperties)
-		row[column].properties.mouseOverText = item.item.hasBlueprint and ReadText(config.textId, 102) or ReadText(config.textId, 103)
+		local blueprintIcon = item.item.hasBlueprint and "\27[rkn_configio_blueprint]" or Helper.convertColorToText(RKN_Configio.config.shipNotOwnedColor) .. "\27[rkn_configio_no_blueprint]"
+		row[column]:createText(blueprintIcon, RKN_Configio.config.itemTextProperties)
+		row[column].properties.mouseOverText = item.item.hasBlueprint and ReadText(RKN_Configio.config.textId, 102) or ReadText(RKN_Configio.config.textId, 103)
 		column = column + 1
 	end
-	row[column]:createText("\27[" .. item.item.shipicon .. "]", config.itemTextProperties)
-	row[column + 1]:setColSpan(11 - (column + 1)):createText(text, config.itemTextProperties)
+	row[column]:createText("\27[" .. item.item.shipicon .. "]", RKN_Configio.config.itemTextProperties)
+	row[column + 1]:setColSpan(11 - (column + 1)):createText(text, RKN_Configio.config.itemTextProperties)
 	row[column + 1].properties.mouseOverText = item.item.mouseovertext
-	row[11]:setColSpan(3):createText(item.item.shiptypename, config.itemTextProperties)
+	row[11]:setColSpan(3):createText(item.item.shiptypename, RKN_Configio.config.itemTextProperties)
 end
 
-function L.createSettings(stable)
+function RKN_Configio.createSettings(stable)
 	local row = stable:addRow(false, { fixed = true })
-	row[1]:setColSpan(2):createText(ReadText(config.textId, 6), config.browserHeaderTextProperties)
+	row[1]:setColSpan(2):createText(ReadText(RKN_Configio.config.textId, 6), RKN_Configio.config.browserHeaderTextProperties)
 
-	local row = L.createSettingsSwitch(stable, ReadText(config.textId, 7), "folder_enabled", true)
-	row[1].properties.mouseOverText = ReadText(config.textId, 13)
+	local row = RKN_Configio.createSettingsSwitch(stable, ReadText(RKN_Configio.config.textId, 7), "folder_enabled", true)
+	row[1].properties.mouseOverText = ReadText(RKN_Configio.config.textId, 13)
 
 	stable:addEmptyRow(Helper.standardTextHeight / 4)
 
-	local foldersActive = L.getLoadSettings().folder_enabled
+	local foldersActive = RKN_Configio.getLoadSettings().folder_enabled
 	local row = stable:addRow(true, { fixed = true })
-	row[1]:createText(ReadText(config.textId, 8), { color = (not foldersActive) and Color["text_inactive"] or nil })
-	row[1].properties.mouseOverText = ReadText(config.textId, 12)
-	local delimiterEditBoxText = L.getLoadSettings().folder_delimiter:gsub(" ", "(space)") -- Replace spaces with '(space)' so that it is easier to read
+	row[1]:createText(ReadText(RKN_Configio.config.textId, 8), { color = (not foldersActive) and Color["text_inactive"] or nil })
+	row[1].properties.mouseOverText = ReadText(RKN_Configio.config.textId, 12)
+	local delimiterEditBoxText = RKN_Configio.getLoadSettings().folder_delimiter:gsub(" ", "(space)") -- Replace spaces with '(space)' so that it is easier to read
 	row[2]:createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(delimiterEditBoxText, { })
 	row[2].handlers.onEditBoxDeactivated = function(_, text, textchanged)
 		if textchanged then
@@ -656,108 +555,108 @@ function L.createSettings(stable)
 			if text:len() > 1 then
 				text = text:sub(1, 1)
 			end
-			L.setLoadSetting("folder_delimiter", text)
-			L.refreshLoadFrame()
+			RKN_Configio.setLoadSetting("folder_delimiter", text)
+			RKN_Configio.refreshLoadFrame()
 		end
 	end
 	row[2].properties.active = foldersActive
 
-	L.createSettingsSwitch(stable, L.params.optionItemNameText, "item_fullname", foldersActive)
+	RKN_Configio.createSettingsSwitch(stable, RKN_Configio.params.optionItemNameText, "item_fullname", foldersActive)
 
-	L.createSettingsSwitch(stable, ReadText(config.textId, 10), "folder_fullname", foldersActive)
+	RKN_Configio.createSettingsSwitch(stable, ReadText(RKN_Configio.config.textId, 10), "folder_fullname", foldersActive)
 
-	local row = L.createSettingsSwitch(stable, ReadText(config.textId, 11), "folder_flatten_single_item", foldersActive)
-	row[1].properties.mouseOverText = ReadText(config.textId, 14)
+	local row = RKN_Configio.createSettingsSwitch(stable, ReadText(RKN_Configio.config.textId, 11), "folder_flatten_single_item", foldersActive)
+	row[1].properties.mouseOverText = ReadText(RKN_Configio.config.textId, 14)
 
 	stable:addEmptyRow(Helper.standardTextHeight / 2)
 
-	L.createSettingsSwitch(stable, ReadText(config.textId, 33), "item_hide_inactive", true)
+	RKN_Configio.createSettingsSwitch(stable, ReadText(RKN_Configio.config.textId, 33), "item_hide_inactive", true)
 
-	if L.params.settingKey == config.shipLoadoutKey or L.params.settingKey == config.stationLoadoutKey then
-		local row = L.createSettingsSwitch(stable, ReadText(config.textId, 89), "item_load_partial", true)
-		row[1].properties.mouseOverText = ReadText(config.textId, 90)
+	if RKN_Configio.params.settingKey == RKN_Configio.config.shipLoadoutKey or RKN_Configio.params.settingKey == RKN_Configio.config.stationLoadoutKey then
+		local row = RKN_Configio.createSettingsSwitch(stable, ReadText(RKN_Configio.config.textId, 89), "item_load_partial", true)
+		row[1].properties.mouseOverText = ReadText(RKN_Configio.config.textId, 90)
 	end
 end
 
-function L.createSettingsSwitch(stable, text, setting, active)
-	local checked = L.getLoadSettings()[setting]
+function RKN_Configio.createSettingsSwitch(stable, text, setting, active)
+	local checked = RKN_Configio.getLoadSettings()[setting]
 	local row = stable:addRow(true, { fixed = true })
 	row[1]:createText(text, { color = (not active) and Color["text_inactive"] or nil })
-	row[2]:createButton({ active = active }):setText(checked and ReadText(config.textId, 100) or ReadText(config.textId, 101), checked and config.settingSwitchActiveTextProperties or config.settingSwitchInActiveTextProperties)
+	row[2]:createButton({ active = active }):setText(checked and ReadText(RKN_Configio.config.textId, 100) or ReadText(RKN_Configio.config.textId, 101), checked and RKN_Configio.config.settingSwitchActiveTextProperties or RKN_Configio.config.settingSwitchInActiveTextProperties)
 	row[2].handlers.onClick = function()
 		if active then
-			L.setLoadSetting(setting, not checked)
-			L.refreshLoadFrame()
+			RKN_Configio.setLoadSetting(setting, not checked)
+			RKN_Configio.refreshLoadFrame()
 		end
 	end
 	return row
 end
 
-function L.createSearchField(stable)
+function RKN_Configio.createSearchField(stable)
 	-- Search bar --
 	local row = stable:addRow(false, { fixed = true })
-	row[1]:setColSpan(2):createText(ReadText(config.textId, 15), config.browserHeaderTextProperties)
+	row[1]:setColSpan(2):createText(ReadText(RKN_Configio.config.textId, 15), RKN_Configio.config.browserHeaderTextProperties)
 
 	local row = stable:addRow(true, { fixed = true })
-	local editBox = row[1]:createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(L.getState().filter.search, { })
-	row[1].handlers.onEditBoxDeactivated = L.searchItemEdit
-	row[2]:createButton({  }):setText(ReadText(config.textId, 16), { halign = "center" })
-	row[2].handlers.onClick = function () L.searchItemEdit(nil, "", true) end
-	if L.autoSelectSearch then
+	local editBox = row[1]:createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(RKN_Configio.getState().filter.search, { })
+	row[1].handlers.onEditBoxDeactivated = RKN_Configio.searchItemEdit
+	row[2]:createButton({  }):setText(ReadText(RKN_Configio.config.textId, 16), { halign = "center" })
+	row[2].handlers.onClick = function () RKN_Configio.searchItemEdit(nil, "", true) end
+	if RKN_Configio.autoSelectSearch then
 		-- This will cause the editbox to be automatically activated --
-		L.params.contextMode.nameEditBox = editBox
+		RKN_Configio.params.contextMode.nameEditBox = editBox
 	end
 end
 
-function L.createCPModulesFilter(stable)
+function RKN_Configio.createCPModulesFilter(stable)
 	local row = stable:addRow(false, { fixed = true })
-	row[1]:createText(ReadText(config.textId, 17), config.browserHeaderTextProperties)
-	row[1].properties.mouseOverText = ReadText(config.textId, 23)
+	row[1]:createText(ReadText(RKN_Configio.config.textId, 17), RKN_Configio.config.browserHeaderTextProperties)
+	row[1].properties.mouseOverText = ReadText(RKN_Configio.config.textId, 23)
 
-	local addSeparation = L.addModulesToFilter(stable, ReadText(config.textId, 18), true)
+	local addSeparation = RKN_Configio.addModulesToFilter(stable, ReadText(RKN_Configio.config.textId, 18), true)
 	if addSeparation then
 		stable:addEmptyRow(Helper.standardTextHeight)
 	end
-	L.addModulesToFilter(stable, ReadText(config.textId, 19), false)
+	RKN_Configio.addModulesToFilter(stable, ReadText(RKN_Configio.config.textId, 19), false)
 end
 
-function L.addModulesToFilter(table, buttonText, checked)
+function RKN_Configio.addModulesToFilter(table, buttonText, checked)
 	local atLeastOneAdded = false;
-	local selectedMacros = L.getState().filter.macros
-	for _, module in ipairs(L.getAllProductionModules()) do
+	local selectedMacros = RKN_Configio.getState().filter.macros
+	for _, module in ipairs(RKN_Configio.getAllProductionModules()) do
 		local macro = module.macro
-		if (checked and Utils.ArrayIndexOf(selectedMacros, macro) ~= nil) or (not checked and Utils.ArrayIndexOf(selectedMacros, macro) == nil) then
+		if (checked and RKN_Configio_Utils.ArrayIndexOf(selectedMacros, macro) ~= nil) or (not checked and RKN_Configio_Utils.ArrayIndexOf(selectedMacros, macro) == nil) then
 			local row = table:addRow(true, { })
 			row[1]:createText(module.name, { })
 			row[2]:createButton({  }):setText(buttonText, { halign = "center" })
-			row[2].handlers.onClick = function () L.filterMacroToggled(macro, not checked) end
+			row[2].handlers.onClick = function () RKN_Configio.filterMacroToggled(macro, not checked) end
 			atLeastOneAdded = true
 		end
 	end
 	return atLeastOneAdded
 end
 
-function L.createShipFilters(stable, classOptions, purposes, races)
+function RKN_Configio.createShipFilters(stable, classOptions, purposes, races)
 	local row = stable:addRow(false, { fixed = true })
-	row[1]:setColSpan(2):createText(ReadText(config.textId, 31), config.browserHeaderTextProperties)
+	row[1]:setColSpan(2):createText(ReadText(RKN_Configio.config.textId, 31), RKN_Configio.config.browserHeaderTextProperties)
 
-	local addSeparation = L.addAllToShipFilter(stable, classOptions, purposes, races, ReadText(config.textId, 18), true)
+	local addSeparation = RKN_Configio.addAllToShipFilter(stable, classOptions, purposes, races, ReadText(RKN_Configio.config.textId, 18), true)
 	if addSeparation then
 		stable:addEmptyRow(Helper.standardTextHeight / 4)
 		row = stable:addRow(false, { bgColor = { r = 128, g = 128, b = 128, a = 100 } } )
 		row[1]:createText("", { height = 3 } )
 		stable:addEmptyRow(Helper.standardTextHeight / 4)
 	end
-	L.addAllToShipFilter(stable, classOptions, purposes, races, ReadText(config.textId, 19), false)
+	RKN_Configio.addAllToShipFilter(stable, classOptions, purposes, races, ReadText(RKN_Configio.config.textId, 19), false)
 end
 
-function L.addAllToShipFilter(table, classOptions, purposes, races, buttonText, checked)
-	local added = L.addToShipFilter(table, classOptions, L.getState().filter.sizes, checked, buttonText, false)
-	added = L.addToShipFilter(table, purposes, L.getState().filter.purposes, checked, buttonText, added)
-	return L.addToShipFilter(table, races, L.getState().filter.races, checked, buttonText, added)
+function RKN_Configio.addAllToShipFilter(table, classOptions, purposes, races, buttonText, checked)
+	local added = RKN_Configio.addToShipFilter(table, classOptions, RKN_Configio.getState().filter.sizes, checked, buttonText, false)
+	added = RKN_Configio.addToShipFilter(table, purposes, RKN_Configio.getState().filter.purposes, checked, buttonText, added)
+	return RKN_Configio.addToShipFilter(table, races, RKN_Configio.getState().filter.races, checked, buttonText, added)
 end
 
-function L.addToShipFilter(table, options, selected, checked, buttonText, atLeastOneAdded)
+function RKN_Configio.addToShipFilter(table, options, selected, checked, buttonText, atLeastOneAdded)
 	local needSep = atLeastOneAdded
 	if #options > 1 then
 		for _, op in ipairs(options) do
@@ -769,7 +668,7 @@ function L.addToShipFilter(table, options, selected, checked, buttonText, atLeas
 				local row = table:addRow(true, { })
 				row[1]:createText(op.text, { })
 				row[2]:createButton({  }):setText(buttonText, { halign = "center" })
-				row[2].handlers.onClick = function () L.filterShipToggled(op.id, selected, not checked) end
+				row[2].handlers.onClick = function () RKN_Configio.filterShipToggled(op.id, selected, not checked) end
 				atLeastOneAdded = true
 			end
 		end
@@ -777,38 +676,38 @@ function L.addToShipFilter(table, options, selected, checked, buttonText, atLeas
 	return atLeastOneAdded
 end
 
-function L.createAutoPresetEditorButtons(stable)
+function RKN_Configio.createAutoPresetEditorButtons(stable)
 	local row = stable:addRow(false, { fixed = true })
-	row[1]:setColSpan(2):createText(ReadText(config.textId, 74), config.browserHeaderTextProperties)
+	row[1]:setColSpan(2):createText(ReadText(RKN_Configio.config.textId, 74), RKN_Configio.config.browserHeaderTextProperties)
 	local row = stable:addRow(true, { fixed = true })
-	row[1]:setColSpan(2):createButton({ }):setText(ReadText(config.textId, 75), { halign = "center" })
+	row[1]:setColSpan(2):createButton({ }):setText(ReadText(RKN_Configio.config.textId, 75), { halign = "center" })
 	row[1].handlers.onClick = function()
-		L.getState().presetEditor = nil
-		L.params.onOpenPresetEditor()
+		RKN_Configio.getState().presetEditor = nil
+		RKN_Configio.params.onOpenPresetEditor()
 	end
 	local row = stable:addRow(true, { fixed = true })
-	row[1]:setColSpan(2):createButton({ active = function() return L.getSelectedRowCustomAutoPreset() ~= nil end }):setText(ReadText(config.textId, 76), { halign = "center" })
+	row[1]:setColSpan(2):createButton({ active = function() return RKN_Configio.getSelectedRowCustomAutoPreset() ~= nil end }):setText(ReadText(RKN_Configio.config.textId, 76), { halign = "center" })
 	row[1].handlers.onClick = function()
-		L.getState().presetEditor = L.getSelectedRowCustomAutoPreset()
-		L.params.onOpenPresetEditor()
+		RKN_Configio.getState().presetEditor = RKN_Configio.getSelectedRowCustomAutoPreset()
+		RKN_Configio.params.onOpenPresetEditor()
 	end
 end
 
-function L.createAutoPresetEditorContext()
-	Helper.removeAllWidgetScripts(L.params.menu, L.params.contextLayer)
+function RKN_Configio.createAutoPresetEditorContext()
+	Helper.removeAllWidgetScripts(RKN_Configio.params.menu, RKN_Configio.params.contextLayer)
 
-	local contextFrame = Helper.createFrameHandle(L.params.menu, {
-		layer = L.params.contextLayer,
+	local contextFrame = Helper.createFrameHandle(RKN_Configio.params.menu, {
+		layer = RKN_Configio.params.contextLayer,
 		standardButtons = {},
-		width = L.params.width,
-		x = L.params.x,
-		y = L.params.y,
+		width = RKN_Configio.params.width,
+		x = RKN_Configio.params.x,
+		y = RKN_Configio.params.y,
 		autoFrameHeight = true,
 	})
-	L.params.setContextFrame(contextFrame)
+	RKN_Configio.params.setContextFrame(contextFrame)
 	contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
 
-	local preset = L.getState().presetEditor
+	local preset = RKN_Configio.getState().presetEditor
 	if not preset then
 		preset = {
 			name = "New Auto-Preset",
@@ -833,24 +732,24 @@ function L.createAutoPresetEditorContext()
 			deployables = { type = "percentage" },
 			countermeasure = { type = "percentage" }
 		}
-		L.getState().presetEditor = preset
+		RKN_Configio.getState().presetEditor = preset
 	end
 
-	local raceOptions = { { id = "any", text = ReadText(config.textId, 34), icon = "", displayremoveoption = false } }
-	for _,race in ipairs(L.getAllAutoPresetRaces()) do
+	local raceOptions = { { id = "any", text = ReadText(RKN_Configio.config.textId, 34), icon = "", displayremoveoption = false } }
+	for _,race in ipairs(RKN_Configio.getAllAutoPresetRaces()) do
 		if race ~= "other" then
 			table.insert(raceOptions, { id = race.id, text = race.name, icon = "", displayremoveoption = false })
 		end
 	end
 
-	local htable = contextFrame:addTable(1, { tabOrder = 6, x = Helper.borderSize, width = L.params.width - Helper.borderSize * 2 })
+	local htable = contextFrame:addTable(1, { tabOrder = 6, x = Helper.borderSize, width = RKN_Configio.params.width - Helper.borderSize * 2 })
 	local row = htable:addRow(false, { fixed = true })
-	row[1]:createText(ReadText(config.textId, 35), config.browserHeaderTextProperties)
+	row[1]:createText(ReadText(RKN_Configio.config.textId, 35), RKN_Configio.config.browserHeaderTextProperties)
 
 	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
-	local optionsWidth = (L.params.width / 2) - Helper.borderSize * 2
+	local optionsWidth = (RKN_Configio.params.width / 2) - Helper.borderSize * 2
 	local optionsY = row:getHeight() + Helper.borderSize * 3;
-	local c1table = contextFrame:addTable(6, { tabOrder = 6, x = Helper.borderSize, y = optionsY, width = optionsWidth, maxVisibleHeight  = L.params.height })
+	local c1table = contextFrame:addTable(6, { tabOrder = 6, x = Helper.borderSize, y = optionsY, width = optionsWidth, maxVisibleHeight  = RKN_Configio.params.height })
 	c1table:setColWidth(1, smallColWidth, false)
 	c1table:setColWidth(2, smallColWidth, false)
 	c1table:setColWidth(3, smallColWidth, false)
@@ -858,118 +757,118 @@ function L.createAutoPresetEditorContext()
 	c1table:setColWidth(5, smallColWidth, false)
 
 	local row = c1table:addRow(false, { fixed = false })
-	row[1]:setColSpan(6):createText(ReadText(config.textId, 36), {})
-	L.createPresetRules(c1table, raceOptions, config.valueOptions, L.params.mTurretOptions, preset.mturrets)
+	row[1]:setColSpan(6):createText(ReadText(RKN_Configio.config.textId, 36), {})
+	RKN_Configio.createPresetRules(c1table, raceOptions, RKN_Configio.config.valueOptions, RKN_Configio.params.mTurretOptions, preset.mturrets)
 
 	c1table:addEmptyRow(Helper.standardTextHeight / 2)
 	local row = c1table:addRow(false, { fixed = false })
-	row[1]:setColSpan(6):createText(ReadText(config.textId, 37), {})
-	L.createPresetRules(c1table, raceOptions, config.valueOptions, L.params.lTurretOptions, preset.lturrets)
+	row[1]:setColSpan(6):createText(ReadText(RKN_Configio.config.textId, 37), {})
+	RKN_Configio.createPresetRules(c1table, raceOptions, RKN_Configio.config.valueOptions, RKN_Configio.params.lTurretOptions, preset.lturrets)
 
-	if L.params.editorShipLoadout then
+	if RKN_Configio.params.editorShipLoadout then
 		c1table:addEmptyRow(Helper.standardTextHeight / 2)
 		local row = c1table:addRow(false, { fixed = false })
-		row[1]:setColSpan(6):createText(ReadText(config.textId, 38), {})
-		L.createPresetRules(c1table, raceOptions, config.valueOptions, L.params.sShieldsOptions, preset.sshields)
+		row[1]:setColSpan(6):createText(ReadText(RKN_Configio.config.textId, 38), {})
+		RKN_Configio.createPresetRules(c1table, raceOptions, RKN_Configio.config.valueOptions, RKN_Configio.params.sShieldsOptions, preset.sshields)
 	end
 
 	c1table:addEmptyRow(Helper.standardTextHeight / 2)
 	local row = c1table:addRow(false, { fixed = false })
-	row[1]:setColSpan(6):createText(ReadText(config.textId, 39), {})
-	L.createPresetRules(c1table, raceOptions, config.valueOptions, L.params.mShieldOptions, preset.mshields)
+	row[1]:setColSpan(6):createText(ReadText(RKN_Configio.config.textId, 39), {})
+	RKN_Configio.createPresetRules(c1table, raceOptions, RKN_Configio.config.valueOptions, RKN_Configio.params.mShieldOptions, preset.mshields)
 
 	c1table:addEmptyRow(Helper.standardTextHeight / 2)
 	local row = c1table:addRow(false, { fixed = false })
-	row[1]:setColSpan(6):createText(ReadText(config.textId, 40), {})
-	L.createPresetRules(c1table, raceOptions, config.valueOptions, L.params.lShieldOptions, preset.lshields)
+	row[1]:setColSpan(6):createText(ReadText(RKN_Configio.config.textId, 40), {})
+	RKN_Configio.createPresetRules(c1table, raceOptions, RKN_Configio.config.valueOptions, RKN_Configio.params.lShieldOptions, preset.lshields)
 
-	if L.params.editorShipLoadout then
+	if RKN_Configio.params.editorShipLoadout then
 		c1table:addEmptyRow(Helper.standardTextHeight / 2)
 		local row = c1table:addRow(false, { fixed = false })
-		row[1]:setColSpan(6):createText(ReadText(config.textId, 41), {})
-		L.createPresetRules(c1table, raceOptions, config.valueOptions, L.params.xlShieldOptions, preset.xlshields)
-
-		c1table:addEmptyRow(Helper.standardTextHeight / 2)
-		local row = c1table:addRow(false, { fixed = false })
-		row[1]:setColSpan(6):createText(ReadText(config.textId, 42), {})
-		L.createPresetRules(c1table, raceOptions, config.valueOptions, L.params.engineOptions, preset.engines)
+		row[1]:setColSpan(6):createText(ReadText(RKN_Configio.config.textId, 41), {})
+		RKN_Configio.createPresetRules(c1table, raceOptions, RKN_Configio.config.valueOptions, RKN_Configio.params.xlShieldOptions, preset.xlshields)
 
 		c1table:addEmptyRow(Helper.standardTextHeight / 2)
 		local row = c1table:addRow(false, { fixed = false })
-		row[1]:setColSpan(6):createText(ReadText(config.textId, 43), {})
-		L.createPresetRules(c1table, raceOptions, config.valueOptions, L.params.weaponOptions, preset.weapons)
+		row[1]:setColSpan(6):createText(ReadText(RKN_Configio.config.textId, 42), {})
+		RKN_Configio.createPresetRules(c1table, raceOptions, RKN_Configio.config.valueOptions, RKN_Configio.params.engineOptions, preset.engines)
 
 		c1table:addEmptyRow(Helper.standardTextHeight / 2)
 		local row = c1table:addRow(false, { fixed = false })
-		row[1]:setColSpan(6):createText(ReadText(config.textId, 44), {})
-		local onlyAnyRace = { { id = "any", text = ReadText(config.textId, 34), icon = "", displayremoveoption = false } }
-		L.createPresetRules(c1table, onlyAnyRace, config.valueOptions, L.params.thrusterOptions, preset.thrusters)
+		row[1]:setColSpan(6):createText(ReadText(RKN_Configio.config.textId, 43), {})
+		RKN_Configio.createPresetRules(c1table, raceOptions, RKN_Configio.config.valueOptions, RKN_Configio.params.weaponOptions, preset.weapons)
+
+		c1table:addEmptyRow(Helper.standardTextHeight / 2)
+		local row = c1table:addRow(false, { fixed = false })
+		row[1]:setColSpan(6):createText(ReadText(RKN_Configio.config.textId, 44), {})
+		local onlyAnyRace = { { id = "any", text = ReadText(RKN_Configio.config.textId, 34), icon = "", displayremoveoption = false } }
+		RKN_Configio.createPresetRules(c1table, onlyAnyRace, RKN_Configio.config.valueOptions, RKN_Configio.params.thrusterOptions, preset.thrusters)
 	end
 
 
-	local c2table = contextFrame:addTable(3, { tabOrder = 6, x = Helper.borderSize * 2 + (L.params.width / 2), y = optionsY, width = optionsWidth, maxVisibleHeight  = L.params.height })
+	local c2table = contextFrame:addTable(3, { tabOrder = 6, x = Helper.borderSize * 2 + (RKN_Configio.params.width / 2), y = optionsY, width = optionsWidth, maxVisibleHeight  = RKN_Configio.params.height })
 	c2table:setColWidth(1, smallColWidth, false)
 
-	if L.params.editorShipLoadout then
+	if RKN_Configio.params.editorShipLoadout then
 		local row = c2table:addRow(false, { fixed = false })
-		row[1]:setColSpan(3):createText(ReadText(config.textId, 45), {})
+		row[1]:setColSpan(3):createText(ReadText(RKN_Configio.config.textId, 45), {})
 		local row = c2table:addRow(true, { fixed = false })
-		row[2]:createText(ReadText(config.textId, 46), {})
-		row[3]:createDropDown(config.dockingComputerOptions, { startOption = preset.software.docking.id, height = Helper.standardTextHeight })
+		row[2]:createText(ReadText(RKN_Configio.config.textId, 46), {})
+		row[3]:createDropDown(RKN_Configio.config.dockingComputerOptions, { startOption = preset.software.docking.id, height = Helper.standardTextHeight })
 		row[3].handlers.onDropDownConfirmed = function(_, id)
 			preset.software.docking.id = id
 		end
 		local row = c2table:addRow(true, { fixed = false })
-		row[2]:createText(ReadText(config.textId, 47), {})
-		row[3]:createDropDown(config.longRangeScannerOptions, { startOption = preset.software.longrangescanner.id, height = Helper.standardTextHeight })
+		row[2]:createText(ReadText(RKN_Configio.config.textId, 47), {})
+		row[3]:createDropDown(RKN_Configio.config.longRangeScannerOptions, { startOption = preset.software.longrangescanner.id, height = Helper.standardTextHeight })
 		row[3].handlers.onDropDownConfirmed = function(_, id)
 			preset.software.longrangescanner.id = id
 		end
 		local row = c2table:addRow(true, { fixed = false })
-		row[2]:createText(ReadText(config.textId, 48), {})
-		row[3]:createDropDown(config.objectScannerOptions, { startOption = preset.software.objectscanner.id, height = Helper.standardTextHeight })
+		row[2]:createText(ReadText(RKN_Configio.config.textId, 48), {})
+		row[3]:createDropDown(RKN_Configio.config.objectScannerOptions, { startOption = preset.software.objectscanner.id, height = Helper.standardTextHeight })
 		row[3].handlers.onDropDownConfirmed = function(_, id)
 			preset.software.objectscanner.id = id
 		end
 		local row = c2table:addRow(true, { fixed = false })
-		row[2]:createText(ReadText(config.textId, 49), {})
-		row[3]:createDropDown(config.targetingComputerOptions, { startOption = preset.software.targeting.id, height = Helper.standardTextHeight })
+		row[2]:createText(ReadText(RKN_Configio.config.textId, 49), {})
+		row[3]:createDropDown(RKN_Configio.config.targetingComputerOptions, { startOption = preset.software.targeting.id, height = Helper.standardTextHeight })
 		row[3].handlers.onDropDownConfirmed = function(_, id)
 			preset.software.targeting.id = id
 		end
 		local row = c2table:addRow(true, { fixed = false })
-		row[2]:createText(ReadText(config.textId, 50), {})
-		row[3]:createDropDown(config.tradingComputerOptions, { startOption = preset.software.trading.id, height = Helper.standardTextHeight })
+		row[2]:createText(ReadText(RKN_Configio.config.textId, 50), {})
+		row[3]:createDropDown(RKN_Configio.config.tradingComputerOptions, { startOption = preset.software.trading.id, height = Helper.standardTextHeight })
 		row[3].handlers.onDropDownConfirmed = function(_, id)
 			preset.software.trading.id = id
 		end
 
 		local row = c2table:addRow(false, { fixed = false })
-		row[1]:setColSpan(2):createText(ReadText(config.textId, 51), {})
-		L.createPresetPercentageSlider(c2table, "crew", preset.crew, ReadText(config.textId, 52))
-		L.createPresetPercentageSlider(c2table, "marines", preset.crew, ReadText(config.textId, 53))
+		row[1]:setColSpan(2):createText(ReadText(RKN_Configio.config.textId, 51), {})
+		RKN_Configio.createPresetPercentageSlider(c2table, "crew", preset.crew, ReadText(RKN_Configio.config.textId, 52))
+		RKN_Configio.createPresetPercentageSlider(c2table, "marines", preset.crew, ReadText(RKN_Configio.config.textId, 53))
 
 		local row = c2table:addRow(false, { fixed = false })
-		row[1]:setColSpan(2):createText(ReadText(config.textId, 54), {})
-		L.createPresetPercentageSlider(c2table, "cargo", preset.drones, ReadText(config.textId, 55))
-		L.createPresetPercentageSlider(c2table, "mining", preset.drones, ReadText(config.textId, 56))
-		L.createPresetPercentageSlider(c2table, "defence", preset.drones, ReadText(config.textId, 57))
-		L.createPresetPercentageSlider(c2table, "repair", preset.drones, ReadText(config.textId, 58))
+		row[1]:setColSpan(2):createText(ReadText(RKN_Configio.config.textId, 54), {})
+		RKN_Configio.createPresetPercentageSlider(c2table, "cargo", preset.drones, ReadText(RKN_Configio.config.textId, 55))
+		RKN_Configio.createPresetPercentageSlider(c2table, "mining", preset.drones, ReadText(RKN_Configio.config.textId, 56))
+		RKN_Configio.createPresetPercentageSlider(c2table, "defence", preset.drones, ReadText(RKN_Configio.config.textId, 57))
+		RKN_Configio.createPresetPercentageSlider(c2table, "repair", preset.drones, ReadText(RKN_Configio.config.textId, 58))
 
 		local row = c2table:addRow(false, { fixed = false })
-		row[1]:setColSpan(2):createText(ReadText(config.textId, 59), {})
-		L.createPresetPercentageSlider(c2table, "advsatellite", preset.deployables, ReadText(config.textId, 60))
-		L.createPresetPercentageSlider(c2table, "satellite", preset.deployables, ReadText(config.textId, 61))
-		L.createPresetPercentageSlider(c2table, "resprobe", preset.deployables, ReadText(config.textId, 62))
-		L.createPresetPercentageSlider(c2table, "lastower1", preset.deployables, ReadText(config.textId, 63))
-		L.createPresetPercentageSlider(c2table, "lastower2", preset.deployables, ReadText(config.textId, 64))
-		L.createPresetPercentageSlider(c2table, "ffmine", preset.deployables, ReadText(config.textId, 65))
-		L.createPresetPercentageSlider(c2table, "mine", preset.deployables, ReadText(config.textId, 66))
-		L.createPresetPercentageSlider(c2table, "trackmine", preset.deployables, ReadText(config.textId, 67))
+		row[1]:setColSpan(2):createText(ReadText(RKN_Configio.config.textId, 59), {})
+		RKN_Configio.createPresetPercentageSlider(c2table, "advsatellite", preset.deployables, ReadText(RKN_Configio.config.textId, 60))
+		RKN_Configio.createPresetPercentageSlider(c2table, "satellite", preset.deployables, ReadText(RKN_Configio.config.textId, 61))
+		RKN_Configio.createPresetPercentageSlider(c2table, "resprobe", preset.deployables, ReadText(RKN_Configio.config.textId, 62))
+		RKN_Configio.createPresetPercentageSlider(c2table, "lastower1", preset.deployables, ReadText(RKN_Configio.config.textId, 63))
+		RKN_Configio.createPresetPercentageSlider(c2table, "lastower2", preset.deployables, ReadText(RKN_Configio.config.textId, 64))
+		RKN_Configio.createPresetPercentageSlider(c2table, "ffmine", preset.deployables, ReadText(RKN_Configio.config.textId, 65))
+		RKN_Configio.createPresetPercentageSlider(c2table, "mine", preset.deployables, ReadText(RKN_Configio.config.textId, 66))
+		RKN_Configio.createPresetPercentageSlider(c2table, "trackmine", preset.deployables, ReadText(RKN_Configio.config.textId, 67))
 
 		local row = c2table:addRow(false, { fixed = false })
-		row[1]:setColSpan(2):createText(ReadText(config.textId, 68), {})
-		L.createPresetPercentageSlider(c2table, "flares", preset.countermeasure, ReadText(config.textId, 68))
+		row[1]:setColSpan(2):createText(ReadText(RKN_Configio.config.textId, 68), {})
+		RKN_Configio.createPresetPercentageSlider(c2table, "flares", preset.countermeasure, ReadText(RKN_Configio.config.textId, 68))
 
 		c2table:addEmptyRow(Helper.standardTextHeight)
 	end
@@ -980,27 +879,27 @@ function L.createAutoPresetEditorContext()
 		preset.name = text
 	end
 
-	local allPresets = L.getAutoPresets(L.params.settingKey)
+	local allPresets = RKN_Configio.getAutoPresets(RKN_Configio.params.settingKey)
 	local row = c2table:addRow(true, { fixed = false })
-	row[1]:setColSpan(2):createButton({ active = function() return L.getAutoPresetByName(allPresets, preset.name) ~= nil end }):setText(ReadText(config.textId, 70), { halign = "center" })
+	row[1]:setColSpan(2):createButton({ active = function() return RKN_Configio.getAutoPresetByName(allPresets, preset.name) ~= nil end }):setText(ReadText(RKN_Configio.config.textId, 70), { halign = "center" })
 	row[1].handlers.onClick = function()
-		L.saveAutoPreset(preset, L.getAutoPresetByName(allPresets, preset.name).id)
-		L.params.onSave()
+		RKN_Configio.saveAutoPreset(preset, RKN_Configio.getAutoPresetByName(allPresets, preset.name).id)
+		RKN_Configio.params.onSave()
 	end
-	row[3]:createButton({ active = function() return L.getAutoPresetByName(allPresets, preset.name) == nil end }):setText(ReadText(config.textId, 69), { halign = "center" })
+	row[3]:createButton({ active = function() return RKN_Configio.getAutoPresetByName(allPresets, preset.name) == nil end }):setText(ReadText(RKN_Configio.config.textId, 69), { halign = "center" })
 	row[3].handlers.onClick = function()
-		L.saveAutoPreset(preset)
-		L.params.onSave()
+		RKN_Configio.saveAutoPreset(preset)
+		RKN_Configio.params.onSave()
 	end
 	
-	if L.getState().topRow then
-		c1table:setTopRow(L.getState().topRow.leftTable)
+	if RKN_Configio.getState().topRow then
+		c1table:setTopRow(RKN_Configio.getState().topRow.leftTable)
 	end
 
 	contextFrame:display()
 end
 
-function L.createPresetRules(c1table, raceOptions, valueOptions, exactOptions, rules)
+function RKN_Configio.createPresetRules(c1table, raceOptions, valueOptions, exactOptions, rules)
 	local exactKey = "exact"
 	local autoKey = "auto"
 
@@ -1012,30 +911,30 @@ function L.createPresetRules(c1table, raceOptions, valueOptions, exactOptions, r
 		row[2].handlers.onClick = function ()
 			table.insert(rules, i-1, rule)
 			table.remove(rules, i+1)
-			L.refreshPresetFrame()
+			RKN_Configio.refreshPresetFrame()
 		end
 		-- Move down button --
 		row[3]:createButton({ active = i ~= #rules, height = Helper.standardTextHeight }):setIcon("widget_arrow_down_01")
 		row[3].handlers.onClick = function ()
 			table.insert(rules, i, rules[i+1])
 			table.remove(rules, i+2)
-			L.refreshPresetFrame()
+			RKN_Configio.refreshPresetFrame()
 		end
 		-- Delete button --
 		row[4]:createButton({ height = Helper.standardTextHeight }):setIcon("widget_cross_01")
 		row[4].handlers.onClick = function ()
 			table.remove(rules, i)
-			L.refreshPresetFrame()
+			RKN_Configio.refreshPresetFrame()
 		end
 		-- Rule number --
 		--row[5]:setColSpan(2):createText(tostring(i), { })
 
 		if rule.type == exactKey then
-			row[5]:setColSpan(2):createText(ReadText(config.textId, 87))
-			L.createPresetExactRows(c1table, exactOptions, rule)
+			row[5]:setColSpan(2):createText(ReadText(RKN_Configio.config.textId, 87))
+			RKN_Configio.createPresetExactRows(c1table, exactOptions, rule)
 		elseif rule.type == autoKey then
-			row[5]:setColSpan(2):createText(ReadText(config.textId, 88))
-			L.createPresetAutoRows(c1table, raceOptions, valueOptions, rule)
+			row[5]:setColSpan(2):createText(ReadText(RKN_Configio.config.textId, 88))
+			RKN_Configio.createPresetAutoRows(c1table, raceOptions, valueOptions, rule)
 		else
 			row[3]:setColSpan(4):createText("Unknown rule type!", {})
 		end
@@ -1044,10 +943,10 @@ function L.createPresetRules(c1table, raceOptions, valueOptions, exactOptions, r
 	-- Create add new rule dropdown
 	local row = c1table:addRow(true, { fixed = false })
 	local addOptions = {
-		{ id = exactKey, text = ReadText(config.textId, 77), icon = "", displayremoveoption = false },
-		{ id = autoKey, text = ReadText(config.textId, 78), icon = "", displayremoveoption = false }
+		{ id = exactKey, text = ReadText(RKN_Configio.config.textId, 77), icon = "", displayremoveoption = false },
+		{ id = autoKey, text = ReadText(RKN_Configio.config.textId, 78), icon = "", displayremoveoption = false }
 	}
-	row[2]:setColSpan(5):createDropDown(addOptions, { height = Helper.standardTextHeight, textOverride = ReadText(config.textId, 79)})
+	row[2]:setColSpan(5):createDropDown(addOptions, { height = Helper.standardTextHeight, textOverride = ReadText(RKN_Configio.config.textId, 79)})
 	row[2].handlers.onDropDownConfirmed = function(_, id)
 		local rule = { type = id }
 		if id == autoKey then
@@ -1056,35 +955,35 @@ function L.createPresetRules(c1table, raceOptions, valueOptions, exactOptions, r
 			rule.value = "low"
 		end
 		table.insert(rules, rule)
-		L.refreshPresetFrame()
+		RKN_Configio.refreshPresetFrame()
 	end
 end
 
-function L.createPresetExactRows(c1table, options, rule)
+function RKN_Configio.createPresetExactRows(c1table, options, rule)
 	local row = c1table:addRow(true, { fixed = false })
-	row[3]:setColSpan(3):createText(ReadText(config.textId, 80), {})
+	row[3]:setColSpan(3):createText(ReadText(RKN_Configio.config.textId, 80), {})
 	row[6]:createDropDown(options, { startOption = rule.macro, height = Helper.standardTextHeight })
 	row[6].handlers.onDropDownConfirmed = function(_, id)
 		rule.macro = id
 	end
 end
 
-function L.createPresetAutoRows(c1table, raceOptions, valueOptions, rule)
+function RKN_Configio.createPresetAutoRows(c1table, raceOptions, valueOptions, rule)
 	local row = c1table:addRow(true, { fixed = false })
-	row[3]:setColSpan(3):createText(ReadText(config.textId, 81), {})
+	row[3]:setColSpan(3):createText(ReadText(RKN_Configio.config.textId, 81), {})
 	row[6]:createDropDown(raceOptions, { active = #raceOptions > 1, startOption = rule.race, height = Helper.standardTextHeight })
 	row[6].handlers.onDropDownConfirmed = function(_, id)
 		rule.race = id
 	end
 	local row = c1table:addRow(true, { fixed = false })
-	row[3]:setColSpan(3):createText(ReadText(config.textId, 82), {})
+	row[3]:setColSpan(3):createText(ReadText(RKN_Configio.config.textId, 82), {})
 	row[6]:createDropDown(valueOptions, { active = #valueOptions > 1, startOption = rule.value, height = Helper.standardTextHeight })
 	row[6].handlers.onDropDownConfirmed = function(_, id)
 		rule.value = id
 	end
 end
 
-function L.createPresetPercentageSlider(c1table, current, all, text)
+function RKN_Configio.createPresetPercentageSlider(c1table, current, all, text)
 	local remaining = 100
 	for k, v in pairs(all) do
 		if k ~= "type" and k ~= current then
@@ -1096,273 +995,273 @@ function L.createPresetPercentageSlider(c1table, current, all, text)
 	row[2]:setColSpan(2):createSliderCell({ maxSelect = remaining, height = Helper.standardTextHeight, valueColor = Color["slider_value"], min = 0, max = 100, start = all[current], suffix = "%" }):setText(text)
 	row[2].handlers.onSliderCellConfirm = function(_, value)
 		all[current] = value
-		L.refreshPresetFrame()
+		RKN_Configio.refreshPresetFrame()
 	end
 end
 
-function L.createDeleteConfirmation(contextFrame, y, item)
-	local htable = contextFrame:addTable(8, { tabOrder = 6, x = Helper.borderSize, y = y, width = L.params.width - Helper.borderSize * 2 })
+function RKN_Configio.createDeleteConfirmation(contextFrame, y, item)
+	local htable = contextFrame:addTable(8, { tabOrder = 6, x = Helper.borderSize, y = y, width = RKN_Configio.params.width - Helper.borderSize * 2 })
 	local row = htable:addRow(false, { fixed = true })
-	row[1]:setColSpan(8):createText(ReadText(config.textId, 83), config.browserHeaderTextProperties)
+	row[1]:setColSpan(8):createText(ReadText(RKN_Configio.config.textId, 83), RKN_Configio.config.browserHeaderTextProperties)
 
 	local row = htable:addRow(false, { fixed = true })
-	row[3]:setColSpan(4):createText(ReadText(config.textId, 84):format(item.name), { wordwrap = true })
+	row[3]:setColSpan(4):createText(ReadText(RKN_Configio.config.textId, 84):format(item.name), { wordwrap = true })
 
 	htable:addEmptyRow(Helper.standardTextHeight)
 	local row = htable:addRow(true, { fixed = true })
-	row[5]:createButton({ }):setText(ReadText(config.textId, 85), { halign = "center" })
+	row[5]:createButton({ }):setText(ReadText(RKN_Configio.config.textId, 85), { halign = "center" })
 	row[5].handlers.onClick = function()
-		L.params.onDeletion(item)
-		L.contextModule = nil
-		L.refreshLoadFrame()
+		RKN_Configio.params.onDeletion(item)
+		RKN_Configio.contextModule = nil
+		RKN_Configio.refreshLoadFrame()
 	end
-	row[6]:createButton({ }):setText(ReadText(config.textId, 86), { halign = "center" })
+	row[6]:createButton({ }):setText(ReadText(RKN_Configio.config.textId, 86), { halign = "center" })
 	row[6].handlers.onClick = function()
-		L.contextModule = nil
-		L.refreshLoadFrame()
+		RKN_Configio.contextModule = nil
+		RKN_Configio.refreshLoadFrame()
 	end
 end
 
-function L.createRenameItemContext(contextFrame, y, item)
-	local state = L.getState()
-	local htable = contextFrame:addTable(8, { tabOrder = 6, x = Helper.borderSize, y = y, width = L.params.width - Helper.borderSize * 2 })
+function RKN_Configio.createRenameItemContext(contextFrame, y, item)
+	local state = RKN_Configio.getState()
+	local htable = contextFrame:addTable(8, { tabOrder = 6, x = Helper.borderSize, y = y, width = RKN_Configio.params.width - Helper.borderSize * 2 })
 	local row = htable:addRow(false, { fixed = true })
-	row[1]:setColSpan(8):createText(ReadText(config.textId, 94), config.browserHeaderTextProperties)
+	row[1]:setColSpan(8):createText(ReadText(RKN_Configio.config.textId, 94), RKN_Configio.config.browserHeaderTextProperties)
 
 	local row = htable:addRow(false, { fixed = true })
-	row[3]:createText(ReadText(config.textId, 95), { wordwrap = true })
-	L.params.contextMode.nameEditBox = row[4]:setColSpan(3):createEditBox({ scaling = true, height = Helper.standardTextHeight }):setText(state.renameText, { })
+	row[3]:createText(ReadText(RKN_Configio.config.textId, 95), { wordwrap = true })
+	RKN_Configio.params.contextMode.nameEditBox = row[4]:setColSpan(3):createEditBox({ scaling = true, height = Helper.standardTextHeight }):setText(state.renameText, { })
 	row[4].handlers.onTextChanged = function(_, text)
 		state.renameText = text
 	end
 
 	local takenNames = {}
-	for _, l in ipairs(L.params.itemsList()) do
-		takenNames[l.name] = true
+	for _, l in ipairs(RKN_Configio.params.itemsList()) do
+		takenNames[RKN_Configio.name] = true
 	end
 
 	htable:addEmptyRow(Helper.standardTextHeight)
 	local row = htable:addRow(true, { fixed = true })
-	row[5]:createButton({ active = function() return not takenNames[state.renameText] end }):setText(ReadText(config.textId, 85), { halign = "center" })
+	row[5]:createButton({ active = function() return not takenNames[state.renameText] end }):setText(ReadText(RKN_Configio.config.textId, 85), { halign = "center" })
 	row[5].handlers.onClick = function()
-		L.params.onRename(item, state.renameText)
-		L.contextModule = nil
-		L.refreshLoadFrame()
+		RKN_Configio.params.onRename(item, state.renameText)
+		RKN_Configio.contextModule = nil
+		RKN_Configio.refreshLoadFrame()
 	end
-	row[6]:createButton({ }):setText(ReadText(config.textId, 86), { halign = "center" })
+	row[6]:createButton({ }):setText(ReadText(RKN_Configio.config.textId, 86), { halign = "center" })
 	row[6].handlers.onClick = function()
-		L.contextModule = nil
-		L.refreshLoadFrame()
+		RKN_Configio.contextModule = nil
+		RKN_Configio.refreshLoadFrame()
 	end
 end
 
-function L.createSaveItemContext(contextFrame, y, item)
-	local state = L.getState()
-	local htable = contextFrame:addTable(8, { tabOrder = 6, x = Helper.borderSize, y = y, width = L.params.width - Helper.borderSize * 2 })
+function RKN_Configio.createSaveItemContext(contextFrame, y, item)
+	local state = RKN_Configio.getState()
+	local htable = contextFrame:addTable(8, { tabOrder = 6, x = Helper.borderSize, y = y, width = RKN_Configio.params.width - Helper.borderSize * 2 })
 	local row = htable:addRow(false, { fixed = true })
-	row[1]:setColSpan(8):createText(ReadText(config.textId, 97), config.browserHeaderTextProperties)
+	row[1]:setColSpan(8):createText(ReadText(RKN_Configio.config.textId, 97), RKN_Configio.config.browserHeaderTextProperties)
 
 	local row = htable:addRow(false, { fixed = true })
-	row[3]:createText(ReadText(config.textId, 96), { wordwrap = true })
-	L.params.contextMode.nameEditBox = row[4]:setColSpan(3):createEditBox({ scaling = true, height = Helper.standardTextHeight }):setText(state.saveText, { })
+	row[3]:createText(ReadText(RKN_Configio.config.textId, 96), { wordwrap = true })
+	RKN_Configio.params.contextMode.nameEditBox = row[4]:setColSpan(3):createEditBox({ scaling = true, height = Helper.standardTextHeight }):setText(state.saveText, { })
 	row[4].handlers.onTextChanged = function(_, text)
 		state.saveText = text
 	end
 
 	local takenNames = {}
-	for _, l in ipairs(L.params.itemsList()) do
-		takenNames[l.name] = L.params.isItemSavable(l)
+	for _, l in ipairs(RKN_Configio.params.itemsList()) do
+		takenNames[RKN_Configio.name] = RKN_Configio.params.isItemSavable(l)
 	end
 
 	htable:addEmptyRow(Helper.standardTextHeight)
 	local row = htable:addRow(true, { fixed = true })
-	row[4]:createButton({ active = function() return takenNames[state.saveText] == true end }):setText(ReadText(config.textId, 70), { halign = "center" })
+	row[4]:createButton({ active = function() return takenNames[state.saveText] == true end }):setText(ReadText(RKN_Configio.config.textId, 70), { halign = "center" })
 	row[4].handlers.onClick = function()
-		L.params.onSave(state.saveText, true)
-		L.contextModule = nil
-		L.refreshLoadFrame()
+		RKN_Configio.params.onSave(state.saveText, true)
+		RKN_Configio.contextModule = nil
+		RKN_Configio.refreshLoadFrame()
 	end
-	row[5]:createButton({ active = function() return takenNames[state.saveText] == nil end }):setText(ReadText(config.textId, 69), { halign = "center" })
+	row[5]:createButton({ active = function() return takenNames[state.saveText] == nil end }):setText(ReadText(RKN_Configio.config.textId, 69), { halign = "center" })
 	row[5].handlers.onClick = function()
-		L.params.onSave(state.saveText, false)
-		L.contextModule = nil
-		L.refreshLoadFrame()
+		RKN_Configio.params.onSave(state.saveText, false)
+		RKN_Configio.contextModule = nil
+		RKN_Configio.refreshLoadFrame()
 	end
-	row[6]:createButton({ }):setText(ReadText(config.textId, 86), { halign = "center" })
+	row[6]:createButton({ }):setText(ReadText(RKN_Configio.config.textId, 86), { halign = "center" })
 	row[6].handlers.onClick = function()
-		L.contextModule = nil
-		L.refreshLoadFrame()
+		RKN_Configio.contextModule = nil
+		RKN_Configio.refreshLoadFrame()
 	end
 end
 
-function L.isRowValidForLoad()
-	return L.selectedEntry and L.selectedEntry.active
+function RKN_Configio.isRowValidForLoad()
+	return RKN_Configio.selectedEntry and RKN_Configio.selectedEntry.active
 end
 
-function L.isRowValidForDeletion()
-	return L.selectedEntry and L.selectedEntry.deleteable
+function RKN_Configio.isRowValidForDeletion()
+	return RKN_Configio.selectedEntry and RKN_Configio.selectedEntry.deleteable
 end
 
-function L.isRowValidForRename()
-	return L.selectedEntry and L.selectedEntry.renamable
+function RKN_Configio.isRowValidForRename()
+	return RKN_Configio.selectedEntry and RKN_Configio.selectedEntry.renamable
 end
 
-function L.isRowValidForSave()
-	--return L.selectedEntry and (L.selectedEntry.type == "folder" or L.selectedEntry.savable)
-	return L.params.onSave ~= nil
+function RKN_Configio.isRowValidForSave()
+	--return RKN_Configio.selectedEntry and (RKN_Configio.selectedEntry.type == "folder" or RKN_Configio.selectedEntry.savable)
+	return RKN_Configio.params.onSave ~= nil
 end
 
-function L.getSelectedRowCustomAutoPreset()
-	return L.selectedEntry and L.selectedEntry.item and L.selectedEntry.item.customPreset
+function RKN_Configio.getSelectedRowCustomAutoPreset()
+	return RKN_Configio.selectedEntry and RKN_Configio.selectedEntry.item and RKN_Configio.selectedEntry.item.customPreset
 end
 
-function L.buttonDeleteItem()
-	if L.isRowValidForDeletion() then
-		L.contextModule = function(contextFrame, y) L.createDeleteConfirmation(contextFrame, y, L.selectedEntry.item) end
-		L.refreshLoadFrame()
+function RKN_Configio.buttonDeleteItem()
+	if RKN_Configio.isRowValidForDeletion() then
+		RKN_Configio.contextModule = function(contextFrame, y) RKN_Configio.createDeleteConfirmation(contextFrame, y, RKN_Configio.selectedEntry.item) end
+		RKN_Configio.refreshLoadFrame()
 	end
 end
 
-function L.buttonLoadItem()
-	if L.isRowValidForLoad() then
-		L.params.onSelection(L.selectedEntry.item)
+function RKN_Configio.buttonLoadItem()
+	if RKN_Configio.isRowValidForLoad() then
+		RKN_Configio.params.onSelection(RKN_Configio.selectedEntry.item)
 	end
 end
 
-function L.buttonRenameItem()
-	if L.isRowValidForRename() then
-		L.getState().renameText = L.selectedEntry.item.name
-		L.contextModule = function(contextFrame, y) L.createRenameItemContext(contextFrame, y, L.selectedEntry.item) end
-		L.refreshLoadFrame()
+function RKN_Configio.buttonRenameItem()
+	if RKN_Configio.isRowValidForRename() then
+		RKN_Configio.getState().renameText = RKN_Configio.selectedEntry.item.name
+		RKN_Configio.contextModule = function(contextFrame, y) RKN_Configio.createRenameItemContext(contextFrame, y, RKN_Configio.selectedEntry.item) end
+		RKN_Configio.refreshLoadFrame()
 	end
 end
 
-function L.buttonSaveItem()
-	if L.isRowValidForSave() then
-		if L.selectedEntry.type == "folder" then
-			L.getState().saveText = L.selectedEntry.fullname .. L.getLoadSettings().folder_delimiter
+function RKN_Configio.buttonSaveItem()
+	if RKN_Configio.isRowValidForSave() then
+		if RKN_Configio.selectedEntry.type == "folder" then
+			RKN_Configio.getState().saveText = RKN_Configio.selectedEntry.fullname .. RKN_Configio.getLoadSettings().folder_delimiter
 		else
-			L.getState().saveText = L.selectedEntry.item.name
+			RKN_Configio.getState().saveText = RKN_Configio.selectedEntry.item.name
 		end
-		L.contextModule = function(contextFrame, y) L.createSaveItemContext(contextFrame, y) end
-		L.refreshLoadFrame()
+		RKN_Configio.contextModule = function(contextFrame, y) RKN_Configio.createSaveItemContext(contextFrame, y) end
+		RKN_Configio.refreshLoadFrame()
 	end
 end
 
-function L.refreshLoadFrame()
-	local state = L.getState()
+function RKN_Configio.refreshLoadFrame()
+	local state = RKN_Configio.getState()
 	state.topRow = {
 		listTable = GetTopRow(state.tables[1]),
 		settingsTable = GetTopRow(state.tables[3])
 	}
-	L.autoSelectSearch = false
-	L.createLoadContext()
+	RKN_Configio.autoSelectSearch = false
+	RKN_Configio.createLoadContext()
 end
 
-function L.refreshPresetFrame()
-	local state = L.getState()
+function RKN_Configio.refreshPresetFrame()
+	local state = RKN_Configio.getState()
 	state.topRow = {
 		leftTable = GetTopRow(state.tables[2])
 	}
-	L.createAutoPresetEditorContext()
+	RKN_Configio.createAutoPresetEditorContext()
 end
 
-function L.buttonExtendListEntry(index, row)
-	local key = config.folderIdFormat:format(L.params.settingKey, index)
-	L.getState().expandedFolders[key] = not L.getState().expandedFolders[key]
-	L.getState().selectedRow = row
-	L.refreshLoadFrame()
+function RKN_Configio.buttonExtendListEntry(index, row)
+	local key = RKN_Configio.config.folderIdFormat:format(RKN_Configio.params.settingKey, index)
+	RKN_Configio.getState().expandedFolders[key] = not RKN_Configio.getState().expandedFolders[key]
+	RKN_Configio.getState().selectedRow = row
+	RKN_Configio.refreshLoadFrame()
 end
 
-function L.buttonExpandAll(listRoot)
-	L.expandAll(listRoot)
-	L.refreshLoadFrame()
+function RKN_Configio.buttonExpandAll(listRoot)
+	RKN_Configio.expandAll(listRoot)
+	RKN_Configio.refreshLoadFrame()
 end
 
-function L.expandAll(root)
+function RKN_Configio.expandAll(root)
 	for _,folder in ipairs(root.folders_arr) do
-		L.getState().expandedFolders[config.folderIdFormat:format(L.params.settingKey, folder.fullname)] = true
-		L.expandAll(folder)
+		RKN_Configio.getState().expandedFolders[RKN_Configio.config.folderIdFormat:format(RKN_Configio.params.settingKey, folder.fullname)] = true
+		RKN_Configio.expandAll(folder)
 	end
 end
 
-function L.buttonCollapseAll()
-	for k,_ in pairs(L.getState().expandedFolders) do
-		L.getState().expandedFolders[k] = false
+function RKN_Configio.buttonCollapseAll()
+	for k,_ in pairs(RKN_Configio.getState().expandedFolders) do
+		RKN_Configio.getState().expandedFolders[k] = false
 	end
-	L.refreshLoadFrame()
+	RKN_Configio.refreshLoadFrame()
 end
 
-function L.searchItemEdit(_, text, textchanged)
+function RKN_Configio.searchItemEdit(_, text, textchanged)
 	if not textchanged then
 		return
 	end
 
-	L.getState().filter.search = text
-	L.refreshLoadFrame()
+	RKN_Configio.getState().filter.search = text
+	RKN_Configio.refreshLoadFrame()
 end
 
-function L.filterMacroToggled(macro, checked)
-	local selectedMacros = L.getState().filter.macros
+function RKN_Configio.filterMacroToggled(macro, checked)
+	local selectedMacros = RKN_Configio.getState().filter.macros
 	if checked then
 		table.insert(selectedMacros, macro)
 	else
-		local index = Utils.ArrayIndexOf(selectedMacros, macro)
+		local index = RKN_Configio_Utils.ArrayIndexOf(selectedMacros, macro)
 		if index then
 			table.remove(selectedMacros, index)
 		end
 	end
-	L.refreshLoadFrame()
+	RKN_Configio.refreshLoadFrame()
 end
 
-function L.filterShipToggled(id, selected, checked)
+function RKN_Configio.filterShipToggled(id, selected, checked)
 	if checked then
 		selected[id] = true
 	else
 		selected[id] = nil
 	end
-	L.refreshLoadFrame()
+	RKN_Configio.refreshLoadFrame()
 end
 
-function L.onRowChanged(uitable, rowdata)
-	if L.ltable and uitable == L.ltable.id then
-		L.selectedEntry = rowdata
+function RKN_Configio.onRowChanged(uitable, rowdata)
+	if RKN_Configio.ltable and uitable == RKN_Configio.ltable.id then
+		RKN_Configio.selectedEntry = rowdata
 		return true
 	end
 	return false
 end
 
-function L.onSelectElement(uitable)
-	if uitable == L.ltable.id then
-		L.buttonLoadItem()
+function RKN_Configio.onSelectElement(uitable)
+	if uitable == RKN_Configio.ltable.id then
+		RKN_Configio.buttonLoadItem()
 	end
 end
 
-function L.onDropDownActivated(dropdown)
+function RKN_Configio.onDropDownActivated(dropdown)
 	return true
 end
 
-function L.viewCreated(layer, ...)
+function RKN_Configio.viewCreated(layer, ...)
 	if layer == 2 then
-		local state = L.getState();
+		local state = RKN_Configio.getState();
 		if state then
 			state.tables = table.pack(...)
 		end
 	end
 end
 
-function L.onStationLoadoutLoad(menu, item)
+function RKN_Configio.onStationLoadoutLoad(menu, item)
 	if item.customPreset then
-		local upgradeplan = L.generateLoadoutUpgradePlan(menu, item.customPreset)
+		local upgradeplan = RKN_Configio.generateLoadoutUpgradePlan(menu, item.customPreset)
 		menu.getUpgradeData(upgradeplan)
 		if menu.holomap and (menu.holomap ~= 0) then
 			Helper.callLoadoutFunction(menu.constructionplan[menu.loadoutMode].upgradeplan, nil, function (loadout, _) return C.UpdateObjectConfigurationMap(menu.holomap, menu.container, menu.loadoutModule.component, menu.loadoutModule.macro, true, loadout) end)
 		end
 		menu.displayMenu()
-	elseif item.partial and L.getLoadSettings().item_load_partial then
+	elseif item.partial and RKN_Configio.getLoadSettings().item_load_partial then
 		local loadout = Helper.getLoadoutHelper(C.GetLoadout, C.GetLoadoutCounts, 0, menu.loadoutModule.macro, item.id)
 		local upgradeplan = Helper.convertLoadout(menu.loadoutModule.component, menu.loadoutModule.macro, loadout, nil)
-		L.trimPartialLoadout(menu.constructionplan[menu.loadoutMode].upgradeplan, upgradeplan, menu.upgradewares, false)
+		RKN_Configio.trimPartialLoadout(menu.constructionplan[menu.loadoutMode].upgradeplan, upgradeplan, menu.upgradewares, false)
 		menu.getUpgradeData(upgradeplan)
 		if menu.holomap and (menu.holomap ~= 0) then
 			Helper.callLoadoutFunction(menu.constructionplan[menu.loadoutMode].upgradeplan, nil, function (loadout, _) return C.UpdateObjectConfigurationMap(menu.holomap, menu.container, menu.loadoutModule.component, menu.loadoutModule.macro, true, loadout) end)
@@ -1373,42 +1272,42 @@ function L.onStationLoadoutLoad(menu, item)
 	end
 end
 
-function L.onShipLoadoutLoad(menu, item)
+function RKN_Configio.onShipLoadoutLoad(menu, item)
 	if item.customPreset then
 		menu.loadoutName = item.name
 		menu.setCustomShipName()
-		local upgradeplan = L.generateLoadoutUpgradePlan(menu, item.customPreset)
+		local upgradeplan = RKN_Configio.generateLoadoutUpgradePlan(menu, item.customPreset)
 		if menu.usemacro then
 			menu.captainSelected = true
 		end
 		menu.getDataAndDisplay(upgradeplan, nil)
-	elseif item.partial and L.getLoadSettings().item_load_partial then
+	elseif item.partial and RKN_Configio.getLoadSettings().item_load_partial then
 		menu.loadoutName = item.name
 		menu.setCustomShipName()
 		local loadout = Helper.getLoadoutHelper2(C.GetLoadout2, C.GetLoadoutCounts2, "UILoadout2", menu.object, menu.macro, item.id)
 		local upgradeplan = Helper.convertLoadout(menu.object, menu.macro, loadout, menu.software, "UILoadout2")
-		L.trimPartialLoadout(menu.upgradeplan, upgradeplan, menu.upgradewares, true)
+		RKN_Configio.trimPartialLoadout(menu.upgradeplan, upgradeplan, menu.upgradewares, true)
 		menu.getDataAndDisplay(upgradeplan, menu.crew)
 	else
 		menu.dropdownLoadout(_, item.id)
 	end
 end
 
-function L.onLoadoutRemoved(defaultLoad, item)
+function RKN_Configio.onLoadoutRemoved(defaultLoad, item)
 	if not item.customPreset then
 		defaultLoad(nil, item.id)
 		return
 	end
 
-	local autoPresets = GetNPCBlackboard(L.getPlayerId(), config.autoPresetsBlackboardId)
+	local autoPresets = GetNPCBlackboard(RKN_Configio.getPlayerId(), RKN_Configio.config.autoPresetsBlackboardId)
 	if autoPresets then
-		autoPresets[L.params.settingKey][item.id] = nil
-		SetNPCBlackboard(L.getPlayerId(), config.autoPresetsBlackboardId, autoPresets)
-		L.refreshLoadFrame()
+		autoPresets[RKN_Configio.params.settingKey][item.id] = nil
+		SetNPCBlackboard(RKN_Configio.getPlayerId(), RKN_Configio.config.autoPresetsBlackboardId, autoPresets)
+		RKN_Configio.refreshLoadFrame()
 	end
 end
 
-function L.buttonDeleteCP(menu, id)
+function RKN_Configio.buttonDeleteCP(menu, id)
 	C.RemoveConstructionPlan("local", id)
 	if id == menu.currentCPID then
 		menu.currentCPID = nil
@@ -1422,22 +1321,22 @@ function L.buttonDeleteCP(menu, id)
 	end
 end
 
-function L.dropdownSort(_, id)
-	L.getState().sort = id
-	L.refreshLoadFrame()
+function RKN_Configio.dropdownSort(_, id)
+	RKN_Configio.getState().sort = id
+	RKN_Configio.refreshLoadFrame()
 end
 
-function L.addStationPlanMouseover(plans)
+function RKN_Configio.addStationPlanMouseover(plans)
 	for _, plan in ipairs(plans) do
 		-- Make missing blueprints text red
 		if plan.mouseovertext and not plan.active then
-			plan.mouseovertext = Helper.convertColorToText(config.stationPlanMissingBlueprintsColor) .. plan.mouseovertext .. "\27X"
+			plan.mouseovertext = Helper.convertColorToText(RKN_Configio.config.stationPlanMissingBlueprintsColor) .. plan.mouseovertext .. "\27X"
 		end
 
 		-- Add "Contains production modules" list
 		local atLeastOne = false;
-		local text = ReadText(config.textId, 104)
-		for _, module in ipairs(L.getAllProductionModules()) do
+		local text = ReadText(RKN_Configio.config.textId, 104)
+		for _, module in ipairs(RKN_Configio.getAllProductionModules()) do
 			local hasmacros = Helper.textArrayHelper({ module.macro }, function (numtexts, texts) return C.CheckConstructionPlanForMacros(plan.id, texts, numtexts) end)
 			if (hasmacros) then
 				atLeastOne = true

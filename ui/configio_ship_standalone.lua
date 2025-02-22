@@ -5,8 +5,6 @@ local ffi = require("ffi")
 local C = ffi.C
 
 --local Lib = require("extensions.sn_mod_support_apis.lua_library")
-local ConfigioLib = require("extensions.rkn_configio.ui.configio_menu")
-local Utils = require("extensions.rkn_configio.ui.utils")
 
 local rkn_menu = {}
 local menu = {}
@@ -107,7 +105,7 @@ function rkn_menu.createTitleBar(frame)
 		row[2].handlers.onDropDownConfirmed = menu.dropdownShip
 		--]]
 
-		local dropdown = ConfigioLib.createShipTitleBarButton(row, menu, config, classOptions, shipOptions, curShipOption, dropDownIconProperties)
+		local dropdown = RKN_Configio.createShipTitleBarButton(row, menu, config, classOptions, shipOptions, curShipOption)
 		---- Runekn's Changes Stop Here! ----
 		local active = true
 		if (menu.mode == "purchase") and (menu.macro ~= "") and (not menu.validLicence) then
@@ -128,7 +126,7 @@ function rkn_menu.createTitleBar(frame)
 		--row[3].handlers.onDropDownConfirmed = menu.dropdownLoadout
 		--row[3].handlers.onDropDownRemoved = menu.dropdownLoadoutRemoved
 
-		ConfigioLib.createShipLoadoutTitleBarButton(row, menu, config, active, loadoutOptions)
+		RKN_Configio.createShipLoadoutTitleBarButton(row, menu, config, active, loadoutOptions)
 		---- Runekn's Changes Stop Here! ----
 		-- save
 		row[4]:createButton({ active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")), height = menu.titleData.height, mouseOverText = ReadText(1026, 7905), helpOverlayID = "shipconfig_saveloadout", helpOverlayText = " ", helpOverlayHighlightOnly = true, uiTriggerID = "shipconfig_saveloadout" }):setIcon("menu_save")
@@ -161,19 +159,19 @@ function rkn_menu.onRowChanged(row, rowdata, uitable)
 		end
 	end
 	-- Runekn's Changes Start Here! --
-	ConfigioLib.onRowChanged(uitable, rowdata)
+	RKN_Configio.onRowChanged(uitable, rowdata)
 	-- Runekn's Changes Stop Here! --
 end
 
 function rkn_menu.onSelectElement(uitable)
 	-- Runekn's Changes Start Here! --
-    ConfigioLib.onSelectElement(uitable)
+    RKN_Configio.onSelectElement(uitable)
 	-- Runekn's Changes Stop Here! --
 end
 
 function rkn_menu.onDropDownActivated(dropdown)
 	-- Runekn's Changes Start Here! --
-	if ConfigioLib.onDropDownActivated(dropdown) then
+	if RKN_Configio.onDropDownActivated(dropdown) then
 		return
 	end
 	-- Runekn's Changes Stop Here! --
@@ -182,7 +180,7 @@ function rkn_menu.onDropDownActivated(dropdown)
 end
 
 function rkn_menu.viewCreated(layer, ...)
-	ConfigioLib.viewCreated(layer, ...)
+	RKN_Configio.viewCreated(layer, ...)
 	rkn_menu.viewCreatedOld(layer, ...)
 end
 

@@ -5,7 +5,6 @@ local ffi = require("ffi")
 local C = ffi.C
 
 --local Lib = require("extensions.sn_mod_support_apis.lua_library")
-local ConfigioLib = require("extensions.rkn_configio.ui.configio_menu")
 
 local rkn_menu = {}
 local menu = {}
@@ -66,7 +65,7 @@ function rkn_menu.createTitleBar(frame)
 		--row[2].handlers.onDropDownConfirmed = menu.dropdownLoad
 		--row[2].handlers.onDropDownRemoved = menu.dropdownRemovedCP
 
-		ConfigioLib.createStationTitleBarButton(row, menu, config, loadOptions)
+		RKN_Configio.createStationTitleBarButton(row, menu, config, loadOptions)
 		------- Runekn's Changes Stop Here! ----------
 		-- save
 		row[3]:createButton({ helpOverlayID = "save_constructionplan", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = ReadText(1026, 7901) }):setIcon("menu_save")
@@ -113,7 +112,7 @@ function rkn_menu.createTitleBar(frame)
 		--row[2].handlers.onDropDownConfirmed = menu.dropdownLoadout
 		--row[2].handlers.onDropDownRemoved = menu.dropdownRemovedLoadout
 
-		ConfigioLib.createStationLoadoutTitleBarButton(row, menu, config, loadoutOptions)
+		RKN_Configio.createStationLoadoutTitleBarButton(row, menu, config, loadoutOptions)
 		------- Runekn's Changes Stop Here! ----------
 		-- save
 		row[8]:createButton({ helpOverlayID = "save_loadout", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = ReadText(1026, 7905) }):setIcon("menu_save")
@@ -154,7 +153,7 @@ function rkn_menu.refreshTitleBar()
 		--local desc = Helper.createDropDown(loadOptions, "", text, nil, true, true, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize)
 		--Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, function () menu.noupdate = true end, menu.dropdownLoad, menu.dropdownRemovedCP)
 
-		ConfigioLib.createRefreshStationTitleBarButton(menu, text, loadOptions)
+		RKN_Configio.createRefreshStationTitleBarButton(menu, text, loadOptions)
 		------- Runekn's Changes Stop Here! ----------
 		-- save
 		local desc = Helper.createButton(nil, Helper.createButtonIcon("menu_save", nil, 255, 255, 255, 100), true, true, 0, 0, 0, menu.titleData.height, nil, nil, nil, ReadText(1026, 7901))
@@ -176,7 +175,7 @@ function rkn_menu.refreshTitleBar()
 		--local desc = Helper.createDropDown(loadoutOptions, "", text, nil, true, next(menu.loadouts) ~= nil, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + 4 * (menu.titleData.height + Helper.borderSize))
 		--Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, nil, menu.dropdownLoadout, menu.dropdownRemovedLoadout)
 
-		ConfigioLib.createRefreshStationLoadoutTitleBarButton(menu, text, loadoutOptions)
+		RKN_Configio.createRefreshStationLoadoutTitleBarButton(menu, text, loadoutOptions)
 		------- Runekn's Changes Stop Here! ----------
 		-- save
 		local desc = Helper.createButton(nil, Helper.createButtonIcon("menu_save", nil, 255, 255, 255, 100), true, true, 0, 0, 0, menu.titleData.height, nil, nil, nil, ReadText(1026, 7905))
@@ -187,7 +186,7 @@ end
 -- Overriden function --
 function rkn_menu.onRowChanged(row, rowdata, uitable, modified, input, source)
 	-- Runekn's Changes Start Here! --
-	if ConfigioLib.onRowChanged(uitable, rowdata) then
+	if RKN_Configio.onRowChanged(uitable, rowdata) then
         return
     end
 	-- Runekn's Changes Stop Here! --
@@ -228,13 +227,13 @@ function rkn_menu.onSelectElement(uitable, modified, row)
 		end
     end
 	-- Runekn's Changes Start Here! --
-    ConfigioLib.onSelectElement(uitable)
+    RKN_Configio.onSelectElement(uitable)
 	-- Runekn's Changes Stop Here! --
 end
 
 function rkn_menu.onDropDownActivated(dropdown)
 	-- Runekn's Changes Start Here! --
-	if ConfigioLib.onDropDownActivated(dropdown) then
+	if RKN_Configio.onDropDownActivated(dropdown) then
 		return
 	end
 	-- Runekn's Changes Stop Here! --
@@ -243,7 +242,7 @@ function rkn_menu.onDropDownActivated(dropdown)
 end
 
 function rkn_menu.viewCreated(layer, ...)
-	ConfigioLib.viewCreated(layer, ...)
+	RKN_Configio.viewCreated(layer, ...)
 	rkn_menu.viewCreatedOld(layer, ...)
 end
 
