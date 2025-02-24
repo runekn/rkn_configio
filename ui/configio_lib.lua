@@ -173,7 +173,7 @@ function RKN_Configio.getAllProductionModules()
 			local name, macro = GetWareData(ware, "name", "component")
 			local moduletype = GetMacroData(macro, "infolibrary")
 
-			if moduletype == "moduletypes_production" then
+			if moduletype == "moduletypes_production" or moduletype == "moduletypes_processing" or moduletype == "moduletypes_build" then
 				local entry = { name = name, macro = macro }
 				table.insert(result, entry)
 			end

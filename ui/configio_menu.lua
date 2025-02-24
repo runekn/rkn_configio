@@ -2,13 +2,6 @@
 local ffi = require("ffi")
 local C = ffi.C
 
-local function init()
-	-- Set settings for extension options menu on game start --
-	RKN_Configio.getLoadSettings(1)
-	SetNPCBlackboard(RKN_Configio.getPlayerId(), RKN_Configio.config.settingsBlackboardId, RKN_Configio.settings)
-end
-
-
 function RKN_Configio.createStationTitleBarButton(row, menu, sc_config, loadOptions)
 	if RKN_Configio.isModEnabledForType(RKN_Configio.config.stationKey) then
 		row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(RKN_Configio.config.textId, 1), RKN_Configio.config.loadButtonTextProperties)
@@ -1350,6 +1343,3 @@ function RKN_Configio.addStationPlanMouseover(plans)
 	end
 	return plans
 end
-
-
-init()

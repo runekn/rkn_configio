@@ -85,6 +85,7 @@ Does not support resolutions lower than 1920x1080
 
 ## Updates
 
+* 1.4.8: Add processor and build modules to station plan hoverover text and module filter. Fix loading save not loading dialog settings.
 * 1.4.7: Use new official lua declaration to avoid requiring disabled UI protection mode
 * 1.4.6: Fix 7.5 compatibility. Add "Type" ship sorting option.
 * 1.4.5: Add production modules to station plan mouse-over text
