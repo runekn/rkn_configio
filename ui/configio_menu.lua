@@ -272,7 +272,7 @@ function RKN_Configio.buttonShipLoadoutTitleLoad(menu, contextLayer)
 			x = menu.contextMode.x,
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
-			height = Helper.scaleY(400),
+			height = RKN_Configio.config.stationLoadoutLoadHeight,
 			itemsList = function() return RKN_Configio.addPartialFlag(RKN_Configio.addCustomAutoPresets(RKN_Configio.config.shipLoadoutKey, RKN_Configio_Utils.DeepCopy(menu.loadouts))) end,
 			header = ReadText(RKN_Configio.config.textId, 22),
 			optionItemNameText = ReadText(RKN_Configio.config.textId, 24),
