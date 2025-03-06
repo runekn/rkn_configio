@@ -272,7 +272,7 @@ function RKN_Configio.buttonShipLoadoutTitleLoad(menu, contextLayer)
 			x = menu.contextMode.x,
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
-			height = RKN_Configio.config.stationLoadoutLoadHeight,
+			height = Helper.scaleY(400),
 			itemsList = function() return RKN_Configio.addPartialFlag(RKN_Configio.addCustomAutoPresets(RKN_Configio.config.shipLoadoutKey, RKN_Configio_Utils.DeepCopy(menu.loadouts))) end,
 			header = ReadText(RKN_Configio.config.textId, 22),
 			optionItemNameText = ReadText(RKN_Configio.config.textId, 24),
@@ -408,8 +408,9 @@ function RKN_Configio.createLoadContext()
 	contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
 
 	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
-	local browserWidth = RKN_Configio.params.width - RKN_Configio.config.loadSettingsWidth - Helper.borderSize * 2 - RKN_Configio.config.settingsBrowserSeparation
-	local browserX = RKN_Configio.config.loadSettingsWidth + Helper.borderSize + RKN_Configio.config.settingsBrowserSeparation
+	local settingsWidth = RKN_Configio.params.width * RKN_Configio.config.loadSettingsWidthMultipler
+	local browserWidth = RKN_Configio.params.width - settingsWidth - Helper.borderSize * 2 - RKN_Configio.config.settingsBrowserSeparation
+	local browserX = settingsWidth + Helper.borderSize + RKN_Configio.config.settingsBrowserSeparation
 	local buttonRowHeight = Helper.standardButtonHeight * 1.2
 
 	-- Create item list --
@@ -430,18 +431,18 @@ function RKN_Configio.createLoadContext()
 	local btable = contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = RKN_Configio.params.height - buttonRowHeight, x = browserX, width = browserWidth })
 	RKN_Configio.btable = btable
 	local row = btable:addRow(true, { fixed = true })
-	row[1]:createButton({ active = RKN_Configio.isRowValidForLoad, height = buttonRowHeight }):setText("\27[menu_import] " .. ReadText(RKN_Configio.config.textId, 3), RKN_Configio.config.buttonRowTextProperties)
+	RKN_Configio.setRowButtonText(row[1]:createButton({ active = RKN_Configio.isRowValidForLoad, height = buttonRowHeight }), "\27[menu_import] ", ReadText(RKN_Configio.config.textId, 3), RKN_Configio.config.buttonRowTextProperties)
 	row[1].handlers.onClick = RKN_Configio.buttonLoadItem
-	row[2]:createButton({ active = RKN_Configio.isRowValidForSave, height = buttonRowHeight }):setText("\27[menu_save]" .. ReadText(RKN_Configio.config.textId, 97), RKN_Configio.config.buttonRowTextProperties) -- TODO: text
+	RKN_Configio.setRowButtonText(row[2]:createButton({ active = RKN_Configio.isRowValidForSave, height = buttonRowHeight }), "\27[menu_save]", ReadText(RKN_Configio.config.textId, 97), RKN_Configio.config.buttonRowTextProperties)
 	row[2].handlers.onClick = RKN_Configio.buttonSaveItem
-	row[3]:createButton({ active = RKN_Configio.isRowValidForRename, height = buttonRowHeight }):setText("\27[menu_edit] " .. ReadText(RKN_Configio.config.textId, 98), RKN_Configio.config.buttonRowTextProperties) -- TODO: text
+	RKN_Configio.setRowButtonText(row[3]:createButton({ active = RKN_Configio.isRowValidForRename, height = buttonRowHeight }), "\27[menu_edit] ", ReadText(RKN_Configio.config.textId, 98), RKN_Configio.config.buttonRowTextProperties)
 	row[3].handlers.onClick = RKN_Configio.buttonRenameItem
 	if RKN_Configio.params.settingKey == RKN_Configio.config.stationKey then
 		row[3].properties.mouseOverText = ReadText(RKN_Configio.config.textId, 99)
 	end
-	row[4]:createButton({ active = RKN_Configio.isRowValidForDeletion, height = buttonRowHeight }):setText("\27[menu_dismiss] " .. ReadText(RKN_Configio.config.textId, 4), RKN_Configio.config.buttonRowTextProperties)
+	RKN_Configio.setRowButtonText(row[4]:createButton({ active = RKN_Configio.isRowValidForDeletion, height = buttonRowHeight }), "\27[menu_dismiss] ", ReadText(RKN_Configio.config.textId, 4), RKN_Configio.config.buttonRowTextProperties)
 	row[4].handlers.onClick = RKN_Configio.buttonDeleteItem
-	row[5]:createButton({ height = buttonRowHeight }):setText("\27[widget_cross_01] " .. ReadText(RKN_Configio.config.textId, 5), RKN_Configio.config.buttonRowTextProperties)
+	RKN_Configio.setRowButtonText(row[5]:createButton({ height = buttonRowHeight }), "\27[widget_cross_01] ", ReadText(RKN_Configio.config.textId, 5), RKN_Configio.config.buttonRowTextProperties)
 	row[5].handlers.onClick = RKN_Configio.params.closeContextMenu
 
 	-- Create expand/collapse all buttons --
@@ -460,8 +461,8 @@ function RKN_Configio.createLoadContext()
 	row[4]:createText(RKN_Configio.params.header, { font = RKN_Configio.config.browserHeaderTextProperties.font, fontsize = RKN_Configio.config.browserHeaderTextProperties.fontSize })
 
 	-- Create settings list --
-	local stable = contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = RKN_Configio.params.height, x = Helper.borderSize, width = RKN_Configio.config.loadSettingsWidth - Helper.borderSize * 2 })
-	stable:setColWidth(1, RKN_Configio.config.loadSettingsWidth * 0.7, false)
+	local stable = contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = RKN_Configio.params.height, x = Helper.borderSize, width = settingsWidth - Helper.borderSize * 2 })
+	stable:setColWidth(1, settingsWidth * 0.7, false)
 
 	for _, frameModule in ipairs(RKN_Configio.params.frameModules) do
 		frameModule(stable)
@@ -529,10 +530,14 @@ function RKN_Configio.createShipListItem(row, column, item, isplayershipyard)
 		row[column].properties.mouseOverText = item.item.hasBlueprint and ReadText(RKN_Configio.config.textId, 102) or ReadText(RKN_Configio.config.textId, 103)
 		column = column + 1
 	end
+	if RKN_Configio.getState().listColumns > 11 then
+		row[11]:setColSpan(3):createText(item.item.shiptypename, RKN_Configio.config.itemTextProperties)
+	else
+		text = text .. " (" .. item.item.shiptypename .. ")"
+	end
 	row[column]:createText("\27[" .. item.item.shipicon .. "]", RKN_Configio.config.itemTextProperties)
 	row[column + 1]:setColSpan(11 - (column + 1)):createText(text, RKN_Configio.config.itemTextProperties)
 	row[column + 1].properties.mouseOverText = item.item.mouseovertext
-	row[11]:setColSpan(3):createText(item.item.shiptypename, RKN_Configio.config.itemTextProperties)
 end
 
 function RKN_Configio.createSettings(stable)
@@ -1353,3 +1358,18 @@ function RKN_Configio.addStationPlanMouseover(plans)
 	end
 	return plans
 end
+
+function RKN_Configio.setRowButtonText(button, icon, text, properties)
+	local buttonWidth = button:getWidth() - Helper.borderSize * 2
+	local full = icon .. text
+	local font = properties.font or Helper.standardFont
+	local fontsize = properties.fontsize or Helper.standardFontSizestandardTextHeight
+	local truncated = TruncateText(full, font, Helper.scaleFont(font, fontsize), buttonWidth)
+	local final = full
+	if (full ~= truncated) then
+		final = text
+	end
+	button:setText(final, RKN_Configio.config.buttonRowTextProperties)
+end
+
+init()

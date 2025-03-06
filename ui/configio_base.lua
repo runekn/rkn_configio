@@ -13,10 +13,10 @@ RKN_Configio = {
         maxFolders = 6,
         standardListColumnWidth = Helper.scaleY(Helper.standardTextHeight),
         shipNotOwnedColor = { r = 100, g = 100, b = 100, a = 100 }, -- dark grey
-        stationLoadHeight = 0.5 * Helper.viewHeight,
-        stationLoadoutLoadHeight = 0.35 * Helper.viewHeight,
-        shipLoadHeight = 0.4 * Helper.viewHeight,
-        loadSettingsWidth = Helper.scaleX(300),
+        stationLoadHeight = Helper.scaleY(500),
+        stationLoadoutLoadHeight = Helper.scaleY(350),
+        shipLoadHeight = Helper.scaleY(400),
+        loadSettingsWidthMultipler = 0.38,
         settingsBrowserSeparation = Helper.borderSize * 10,
         loadButtonTextProperties = {
             halign = "center",
