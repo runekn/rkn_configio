@@ -2,8 +2,8 @@
 local ffi = require("ffi")
 local C = ffi.C
 
-local L = require("extensions.rkn_configio.configio_lib")
-local Utils = require("extensions.rkn_configio.utils")
+local L = require("extensions.L.configio_lib")
+local Utils = require("extensions.L.utils")
 
 local config = {
 	textId = 1811143915,
@@ -11,17 +11,17 @@ local config = {
 	stationLoadoutKey = "station_loadout",
 	shipKey = "ship",
 	shipLoadoutKey = "ship_loadout",
-	folderIdFormat = "rkn_configio.folder.%s.%s",
+	folderIdFormat = "L.folder.%s.%s",
 	settingsBlackboardId = "$RKN_ConfigioSettings",
 	autoPresetsBlackboardId = "$RKN_ConfigioAutoPresets",
 	loadWidthMultiplier = 0.85,
 	maxFolders = 6,
 	standardListColumnWidth = Helper.scaleY(Helper.standardTextHeight),
 	shipNotOwnedColor = { r = 100, g = 100, b = 100, a = 100 }, -- dark grey
-	stationLoadHeight = 0.5 * Helper.viewHeight,
-	stationLoadoutLoadHeight = 0.35 * Helper.viewHeight,
-	shipLoadHeight = 0.4 * Helper.viewHeight,
-	loadSettingsWidth = Helper.scaleX(300),
+	stationLoadHeight = Helper.scaleY(500),
+	stationLoadoutLoadHeight = Helper.scaleY(350),
+	shipLoadHeight = Helper.scaleY(400),
+	loadSettingsWidthMultipler = 0.38,
 	settingsBrowserSeparation = Helper.borderSize * 10,
 	loadButtonTextProperties = {
 		halign = "center",
@@ -508,8 +508,9 @@ function L.createLoadContext()
 	contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
 
 	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
-	local browserWidth = L.params.width - config.loadSettingsWidth - Helper.borderSize * 2 - config.settingsBrowserSeparation
-	local browserX = config.loadSettingsWidth + Helper.borderSize + config.settingsBrowserSeparation
+	local settingsWidth = L.params.width * L.config.loadSettingsWidthMultipler
+	local browserWidth = L.params.width - settingsWidth - Helper.borderSize * 2 - L.config.settingsBrowserSeparation
+	local browserX = settingsWidth + Helper.borderSize + L.config.settingsBrowserSeparation
 	local buttonRowHeight = Helper.standardButtonHeight * 1.2
 
 	-- Create item list --
@@ -530,18 +531,18 @@ function L.createLoadContext()
 	local btable = contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = L.params.height - buttonRowHeight, x = browserX, width = browserWidth })
 	L.btable = btable
 	local row = btable:addRow(true, { fixed = true })
-	row[1]:createButton({ active = L.isRowValidForLoad, height = buttonRowHeight }):setText("\27[menu_import] " .. ReadText(config.textId, 3), config.buttonRowTextProperties)
+	L.setRowButtonText(row[1]:createButton({ active = L.isRowValidForLoad, height = buttonRowHeight }), "\27[menu_import] ", ReadText(L.config.textId, 3), L.config.buttonRowTextProperties)
 	row[1].handlers.onClick = L.buttonLoadItem
-	row[2]:createButton({ active = L.isRowValidForSave, height = buttonRowHeight }):setText("\27[menu_save]" .. ReadText(config.textId, 97), config.buttonRowTextProperties) -- TODO: text
+	L.setRowButtonText(row[2]:createButton({ active = L.isRowValidForSave, height = buttonRowHeight }), "\27[menu_save]", ReadText(L.config.textId, 97), L.config.buttonRowTextProperties)
 	row[2].handlers.onClick = L.buttonSaveItem
-	row[3]:createButton({ active = L.isRowValidForRename, height = buttonRowHeight }):setText("\27[menu_edit] " .. ReadText(config.textId, 98), config.buttonRowTextProperties) -- TODO: text
+	L.setRowButtonText(row[3]:createButton({ active = L.isRowValidForRename, height = buttonRowHeight }), "\27[menu_edit] ", ReadText(L.config.textId, 98), L.config.buttonRowTextProperties)
 	row[3].handlers.onClick = L.buttonRenameItem
-	if L.params.settingKey == config.stationKey then
-		row[3].properties.mouseOverText = ReadText(config.textId, 99)
+	if L.params.settingKey == L.config.stationKey then
+		row[3].properties.mouseOverText = ReadText(L.config.textId, 99)
 	end
-	row[4]:createButton({ active = L.isRowValidForDeletion, height = buttonRowHeight }):setText("\27[menu_dismiss] " .. ReadText(config.textId, 4), config.buttonRowTextProperties)
+	L.setRowButtonText(row[4]:createButton({ active = L.isRowValidForDeletion, height = buttonRowHeight }), "\27[menu_dismiss] ", ReadText(L.config.textId, 4), L.config.buttonRowTextProperties)
 	row[4].handlers.onClick = L.buttonDeleteItem
-	row[5]:createButton({ height = buttonRowHeight }):setText("\27[widget_cross_01] " .. ReadText(config.textId, 5), config.buttonRowTextProperties)
+	L.setRowButtonText(row[5]:createButton({ height = buttonRowHeight }), "\27[widget_cross_01] ", ReadText(L.config.textId, 5), L.config.buttonRowTextProperties)
 	row[5].handlers.onClick = L.params.closeContextMenu
 
 	-- Create expand/collapse all buttons --
@@ -560,8 +561,8 @@ function L.createLoadContext()
 	row[4]:createText(L.params.header, { font = config.browserHeaderTextProperties.font, fontsize = config.browserHeaderTextProperties.fontSize })
 
 	-- Create settings list --
-	local stable = contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = L.params.height, x = Helper.borderSize, width = config.loadSettingsWidth - Helper.borderSize * 2 })
-	stable:setColWidth(1, config.loadSettingsWidth * 0.7, false)
+	local stable = contextFrame:addTable(2, { tabOrder = 6, maxVisibleHeight = L.params.height, x = Helper.borderSize, width = settingsWidth - Helper.borderSize * 2 })
+	stable:setColWidth(1, settingsWidth * 0.7, false)
 
 	for _, frameModule in ipairs(L.params.frameModules) do
 		frameModule(stable)
@@ -629,10 +630,14 @@ function L.createShipListItem(row, column, item, isplayershipyard)
 		row[column].properties.mouseOverText = item.item.hasBlueprint and ReadText(config.textId, 102) or ReadText(config.textId, 103)
 		column = column + 1
 	end
+	if L.getState().listColumns > 11 then
+		row[11]:setColSpan(3):createText(item.item.shiptypename, L.config.itemTextProperties)
+	else
+		text = text .. " (" .. item.item.shiptypename .. ")"
+	end
 	row[column]:createText("\27[" .. item.item.shipicon .. "]", config.itemTextProperties)
 	row[column + 1]:setColSpan(11 - (column + 1)):createText(text, config.itemTextProperties)
 	row[column + 1].properties.mouseOverText = item.item.mouseovertext
-	row[11]:setColSpan(3):createText(item.item.shiptypename, config.itemTextProperties)
 end
 
 function L.createSettings(stable)
@@ -1454,6 +1459,18 @@ function L.addStationPlanMouseover(plans)
 	return plans
 end
 
+function L.setRowButtonText(button, icon, text, properties)
+	local buttonWidth = button:getWidth() - Helper.borderSize * 2
+	local full = icon .. text
+	local font = properties.font or Helper.standardFont
+	local fontsize = properties.fontsize or Helper.standardFontSizestandardTextHeight
+	local truncated = TruncateText(full, font, Helper.scaleFont(font, fontsize), buttonWidth)
+	local final = full
+	if (full ~= truncated) then
+		final = text
+	end
+	button:setText(final, L.config.buttonRowTextProperties)
+end
 
 init()
 
