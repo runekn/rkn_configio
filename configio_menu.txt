@@ -2,8 +2,8 @@
 local ffi = require("ffi")
 local C = ffi.C
 
-local L = require("extensions.L.configio_lib")
-local Utils = require("extensions.L.utils")
+local L = require("extensions.rkn_configio.configio_lib")
+local Utils = require("extensions.rkn_configio.utils")
 
 local config = {
 	textId = 1811143915,
@@ -11,7 +11,7 @@ local config = {
 	stationLoadoutKey = "station_loadout",
 	shipKey = "ship",
 	shipLoadoutKey = "ship_loadout",
-	folderIdFormat = "L.folder.%s.%s",
+	folderIdFormat = "rkn_configio.folder.%s.%s",
 	settingsBlackboardId = "$RKN_ConfigioSettings",
 	autoPresetsBlackboardId = "$RKN_ConfigioAutoPresets",
 	loadWidthMultiplier = 0.85,
@@ -508,9 +508,9 @@ function L.createLoadContext()
 	contextFrame:setBackground("solid", { color = Color["frame_background_semitransparent"] })
 
 	local smallColWidth = Helper.scaleY(Helper.standardTextHeight)
-	local settingsWidth = L.params.width * L.config.loadSettingsWidthMultipler
-	local browserWidth = L.params.width - settingsWidth - Helper.borderSize * 2 - L.config.settingsBrowserSeparation
-	local browserX = settingsWidth + Helper.borderSize + L.config.settingsBrowserSeparation
+	local settingsWidth = L.params.width * config.loadSettingsWidthMultipler
+	local browserWidth = L.params.width - settingsWidth - Helper.borderSize * 2 - config.settingsBrowserSeparation
+	local browserX = settingsWidth + Helper.borderSize + config.settingsBrowserSeparation
 	local buttonRowHeight = Helper.standardButtonHeight * 1.2
 
 	-- Create item list --
@@ -531,18 +531,18 @@ function L.createLoadContext()
 	local btable = contextFrame:addTable(5, { tabOrder = 5, reserveScrollBar = false, highlightMode = "off", y = L.params.height - buttonRowHeight, x = browserX, width = browserWidth })
 	L.btable = btable
 	local row = btable:addRow(true, { fixed = true })
-	L.setRowButtonText(row[1]:createButton({ active = L.isRowValidForLoad, height = buttonRowHeight }), "\27[menu_import] ", ReadText(L.config.textId, 3), L.config.buttonRowTextProperties)
+	L.setRowButtonText(row[1]:createButton({ active = L.isRowValidForLoad, height = buttonRowHeight }), "\27[menu_import] ", ReadText(config.textId, 3), config.buttonRowTextProperties)
 	row[1].handlers.onClick = L.buttonLoadItem
-	L.setRowButtonText(row[2]:createButton({ active = L.isRowValidForSave, height = buttonRowHeight }), "\27[menu_save]", ReadText(L.config.textId, 97), L.config.buttonRowTextProperties)
+	L.setRowButtonText(row[2]:createButton({ active = L.isRowValidForSave, height = buttonRowHeight }), "\27[menu_save]", ReadText(config.textId, 97), config.buttonRowTextProperties)
 	row[2].handlers.onClick = L.buttonSaveItem
-	L.setRowButtonText(row[3]:createButton({ active = L.isRowValidForRename, height = buttonRowHeight }), "\27[menu_edit] ", ReadText(L.config.textId, 98), L.config.buttonRowTextProperties)
+	L.setRowButtonText(row[3]:createButton({ active = L.isRowValidForRename, height = buttonRowHeight }), "\27[menu_edit] ", ReadText(config.textId, 98), config.buttonRowTextProperties)
 	row[3].handlers.onClick = L.buttonRenameItem
-	if L.params.settingKey == L.config.stationKey then
-		row[3].properties.mouseOverText = ReadText(L.config.textId, 99)
+	if L.params.settingKey == config.stationKey then
+		row[3].properties.mouseOverText = ReadText(config.textId, 99)
 	end
-	L.setRowButtonText(row[4]:createButton({ active = L.isRowValidForDeletion, height = buttonRowHeight }), "\27[menu_dismiss] ", ReadText(L.config.textId, 4), L.config.buttonRowTextProperties)
+	L.setRowButtonText(row[4]:createButton({ active = L.isRowValidForDeletion, height = buttonRowHeight }), "\27[menu_dismiss] ", ReadText(config.textId, 4), config.buttonRowTextProperties)
 	row[4].handlers.onClick = L.buttonDeleteItem
-	L.setRowButtonText(row[5]:createButton({ height = buttonRowHeight }), "\27[widget_cross_01] ", ReadText(L.config.textId, 5), L.config.buttonRowTextProperties)
+	L.setRowButtonText(row[5]:createButton({ height = buttonRowHeight }), "\27[widget_cross_01] ", ReadText(config.textId, 5), config.buttonRowTextProperties)
 	row[5].handlers.onClick = L.params.closeContextMenu
 
 	-- Create expand/collapse all buttons --
@@ -631,7 +631,7 @@ function L.createShipListItem(row, column, item, isplayershipyard)
 		column = column + 1
 	end
 	if L.getState().listColumns > 11 then
-		row[11]:setColSpan(3):createText(item.item.shiptypename, L.config.itemTextProperties)
+		row[11]:setColSpan(3):createText(item.item.shiptypename, config.itemTextProperties)
 	else
 		text = text .. " (" .. item.item.shiptypename .. ")"
 	end
@@ -1469,7 +1469,7 @@ function L.setRowButtonText(button, icon, text, properties)
 	if (full ~= truncated) then
 		final = text
 	end
-	button:setText(final, L.config.buttonRowTextProperties)
+	button:setText(final, config.buttonRowTextProperties)
 end
 
 init()
