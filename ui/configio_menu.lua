@@ -5,7 +5,6 @@ local C = ffi.C
 local function init()
 	RegisterEvent("RKN_Configio.InitSettings", function ()
 			-- Set settings for extension options menu on game start --
-			DebugError("test")
 			RKN_Configio.getLoadSettings(1)
 			SetNPCBlackboard(RKN_Configio.getPlayerId(), RKN_Configio.config.settingsBlackboardId, RKN_Configio.settings)
 		end
