@@ -360,6 +360,9 @@ function RKN_Configio.getPlayerId()
 end
 
 function RKN_Configio.getLoadSettings(key)
+	if not RKN_Configio.getPlayerId() or RKN_Configio.getPlayerId() == 0 then
+		return { enabled = false }
+	end
 	if not key then
 		key = RKN_Configio.params.settingKey
 	end
@@ -380,9 +383,6 @@ function RKN_Configio.getLoadSettings(key)
 			[RKN_Configio.config.shipKey] = RKN_Configio_Utils.ShallowCopy(default),
 			[RKN_Configio.config.shipLoadoutKey] = RKN_Configio_Utils.ShallowCopy(default)
 		}
-		if not RKN_Configio.getPlayerId() then
-			return allDefault
-		end
 		local all = GetNPCBlackboard(RKN_Configio.getPlayerId(), RKN_Configio.config.settingsBlackboardId)
 		local r
 		if not all then
