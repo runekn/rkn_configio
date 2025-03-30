@@ -128,9 +128,27 @@ function rkn_menu.createTitleBar(frame)
 
 		RKN_Configio.createShipLoadoutTitleBarButton(row, menu, config, active, loadoutOptions)
 		---- Runekn's Changes Stop Here! ----
+
+		---- Store exisiting loadout mod compatibility start ----
+		if menu.uix_callbacks and menu.uix_callbacks ["displaySlots_on_before_create_store_loadout_button"] then
+			for uix_id, uix_callback in pairs (menu.uix_callbacks ["displaySlots_on_before_create_store_loadout_button"]) do
+				uix_callback ()
+			end
+		end
+		---- Store exisiting loadout mod compatibility end ----
+
 		-- save
 		row[4]:createButton({ active = (not menu.isReadOnly) and active and ((menu.object ~= 0) or (menu.macro ~= "")), height = menu.titleData.height, mouseOverText = ReadText(1026, 7905), helpOverlayID = "shipconfig_saveloadout", helpOverlayText = " ", helpOverlayHighlightOnly = true, uiTriggerID = "shipconfig_saveloadout" }):setIcon("menu_save")
 		row[4].handlers.onClick = menu.buttonTitleSave
+
+		---- Store exisiting loadout mod compatibility start ----
+		if menu.uix_callbacks and menu.uix_callbacks ["displaySlots_on_after_create_store_loadout_button"] then
+			for uix_id, uix_callback in pairs (menu.uix_callbacks ["displaySlots_on_after_create_store_loadout_button"]) do
+				uix_callback ()
+			end
+		end
+		---- Store exisiting loadout mod compatibility end ----
+
 		-- reset camera
 		row[5]:createButton({ active = true, height = menu.titleData.height, mouseOverText = ffi.string(C.ConvertInputString(ReadText(1026, 7911), ReadText(1026, 7902))) }):setIcon("menu_reset_view"):setHotkey("INPUT_STATE_DETAILMONITOR_RESET_VIEW", { displayIcon = false })
 		row[5].handlers.onClick = function () return C.ResetMapPlayerRotation(menu.holomap) end
