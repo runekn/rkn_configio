@@ -85,6 +85,7 @@ Does not support resolutions lower than 1920x1080
 
 ## Updates
 
+* 1.5.0: Fix loader being enabled in creative start when no game is loaded. Add compatibility with "Store existing loadout" by Mycu.
 * 1.4.9: Fix Extension Options menu not loading settings. Support smaller screen resolutions and higher UI scales.
 * 1.4.8: Add processor and build modules to station plan hoverover text and module filter. Fix loading save not loading dialog settings.
 * 1.4.7: Use new official lua declaration to avoid requiring disabled UI protection mode
