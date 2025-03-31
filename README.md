@@ -79,6 +79,8 @@ Use along-side VRO can break the "Race filter" during ship selection, unless thi
 
 Does not support resolutions lower than 1920x1080
 
+Specific compatibility with "Store existing loadout" by Mycu was implemented by Mycu.
+
 ## Thanks to
 * netUpb/fikrethos: for feedback and help with code.
 * Eliptus: author of partial loadout, which I was given permission to incorporate.
