@@ -87,6 +87,7 @@ Specific compatibility with "Store existing loadout" by Mycu was implemented by 
 
 ## Updates
 
+* 1.5.1: Support localization of ship purpose filters.
 * 1.5.0: Fix loader being enabled in creative start when no game is loaded. Add compatibility with "Store existing loadout" by Mycu.
 * 1.4.9: Fix Extension Options menu not loading settings. Support smaller screen resolutions and higher UI scales.
 * 1.4.8: Add processor and build modules to station plan hoverover text and module filter. Fix loading save not loading dialog settings.
