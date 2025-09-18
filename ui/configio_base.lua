@@ -101,6 +101,16 @@ RKN_Configio = {
             ship_m = 2,
             ship_s = 3,
             ship_xs = 4
+        },
+        shipPurposeNames = {
+            fight = ReadText(1811143915, 107),
+            mine = ReadText(1811143915, 108),
+            trade = ReadText(1811143915, 109),
+            build = ReadText(1811143915, 110),
+            auxiliary = ReadText(1811143915, 111),
+            racing = ReadText(1811143915, 112),
+            salvage = ReadText(1811143915, 113),
+            dismantling = ReadText(1811143915, 114),
         }
     }
 }

@@ -108,5 +108,14 @@
 		<t id="103">Blueprint not owned</t>
 		<t id="104">Contains production modules:</t>
 		<t id="105">Type</t>
+		<t id="106">Other</t>
+		<t id="107">Fight</t>
+		<t id="108">Mine</t>
+		<t id="109">Trade</t>
+		<t id="110">Build</t>
+		<t id="111">Auxiliary</t>
+		<t id="112">Racing</t>
+		<t id="113">Salvage</t>
+		<t id="114">Dismantling</t>
 	</page>
 </language>

@@ -312,7 +312,7 @@ end
 function RKN_Configio.getAllShipFilterRaces()
 	local races = RKN_Configio.getRaceNameMap()
 	table.sort(races, function (a, b) return a.name < b.name end)
-	table.insert(races, { name = "Other", id = "other" })
+	table.insert(races, { name = ReadText(RKN_Configio.config.textId, 106), id = "other" })
 	return races
 end
 
@@ -827,7 +827,11 @@ function RKN_Configio.getShipPurposes(shipOptions)
 	local purposes = {}
 	for _, ship in ipairs(shipOptions) do
 		if not purposes[ship.purpose] then
-			table.insert(purposes, { id = ship.purpose, text = ship.purpose:gsub("^%l", string.upper) })
+			local name = RKN_Configio.config.shipPurposeNames[ship.purpose]
+			if not name then
+				name = ship.purpose:gsub("^%l", string.upper)
+			end
+			table.insert(purposes, { id = ship.purpose, text = name })
 			purposes[ship.purpose] = true
 		end
 	end
@@ -841,7 +845,7 @@ function RKN_Configio.getShipRaces(shipOptions)
 	for _, ship in ipairs(shipOptions) do
 		for _, race in ipairs(ship.races) do
 			if not races[race] then
-				local name = race == "other" and "Other" or raceNameMap[race]
+				local name = race == "other" and ReadText(RKN_Configio.config.textId, 106) or raceNameMap[race]
 				table.insert(races, { id = race, text = name })
 				races[race] = true
 			end
