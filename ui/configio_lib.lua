@@ -385,6 +385,11 @@ function RKN_Configio.setSetting(key, value, settingKey)
 		settingKey = RKN_Configio.params.settingKey
 	end
 	RKN_Configio.settings[settingKey][key] = value
+	RKN_Configio.setSettingPersistent(key, value, settingKey)
+end
+
+function RKN_Configio.setSettingPersistent(key, value, settingKey)
+	__userdata_rknconfigo_settings = __userdata_rknconfigo_settings or {}
 	-- Save setting in persistent userdata if it is different from default
 	if (RKN_Configio.config.defaultSettings[settingKey][key] == value and __userdata_rknconfigo_settings[settingKey]) then
 		__userdata_rknconfigo_settings[settingKey][key] = nil
