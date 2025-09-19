@@ -88,7 +88,7 @@ Specific compatibility with "Store existing loadout" by Mycu was implemented by 
 
 ## Updates
 
-* 1.5.2: Move settings to uidata, meaning they are no longer tied to save. This means new loader is reenabled in creative start menu.
+* 1.5.2: Move settings to uidata, meaning they are no longer tied to save and new loader is reenabled in creative start menu. Added Russian translation by Alex5Not.
 * 1.5.1: Support localization of ship purpose filters.
 * 1.5.0: Fix loader being enabled in creative start when no game is loaded. Add compatibility with "Store existing loadout" by Mycu.
 * 1.4.9: Fix Extension Options menu not loading settings. Support smaller screen resolutions and higher UI scales.
