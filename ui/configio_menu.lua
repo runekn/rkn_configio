@@ -4,24 +4,19 @@ local C = ffi.C
 
 local function init()
 	RegisterEvent("RKN_Configio.SetEnabled", function (_, key)
-			DebugError("RKN_Configio.SetEnabled")
-			RKN_Configio.setLoadSetting("enabled", true, key)
-			DebugError(RKN_Configio_Utils.SerializeTable(RKN_Configio.settings))
+			RKN_Configio.setSetting("enabled", true, key)
 		end
 	)
 	RegisterEvent("RKN_Configio.SetDisabled", function (_, key)
-			DebugError("RKN_Configio.SetDisabled")
-			RKN_Configio.setLoadSetting("enabled", false, key)
-			DebugError(RKN_Configio_Utils.SerializeTable(RKN_Configio.settings))
+			RKN_Configio.setSetting("enabled", false, key)
 		end
 	)
 	RegisterEvent("RKN_Configio.InitSettingsRequest", function ()
-			DebugError("InitEnabledSettings")
 			AddUITriggeredEvent("RKN_Configio", "InitEnabledSettings", {
-				[RKN_Configio.config.stationKey] = RKN_Configio.getLoadSettings(RKN_Configio.config.stationKey).enabled,
-				[RKN_Configio.config.stationLoadoutKey] = RKN_Configio.getLoadSettings(RKN_Configio.config.stationLoadoutKey).enabled,
-				[RKN_Configio.config.shipKey] = RKN_Configio.getLoadSettings(RKN_Configio.config.shipKey).enabled,
-				[RKN_Configio.config.shipLoadoutKey] = RKN_Configio.getLoadSettings(RKN_Configio.config.shipLoadoutKey).enabled
+				[RKN_Configio.config.stationKey] = RKN_Configio.getSettings(RKN_Configio.config.stationKey).enabled,
+				[RKN_Configio.config.stationLoadoutKey] = RKN_Configio.getSettings(RKN_Configio.config.stationLoadoutKey).enabled,
+				[RKN_Configio.config.shipKey] = RKN_Configio.getSettings(RKN_Configio.config.shipKey).enabled,
+				[RKN_Configio.config.shipLoadoutKey] = RKN_Configio.getSettings(RKN_Configio.config.shipLoadoutKey).enabled
 			})
 		end
 	)
@@ -119,7 +114,7 @@ function RKN_Configio.createShipLoadoutTitleBarButton(row, menu, sc_config, acti
 end
 
 function RKN_Configio.isModEnabledForType(type)
-	return RKN_Configio.getLoadSettings(type).enabled
+	return RKN_Configio.getSettings(type).enabled
 end
 
 function RKN_Configio.buttonStationTitleLoad(menu, contextLayer)
@@ -501,7 +496,7 @@ function RKN_Configio.addFolderToList(ltable, root, column)
 		local isextended = RKN_Configio.getState().expandedFolders[RKN_Configio.config.folderIdFormat:format(RKN_Configio.params.settingKey, folder.fullname)]
 		row[column]:createButton({ helpOverlayID = folder.fullname, helpOverlayText = " ",  helpOverlayHighlightOnly = true }):setText(isextended and "-" or "+", { halign = "center" })
 		row[column].handlers.onClick = function () return RKN_Configio.buttonExtendListEntry(folder.fullname, row.index) end
-		local text = RKN_Configio.getLoadSettings().folder_fullname and folder.fullname or folder.name
+		local text = RKN_Configio.getSettings().folder_fullname and folder.fullname or folder.name
 		row[column + 1]:setColSpan(RKN_Configio.getState().listColumns - column + 1):createText(text, RKN_Configio.config.folderTextProperties)
 		if isextended then
 			RKN_Configio.addFolderToList(ltable, folder, column + 1)
@@ -515,7 +510,7 @@ function RKN_Configio.addFolderToList(ltable, root, column)
 end
 
 function RKN_Configio.createCommonListItem(row, column, item)
-	local text = RKN_Configio.getLoadSettings().item_fullname and item.item.name or item.name
+	local text = RKN_Configio.getSettings().item_fullname and item.item.name or item.name
 	local color
 	if not item.active then
 		color = RKN_Configio.config.inactiveColor
@@ -530,7 +525,7 @@ function RKN_Configio.createCommonListItem(row, column, item)
 end
 
 function RKN_Configio.createShipListItem(row, column, item, isplayershipyard)
-	local text = RKN_Configio.getLoadSettings().item_fullname and item.item.name or item.name
+	local text = RKN_Configio.getSettings().item_fullname and item.item.name or item.name
 	local color
 	if RKN_Configio.params.getItemColor then
 		color = RKN_Configio.params.getItemColor(item)
@@ -563,11 +558,11 @@ function RKN_Configio.createSettings(stable)
 
 	stable:addEmptyRow(Helper.standardTextHeight / 4)
 
-	local foldersActive = RKN_Configio.getLoadSettings().folder_enabled
+	local foldersActive = RKN_Configio.getSettings().folder_enabled
 	local row = stable:addRow(true, { fixed = true })
 	row[1]:createText(ReadText(RKN_Configio.config.textId, 8), { color = (not foldersActive) and Color["text_inactive"] or nil })
 	row[1].properties.mouseOverText = ReadText(RKN_Configio.config.textId, 12)
-	local delimiterEditBoxText = RKN_Configio.getLoadSettings().folder_delimiter:gsub(" ", "(space)") -- Replace spaces with '(space)' so that it is easier to read
+	local delimiterEditBoxText = RKN_Configio.getSettings().folder_delimiter:gsub(" ", "(space)") -- Replace spaces with '(space)' so that it is easier to read
 	row[2]:createEditBox({ scaling = true, height = Helper.standardButtonHeight }):setText(delimiterEditBoxText, { })
 	row[2].handlers.onEditBoxDeactivated = function(_, text, textchanged)
 		if textchanged then
@@ -575,7 +570,7 @@ function RKN_Configio.createSettings(stable)
 			if text:len() > 1 then
 				text = text:sub(1, 1)
 			end
-			RKN_Configio.setLoadSetting("folder_delimiter", text)
+			RKN_Configio.setSetting("folder_delimiter", text)
 			RKN_Configio.refreshLoadFrame()
 		end
 	end
@@ -599,13 +594,13 @@ function RKN_Configio.createSettings(stable)
 end
 
 function RKN_Configio.createSettingsSwitch(stable, text, setting, active)
-	local checked = RKN_Configio.getLoadSettings()[setting]
+	local checked = RKN_Configio.getSettings()[setting]
 	local row = stable:addRow(true, { fixed = true })
 	row[1]:createText(text, { color = (not active) and Color["text_inactive"] or nil })
 	row[2]:createButton({ active = active }):setText(checked and ReadText(RKN_Configio.config.textId, 100) or ReadText(RKN_Configio.config.textId, 101), checked and RKN_Configio.config.settingSwitchActiveTextProperties or RKN_Configio.config.settingSwitchInActiveTextProperties)
 	row[2].handlers.onClick = function()
 		if active then
-			RKN_Configio.setLoadSetting(setting, not checked)
+			RKN_Configio.setSetting(setting, not checked)
 			RKN_Configio.refreshLoadFrame()
 		end
 	end
@@ -1159,7 +1154,7 @@ end
 function RKN_Configio.buttonSaveItem()
 	if RKN_Configio.isRowValidForSave() then
 		if RKN_Configio.selectedEntry.type == "folder" then
-			RKN_Configio.getState().saveText = RKN_Configio.selectedEntry.fullname .. RKN_Configio.getLoadSettings().folder_delimiter
+			RKN_Configio.getState().saveText = RKN_Configio.selectedEntry.fullname .. RKN_Configio.getSettings().folder_delimiter
 		else
 			RKN_Configio.getState().saveText = RKN_Configio.selectedEntry.item.name
 		end
@@ -1278,7 +1273,7 @@ function RKN_Configio.onStationLoadoutLoad(menu, item)
 			Helper.callLoadoutFunction(menu.constructionplan[menu.loadoutMode].upgradeplan, nil, function (loadout, _) return C.UpdateObjectConfigurationMap(menu.holomap, menu.container, menu.loadoutModule.component, menu.loadoutModule.macro, true, loadout) end)
 		end
 		menu.displayMenu()
-	elseif item.partial and RKN_Configio.getLoadSettings().item_load_partial then
+	elseif item.partial and RKN_Configio.getSettings().item_load_partial then
 		local loadout = Helper.getLoadoutHelper(C.GetLoadout, C.GetLoadoutCounts, 0, menu.loadoutModule.macro, item.id)
 		local upgradeplan = Helper.convertLoadout(menu.loadoutModule.component, menu.loadoutModule.macro, loadout, nil)
 		RKN_Configio.trimPartialLoadout(menu.constructionplan[menu.loadoutMode].upgradeplan, upgradeplan, menu.upgradewares, false)
@@ -1301,7 +1296,7 @@ function RKN_Configio.onShipLoadoutLoad(menu, item)
 			menu.captainSelected = true
 		end
 		menu.getDataAndDisplay(upgradeplan, nil)
-	elseif item.partial and RKN_Configio.getLoadSettings().item_load_partial then
+	elseif item.partial and RKN_Configio.getSettings().item_load_partial then
 		menu.loadoutName = item.name
 		menu.setCustomShipName()
 		local loadout = Helper.getLoadoutHelper2(C.GetLoadout2, C.GetLoadoutCounts2, "UILoadout2", menu.object, menu.macro, item.id)

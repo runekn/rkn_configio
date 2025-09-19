@@ -13,8 +13,8 @@ function RKN_Configio.prepareBrowserStructure(itemList)
 		-- iterate through item folders --
 		local nextMatch = function () return item.name end
 		local levelsLeft = 0
-		if RKN_Configio.getLoadSettings().folder_enabled then
-			nextMatch = string.gmatch(item.name, "[^" .. RKN_Configio_Utils.EscapeGmatch(RKN_Configio.getLoadSettings().folder_delimiter) .. "]+")
+		if RKN_Configio.getSettings().folder_enabled then
+			nextMatch = string.gmatch(item.name, "[^" .. RKN_Configio_Utils.EscapeGmatch(RKN_Configio.getSettings().folder_delimiter) .. "]+")
 			levelsLeft = RKN_Configio.params.maxFolders
 		end
 		local folder = nextMatch()
@@ -34,7 +34,7 @@ function RKN_Configio.prepareBrowserStructure(itemList)
 				break
 			end
 			-- Otherwise, path to folder --
-			folderPath = folderPath == "" and folder or folderPath .. RKN_Configio.getLoadSettings().folder_delimiter .. folder
+			folderPath = folderPath == "" and folder or folderPath .. RKN_Configio.getSettings().folder_delimiter .. folder
 			local target = cwd.folders[folder]
 			if not target then
 				target = { type = "folder", name = folder, fullname = folderPath, folders = {}, folders_arr = {}, items = {} }
@@ -56,7 +56,7 @@ function RKN_Configio.prepareBrowserStructure(itemList)
 		::continue::
 	end
 
-	if RKN_Configio.getLoadSettings().folder_flatten_single_item then
+	if RKN_Configio.getSettings().folder_flatten_single_item then
 		RKN_Configio.undentSingleItems(root)
 	end
 
@@ -74,7 +74,7 @@ function RKN_Configio.filterItem(item)
 			return false
 		end
 	end
-	if RKN_Configio.getLoadSettings().item_hide_inactive and not RKN_Configio.params.isItemActive(item) then
+	if RKN_Configio.getSettings().item_hide_inactive and not RKN_Configio.params.isItemActive(item) then
 		return false
 	end
 	if RKN_Configio.params.itemFilter and (not RKN_Configio.params.itemFilter(item)) then
@@ -140,7 +140,7 @@ function RKN_Configio.undentSingleItems(folder, parent)
 		table.insert(parent.items, item)
 		table.remove(folder.items, 1)
 
-		item.name = folder.name .. RKN_Configio.getLoadSettings().folder_delimiter .. item.name
+		item.name = folder.name .. RKN_Configio.getSettings().folder_delimiter .. item.name
 	elseif itemCount > 1 then
 		canDelete = false
 	end
@@ -365,7 +365,7 @@ end
 
 __userdata_rknconfigo_settings = __userdata_rknconfigo_settings or {}
 
-function RKN_Configio.getLoadSettings(key)
+function RKN_Configio.getSettings(key)
 	if not key then
 		key = RKN_Configio.params.settingKey
 	end
@@ -383,7 +383,7 @@ function RKN_Configio.getLoadSettings(key)
 	return RKN_Configio.settings[key]
 end
 
-function RKN_Configio.setLoadSetting(key, value, settingKey)
+function RKN_Configio.setSetting(key, value, settingKey)
 	if not settingKey then
 		settingKey = RKN_Configio.params.settingKey
 	end
@@ -690,7 +690,7 @@ end
 -- Created by Eliptus
 -- Edited and integrated by Runekn
 function RKN_Configio.addPartialFlag(loadouts)
-	if RKN_Configio.getLoadSettings().item_load_partial then
+	if RKN_Configio.getSettings().item_load_partial then
 		for _, loadout in ipairs(loadouts) do
 			if not loadout.active then
 				loadout.name = loadout.name
