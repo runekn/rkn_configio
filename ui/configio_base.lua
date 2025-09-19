@@ -6,6 +6,39 @@ RKN_Configio = {
         stationLoadoutKey = "station_loadout",
         shipKey = "ship",
         shipLoadoutKey = "ship_loadout",
+        defaultSettings = {
+            station = {
+                enabled = true,
+                folder_enabled = false,
+                folder_delimiter = "/",
+                folder_flatten_single_item = false,
+                folder_fullname = false,
+                item_fullname = true,
+                item_hide_inactive = false
+            },
+            station_loadout = {
+                enabled = true,
+                folder_enabled = false,
+                folder_delimiter = "/",
+                folder_flatten_single_item = false,
+                folder_fullname = false,
+                item_fullname = true,
+                item_hide_inactive = false
+            },
+            ship = {
+                enabled = true
+            },
+            ship_loadout = {
+                enabled = true,
+                folder_enabled = false,
+                folder_delimiter = "/",
+                folder_flatten_single_item = false,
+                folder_fullname = false,
+                item_fullname = true,
+                item_hide_inactive = false,
+                item_load_partial = false
+            }
+        },
         folderIdFormat = "rkn_configio.folder.%s.%s",
         settingsBlackboardId = "$RKN_ConfigioSettings",
         autoPresetsBlackboardId = "$RKN_ConfigioAutoPresets",

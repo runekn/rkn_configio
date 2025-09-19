@@ -9,6 +9,6 @@
     <file name="ui/configio_station_standalone.lua" />
     <dependency name="ego_detailmonitor" />
     <dependency name="ego_detailmonitorhelper" />
-    <!--<savedvariable name="InfoCenter_Filters" storage="userdata" />-->
+    <savedvariable name="__userdata_rknconfigo_settings" storage="userdata" />
   </environment>
 </addon>

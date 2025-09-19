@@ -11,10 +11,14 @@ function RKN_Configio.prepareBrowserStructure(itemList)
 		end
 		local cwd = root
 		-- iterate through item folders --
-		local nextMatch = string.gmatch(item.name, "[^" .. RKN_Configio_Utils.EscapeGmatch(RKN_Configio.getLoadSettings().folder_delimiter) .. "]+")
+		local nextMatch = function () return item.name end
+		local levelsLeft = 0
+		if RKN_Configio.getLoadSettings().folder_enabled then
+			nextMatch = string.gmatch(item.name, "[^" .. RKN_Configio_Utils.EscapeGmatch(RKN_Configio.getLoadSettings().folder_delimiter) .. "]+")
+			levelsLeft = RKN_Configio.params.maxFolders
+		end
 		local folder = nextMatch()
 		local name = item.name
-		local levelsLeft = RKN_Configio.getLoadSettings().folder_enabled and RKN_Configio.params.maxFolders or 0
 		local folderPath = ""
 		while 1==1 do
 			-- Check if this is the item name --
@@ -359,69 +363,41 @@ function RKN_Configio.getPlayerId()
 	return RKN_Configio.playerID
 end
 
+__userdata_rknconfigo_settings = __userdata_rknconfigo_settings or {}
+
 function RKN_Configio.getLoadSettings(key)
-	if not RKN_Configio.getPlayerId() or RKN_Configio.getPlayerId() == 0 then
-		return { enabled = false }
-	end
 	if not key then
 		key = RKN_Configio.params.settingKey
 	end
 	if not RKN_Configio.settings then
-		local default = {
-			folder_enabled = false,
-			folder_delimiter = "/",
-			folder_flatten_single_item = false,
-			folder_fullname = false,
-			item_fullname = true,
-			item_hide_inactive = false,
-			item_load_partial = false,
-			enabled = true,
-		}
-		local allDefault = {
-			[RKN_Configio.config.stationKey] = RKN_Configio_Utils.ShallowCopy(default),
-			[RKN_Configio.config.stationLoadoutKey] = RKN_Configio_Utils.ShallowCopy(default),
-			[RKN_Configio.config.shipKey] = RKN_Configio_Utils.ShallowCopy(default),
-			[RKN_Configio.config.shipLoadoutKey] = RKN_Configio_Utils.ShallowCopy(default)
-		}
-		local all = GetNPCBlackboard(RKN_Configio.getPlayerId(), RKN_Configio.config.settingsBlackboardId)
-		local r
-		if not all then
-			r = allDefault
-		else
-			r = {
-				[RKN_Configio.config.stationKey] = RKN_Configio.convertLoadSettings(all[RKN_Configio.config.stationKey], default),
-				[RKN_Configio.config.stationLoadoutKey] = RKN_Configio.convertLoadSettings(all[RKN_Configio.config.stationLoadoutKey], default),
-				[RKN_Configio.config.shipKey] = RKN_Configio.convertLoadSettings(all[RKN_Configio.config.shipKey], default),
-				[RKN_Configio.config.shipLoadoutKey] = RKN_Configio.convertLoadSettings(all[RKN_Configio.config.shipLoadoutKey], default)
-			}
+		RKN_Configio.settings = RKN_Configio_Utils.DeepCopy(RKN_Configio.config.defaultSettings)
+		-- Apply persistent userdata settings
+		if __userdata_rknconfigo_settings then
+			for settingKey, menuSettings in pairs(__userdata_rknconfigo_settings) do
+				for key1, value in pairs(menuSettings) do
+					RKN_Configio.settings[settingKey][key1] = value;
+				end
+			end
 		end
-		RKN_Configio.settings = r
 	end
 	return RKN_Configio.settings[key]
 end
 
-function RKN_Configio.convertLoadSettings(s, default)
-	if not s then
-		return default
+function RKN_Configio.setLoadSetting(key, value, settingKey)
+	if not settingKey then
+		settingKey = RKN_Configio.params.settingKey
 	end
-	local r = {}
-	for k,d in pairs(default) do
-		local l = s[k]
-		if type(d) == "boolean" then
-			l = l == nil and d or l == 1
+	RKN_Configio.settings[settingKey][key] = value
+	-- Save setting in persistent userdata if it is different from default
+	if (RKN_Configio.config.defaultSettings[settingKey][key] == value and __userdata_rknconfigo_settings[settingKey]) then
+		__userdata_rknconfigo_settings[settingKey][key] = nil
+	else
+		if __userdata_rknconfigo_settings[settingKey] then
+			__userdata_rknconfigo_settings[settingKey][key] = value
+		else
+			__userdata_rknconfigo_settings[settingKey] = {[key] = value}
 		end
-		if k == "folder_delimiter" and l == "" then
-			l = "/"
-		end
-		r[k] = l
 	end
-	return r
-end
-
-function RKN_Configio.setLoadSetting(key, value)
-	RKN_Configio.getLoadSettings()
-	RKN_Configio.settings[RKN_Configio.params.settingKey][key] = value
-	SetNPCBlackboard(RKN_Configio.getPlayerId(), RKN_Configio.config.settingsBlackboardId, RKN_Configio.settings)
 end
 
 function RKN_Configio.addCustomAutoPresets(key, loadouts)

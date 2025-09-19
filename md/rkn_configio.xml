@@ -1,12 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <mdscript name="rkn_configio" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
 	<cues>
+		<cue name="LuaInitEnabledSettings" instantiate="true">
+			<conditions>
+				<event_ui_triggered screen="'RKN_Configio'" control="'InitEnabledSettings'" />
+			</conditions>
+			<actions>
+				<debug_text text="'InitEnabledSettings'" chance="100"/>
+				<set_value name="$settings" exact="event.param3"/>
+			</actions>
+		</cue>
 		<cue name="StartSMO" instantiate="true">
 			<conditions>
 				<event_cue_signalled cue="md.Simple_Menu_Options.Reloaded"/>
 			</conditions>
 			<actions>
-				<raise_lua_event name="'RKN_Configio.InitSettings'" />
+				<raise_lua_event name="'RKN_Configio.InitSettingsRequest'" />
 				<signal_cue_instantly cue="md.Simple_Menu_API.Register_Options_Menu"
 					param="table[
 						$id = 'rkn_configio_extension_options_menu',
@@ -22,14 +31,13 @@
 				<event_cue_signalled />
 			</conditions>
 			<actions>
-				<set_value name="$settings" exact="player.entity.$RKN_ConfigioSettings" />
 				<signal_cue_instantly cue="md.Simple_Menu_API.Add_Row"/>
 				<signal_cue_instantly cue="md.Simple_Menu_API.Make_Text" param="table[$col=1, $text={1811143915, 26}]" comment="Reactive as default for carriers"/>
 				<signal_cue_instantly
 					cue = "md.Simple_Menu_API.Make_CheckBox"
 					param = "table[
 						$id = 'station',
-						$checked = $settings.$station.$enabled,
+						$checked = LuaInitEnabledSettings.$settings.$station,
 						$col = 2,
 						$width = 'Helper.standardButtonHeight', $height = 'Helper.standardButtonHeight',
 						$onClick = OnSMOCheckboxChange
@@ -40,7 +48,7 @@
 					cue = "md.Simple_Menu_API.Make_CheckBox"
 					param = "table[
 						$id = 'station_loadout',
-						$checked = $settings.$station_loadout.$enabled,
+						$checked = LuaInitEnabledSettings.$settings.$station_loadout,
 						$col = 2,
 						$width = 'Helper.standardButtonHeight', $height = 'Helper.standardButtonHeight',
 						$onClick = OnSMOCheckboxChange
@@ -51,7 +59,7 @@
 					cue = "md.Simple_Menu_API.Make_CheckBox"
 					param = "table[
 						$id = 'ship',
-						$checked = $settings.$ship.$enabled,
+						$checked = LuaInitEnabledSettings.$settings.$ship,
 						$col = 2,
 						$width = 'Helper.standardButtonHeight', $height = 'Helper.standardButtonHeight',
 						$onClick = OnSMOCheckboxChange
@@ -62,7 +70,7 @@
 					cue = "md.Simple_Menu_API.Make_CheckBox"
 					param = "table[
 						$id = 'ship_loadout',
-						$checked = $settings.$ship_loadout.$enabled,
+						$checked = LuaInitEnabledSettings.$settings.$ship_loadout,
 						$col = 2,
 						$width = 'Helper.standardButtonHeight', $height = 'Helper.standardButtonHeight',
 						$onClick = OnSMOCheckboxChange
@@ -74,7 +82,13 @@
 				<event_cue_signalled />
 			</conditions>
 			<actions>
-				<set_value name="player.entity.$RKN_ConfigioSettings.{'$' + event.param.$id}.$enabled" exact="event.param.$checked" />
+				<set_value name="LuaInitEnabledSettings.$settings.{'$' + event.param.$id}" exact="event.param.$checked" />
+				<do_if value="event.param.$checked">
+					<raise_lua_event name="'RKN_Configio.SetEnabled'" param="event.param.$id"/>
+				</do_if>
+				<do_else>
+					<raise_lua_event name="'RKN_Configio.SetDisabled'" param="event.param.$id"/>
+				</do_else>
 				<cancel_cue cue = "this" />
 			</actions>
 		</cue>

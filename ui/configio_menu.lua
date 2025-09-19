@@ -3,10 +3,26 @@ local ffi = require("ffi")
 local C = ffi.C
 
 local function init()
-	RegisterEvent("RKN_Configio.InitSettings", function ()
-			-- Set settings for extension options menu on game start --
-			RKN_Configio.getLoadSettings(1)
-			SetNPCBlackboard(RKN_Configio.getPlayerId(), RKN_Configio.config.settingsBlackboardId, RKN_Configio.settings)
+	RegisterEvent("RKN_Configio.SetEnabled", function (_, key)
+			DebugError("RKN_Configio.SetEnabled")
+			RKN_Configio.setLoadSetting("enabled", true, key)
+			DebugError(RKN_Configio_Utils.SerializeTable(RKN_Configio.settings))
+		end
+	)
+	RegisterEvent("RKN_Configio.SetDisabled", function (_, key)
+			DebugError("RKN_Configio.SetDisabled")
+			RKN_Configio.setLoadSetting("enabled", false, key)
+			DebugError(RKN_Configio_Utils.SerializeTable(RKN_Configio.settings))
+		end
+	)
+	RegisterEvent("RKN_Configio.InitSettingsRequest", function ()
+			DebugError("InitEnabledSettings")
+			AddUITriggeredEvent("RKN_Configio", "InitEnabledSettings", {
+				[RKN_Configio.config.stationKey] = RKN_Configio.getLoadSettings(RKN_Configio.config.stationKey).enabled,
+				[RKN_Configio.config.stationLoadoutKey] = RKN_Configio.getLoadSettings(RKN_Configio.config.stationLoadoutKey).enabled,
+				[RKN_Configio.config.shipKey] = RKN_Configio.getLoadSettings(RKN_Configio.config.shipKey).enabled,
+				[RKN_Configio.config.shipLoadoutKey] = RKN_Configio.getLoadSettings(RKN_Configio.config.shipLoadoutKey).enabled
+			})
 		end
 	)
 end
@@ -103,7 +119,6 @@ function RKN_Configio.createShipLoadoutTitleBarButton(row, menu, sc_config, acti
 end
 
 function RKN_Configio.isModEnabledForType(type)
-	RKN_Configio.settings = nil -- Detect changes from extension options menu
 	return RKN_Configio.getLoadSettings(type).enabled
 end
 
