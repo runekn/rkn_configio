@@ -40,7 +40,6 @@ RKN_Configio = {
             }
         },
         folderIdFormat = "rkn_configio.folder.%s.%s",
-        settingsBlackboardId = "$RKN_ConfigioSettings",
         autoPresetsBlackboardId = "$RKN_ConfigioAutoPresets",
         loadWidthMultiplier = 0.85,
         maxFolders = 6,

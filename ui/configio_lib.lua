@@ -363,8 +363,6 @@ function RKN_Configio.getPlayerId()
 	return RKN_Configio.playerID
 end
 
-__userdata_rknconfigo_settings = __userdata_rknconfigo_settings or {}
-
 function RKN_Configio.getSettings(key)
 	if not key then
 		key = RKN_Configio.params.settingKey
@@ -372,11 +370,10 @@ function RKN_Configio.getSettings(key)
 	if not RKN_Configio.settings then
 		RKN_Configio.settings = RKN_Configio_Utils.DeepCopy(RKN_Configio.config.defaultSettings)
 		-- Apply persistent userdata settings
-		if __userdata_rknconfigo_settings then
-			for settingKey, menuSettings in pairs(__userdata_rknconfigo_settings) do
-				for key1, value in pairs(menuSettings) do
-					RKN_Configio.settings[settingKey][key1] = value;
-				end
+		__userdata_rknconfigo_settings = __userdata_rknconfigo_settings or {}
+		for settingKey, menuSettings in pairs(__userdata_rknconfigo_settings) do
+			for key1, value in pairs(menuSettings) do
+				RKN_Configio.settings[settingKey][key1] = value;
 			end
 		end
 	end
@@ -420,6 +417,9 @@ function RKN_Configio.getAutoPresetByName(autoPresets, name)
 end
 
 function RKN_Configio.getAutoPresets(key)
+	if not RKN_Configio.getPlayerId() then
+		return {}
+	end
 	local autoPresets = GetNPCBlackboard(RKN_Configio.getPlayerId(), RKN_Configio.config.autoPresetsBlackboardId)
 	if autoPresets then
 		return autoPresets[key] or {}

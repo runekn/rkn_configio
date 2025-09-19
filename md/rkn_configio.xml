@@ -92,5 +92,15 @@
 				<cancel_cue cue = "this" />
 			</actions>
 		</cue>
+
+		<cue name="MigrateSettings" instantiate="true">
+			<conditions>
+				<event_game_loaded />
+			</conditions>
+			<actions>
+				<raise_lua_event name="'RKN_Configio.MigrateSettings'" />
+				<cancel_cue cue = "this" />
+			</actions>
+		</cue>
 	</cues>
 </mdscript>

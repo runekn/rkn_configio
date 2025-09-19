@@ -20,6 +20,33 @@ local function init()
 			})
 		end
 	)
+	RegisterEvent("RKN_Configio.MigrateSettings", function ()
+			if not RKN_Configio.getPlayerId() or __userdata_rknconfigo_settings then
+				return
+			end
+			DebugError("MigrateSettings")
+			local bbSettings = GetNPCBlackboard(RKN_Configio.getPlayerId(), "$RKN_ConfigioSettings")
+			DebugError(RKN_Configio_Utils.SerializeTable(bbSettings))
+			if not bbSettings then
+				return
+			end
+			for settingKey, menuSettings in pairs(bbSettings) do
+				for key, value in pairs(menuSettings) do
+					local d = RKN_Configio.defaultSettings[settingKey][key]
+					if d ~= nil then -- check that it is still a relevant setting
+						if type(d) == "boolean" then
+							value = value == 1 -- convert booleans as saved in blackboard to lua boolean
+						end
+						if key == "folder_delimiter" and value == "" then
+							value = "/"
+						end
+						RKN_Configio.setSetting(key, value, settingKey)
+					end
+				end
+			end
+			DebugError(RKN_Configio_Utils.SerializeTable(RKN_Configio.settings))
+		end
+	)
 end
 
 function RKN_Configio.createStationTitleBarButton(row, menu, sc_config, loadOptions)
@@ -695,7 +722,12 @@ function RKN_Configio.createAutoPresetEditorButtons(stable)
 	local row = stable:addRow(false, { fixed = true })
 	row[1]:setColSpan(2):createText(ReadText(RKN_Configio.config.textId, 74), RKN_Configio.config.browserHeaderTextProperties)
 	local row = stable:addRow(true, { fixed = true })
-	row[1]:setColSpan(2):createButton({ }):setText(ReadText(RKN_Configio.config.textId, 75), { halign = "center" })
+	DebugError("playerId=" .. tostring(RKN_Configio.getPlayerId()))
+	local active = RKN_Configio.getPlayerId() ~= 0
+	row[1]:setColSpan(2):createButton({ active = active }):setText(ReadText(RKN_Configio.config.textId, 75), { halign = "center" })
+	if not active then
+		row[1]:setColSpan(2).properties.mouseOverText = "Only available while ingame"
+	end
 	row[1].handlers.onClick = function()
 		RKN_Configio.getState().presetEditor = nil
 		RKN_Configio.params.onOpenPresetEditor()
