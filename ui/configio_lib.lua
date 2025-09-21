@@ -210,11 +210,12 @@ end
 function RKN_Configio.getAllTurrets()
 	local mTurrets = {}
 	local lTurrets = {}
-    for _, ware in ipairs(RKN_Configio.getAllWaresByTag("turret")) do
+
+	local turrets = RKN_Configio.getAllWaresByTag("turret")
+    for _, ware in ipairs(turrets) do
         local name, macro = GetWareData(ware, "name", "component")
-		
-		local isAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
-		if not isAlias and IsKnownItem(librarytype, macro) then
+		local isNotAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
+		if isNotAlias and IsKnownItem(librarytype, macro) then
 			local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
 			local _, _, slotsize = macro:find("^%a+_%a+_(%a)_")
 			if slotsize then

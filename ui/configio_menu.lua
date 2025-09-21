@@ -1034,7 +1034,7 @@ end
 function RKN_Configio.createPresetPercentageSlider(c1table, current, all, text)
 	local remaining = 100
 	for k, v in pairs(all) do
-		if type(k) == "number" and k ~= current then
+		if k ~= "type" and k ~= "creativecrewoption" and k ~= current then
 			remaining = remaining - v
 		end
 	end
