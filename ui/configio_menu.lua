@@ -1084,7 +1084,7 @@ function RKN_Configio.createRenameItemContext(contextFrame, y, item)
 
 	local takenNames = {}
 	for _, l in ipairs(RKN_Configio.params.itemsList()) do
-		takenNames[RKN_Configio.name] = true
+		takenNames[l.name] = true
 	end
 
 	htable:addEmptyRow(Helper.standardTextHeight)
@@ -1117,7 +1117,7 @@ function RKN_Configio.createSaveItemContext(contextFrame, y, item)
 
 	local takenNames = {}
 	for _, l in ipairs(RKN_Configio.params.itemsList()) do
-		takenNames[RKN_Configio.name] = RKN_Configio.params.isItemSavable(l)
+		takenNames[l.name] = RKN_Configio.params.isItemSavable(l)
 	end
 
 	htable:addEmptyRow(Helper.standardTextHeight)
