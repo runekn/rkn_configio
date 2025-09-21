@@ -530,17 +530,17 @@ function RKN_Configio.generateLoadoutUpgradePlan(menu, presetTemplate)
 						chosenMacro = slot.possiblemacros[1]
 					end
 					if chosenMacro then
-						upgradeplan.shield[i] = { macro = chosenMacro }
+						upgradeplan.shield[i] = { macro = chosenMacro, weaponmode = "", ammomacro = "" }
 					end
 				elseif type == "weapon" then
 					local chosenMacro = RKN_Configio.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.weapons)
 					if chosenMacro then
-						upgradeplan.weapon[i] = { macro = chosenMacro }
+						upgradeplan.weapon[i] = { macro = chosenMacro, weaponmode = "", ammomacro = "" }
 					end
 				elseif type == "engine" and #upgradeplan.enginegroup == 0 then
 					local chosenMacro = RKN_Configio.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.engines)
 					if chosenMacro then
-						upgradeplan.engine[i] = { macro = chosenMacro }
+						upgradeplan.engine[i] = { macro = chosenMacro, weaponmode = "", ammomacro = "" }
 					end
 				elseif type == "turret" then
 					local chosenMacro
@@ -550,12 +550,12 @@ function RKN_Configio.generateLoadoutUpgradePlan(menu, presetTemplate)
 						chosenMacro = RKN_Configio.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.lturrets)
 					end
 					if chosenMacro then
-						upgradeplan.turret[i] = { macro = chosenMacro }
+						upgradeplan.turret[i] = { macro = chosenMacro, weaponmode = "", ammomacro = "" }
 					end
 				elseif type == "thruster" then
 					local chosenMacro = RKN_Configio.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.thrusters)
 					if chosenMacro then
-						upgradeplan.thruster[i] = { macro = chosenMacro }
+						upgradeplan.thruster[i] = { macro = chosenMacro, weaponmode = "", ammomacro = "" }
 					end
 				end
 			end
