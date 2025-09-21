@@ -402,11 +402,15 @@ function RKN_Configio.setSettingPersistent(key, value, settingKey)
 	end
 end
 
-function RKN_Configio.addCustomAutoPresets(key, loadouts)
+function RKN_Configio.addCustomAutoPresets(menu, key, loadouts)
 	local autoPresets = RKN_Configio.getAutoPresets(key)
 	if next(autoPresets) ~= nil then
 		for id, preset in pairs(autoPresets) do
-			table.insert(loadouts, { customPreset = preset, id = id, name = preset.name, deleteable = true, active = true })
+			local p = { customPreset = preset, id = id, name = preset.name, deleteable = true, active = true }
+			if menu.mode == "customgamestart" then
+				p.mouseovertext = "Rules matching by value do not work in creative start"
+			end
+			table.insert(loadouts, p)
 		end
 	end
 	return loadouts

@@ -200,7 +200,7 @@ function RKN_Configio.buttonStationLoadoutTitleLoad(menu, contextLayer)
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
 			height = RKN_Configio.config.stationLoadoutLoadHeight,
-			itemsList = function() return RKN_Configio.addPartialFlag(RKN_Configio.addCustomAutoPresets(RKN_Configio.config.stationLoadoutKey, RKN_Configio_Utils.DeepCopy(menu.loadouts))) end,
+			itemsList = function() return RKN_Configio.addPartialFlag(RKN_Configio.addCustomAutoPresets(menu, RKN_Configio.config.stationLoadoutKey, RKN_Configio_Utils.DeepCopy(menu.loadouts))) end,
 			header = ReadText(RKN_Configio.config.textId, 22),
 			optionItemNameText = ReadText(RKN_Configio.config.textId, 24),
 			onSelection = function(item)
@@ -310,7 +310,7 @@ function RKN_Configio.buttonShipLoadoutTitleLoad(menu, contextLayer)
 			y = menu.contextMode.y,
 			width = menu.contextMode.width,
 			height = RKN_Configio.config.stationLoadoutLoadHeight,
-			itemsList = function() return RKN_Configio.addPartialFlag(RKN_Configio.addCustomAutoPresets(RKN_Configio.config.shipLoadoutKey, RKN_Configio_Utils.DeepCopy(menu.loadouts))) end,
+			itemsList = function() return RKN_Configio.addPartialFlag(RKN_Configio.addCustomAutoPresets(menu, RKN_Configio.config.shipLoadoutKey, RKN_Configio_Utils.DeepCopy(menu.loadouts))) end,
 			header = ReadText(RKN_Configio.config.textId, 22),
 			optionItemNameText = ReadText(RKN_Configio.config.textId, 24),
 			onSelection = function(item)
