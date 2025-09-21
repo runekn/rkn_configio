@@ -579,6 +579,15 @@ function RKN_Configio.generateLoadoutUpgradePlan(menu, presetTemplate)
 			local crewCapacity = menu.crew.capacity
 			upgradeplan.crew.service = RKN_Configio.getProportionateCount(crewCapacity, presetTemplate.crew.crew)
 			upgradeplan.crew.marine = RKN_Configio.getProportionateCount(crewCapacity, presetTemplate.crew.marines)
+			if menu.mode == "customgamestart" then
+				local crewoption = ""
+				if presetTemplate.crew.creativecrewoption then
+					crewoption = presetTemplate.crew.creativecrewoption
+				elseif upgradeplan.crew.marine > 0 or upgradeplan.crew.service > 0 then
+					crewoption = RKN_Configio.getCreativeCrewOptions()[2].id
+				end
+				menu.customgamestartpeopledef = crewoption
+			end
 		end
 		local droneCapacity = GetMacroUnitStorageCapacity(menu.macro)
 		if droneCapacity > 0 then
@@ -648,7 +657,7 @@ function RKN_Configio.chooseMacroByExactRule(possiblemacros, rule)
 end
 
 function RKN_Configio.chooseMacroByAutoRule(menu, possiblemacros, rule)
-	if not rule.race or not rule.value then
+	if not rule.race or not rule.value or not menu.container then -- if menu.container == nil then we are not at a shipyard, and cannot get prices.
 		return nil
 	end
 
@@ -893,6 +902,21 @@ function RKN_Configio.renameShipLoadout(menu, item, newName)
 		C.RemoveLoadout("local", macro, item.id)
 		menu.getPresetLoadouts()
 	end
+end
+
+function RKN_Configio.getCreativeCrewOptions()
+	if not RKN_Configio.creativeCrewOptions then
+		RKN_Configio.creativeCrewOptions = {}
+		local n = C.GetNumPlayerPeopleDefinitions()
+		local buf = ffi.new("PeopleDefinitionInfo[?]", n)
+		n = C.GetPlayerPeopleDefinitions(buf, n)
+		for i = 0, n - 1 do
+			table.insert(RKN_Configio.creativeCrewOptions, { id = ffi.string(buf[i].id), text = ffi.string(buf[i].name), icon = "", displayremoveoption = false, mouseovertext = ffi.string(buf[i].desc) })
+		end
+		table.sort(RKN_Configio.creativeCrewOptions, function (a, b) return a.text < b.text end)
+		table.insert(RKN_Configio.creativeCrewOptions, 1, { id = "none", text = ReadText(1001, 9931), icon = "", displayremoveoption = false })
+	end
+	return RKN_Configio.creativeCrewOptions
 end
 
 function RKN_Configio.compareItemNames(a, b)

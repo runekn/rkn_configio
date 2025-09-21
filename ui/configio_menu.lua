@@ -892,6 +892,7 @@ function RKN_Configio.createAutoPresetEditorContext()
 
 		local row = c2table:addRow(false, { fixed = false })
 		row[1]:setColSpan(2):createText(ReadText(RKN_Configio.config.textId, 51), {})
+		RKN_Configio.createCrewOptionDropdown(c2table, preset.crew)
 		RKN_Configio.createPresetPercentageSlider(c2table, "crew", preset.crew, ReadText(RKN_Configio.config.textId, 52))
 		RKN_Configio.createPresetPercentageSlider(c2table, "marines", preset.crew, ReadText(RKN_Configio.config.textId, 53))
 
@@ -1033,7 +1034,7 @@ end
 function RKN_Configio.createPresetPercentageSlider(c1table, current, all, text)
 	local remaining = 100
 	for k, v in pairs(all) do
-		if k ~= "type" and k ~= current then
+		if type(k) == "number" and k ~= current then
 			remaining = remaining - v
 		end
 	end
@@ -1044,6 +1045,17 @@ function RKN_Configio.createPresetPercentageSlider(c1table, current, all, text)
 		all[current] = value
 		RKN_Configio.refreshPresetFrame()
 	end
+end
+
+function RKN_Configio.createCrewOptionDropdown(c2table, all)
+	local options = RKN_Configio.getCreativeCrewOptions()
+	local row = c2table:addRow(true, { scaling = true })
+	row[2]:setColSpan(2):createDropDown(options, { startOption = not all.creativecrewoption and "none" or all.creativecrewoption, height = Helper.standardTextHeight })
+	row[2].handlers.onDropDownConfirmed = function(_, peopledefid)
+		all.creativecrewoption = peopledefid == "none" and nil or peopledefid
+		RKN_Configio.refreshPresetFrame()
+	end
+	row[2].properties.mouseOverText = "Only relevant for creative start"
 end
 
 function RKN_Configio.createDeleteConfirmation(contextFrame, y, item)
