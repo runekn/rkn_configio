@@ -85,6 +85,13 @@ Specific compatibility with "Store existing loadout" by Mycu was implemented by 
 * netUpb/fikrethos: for feedback and help with code.
 * Eliptus: author of partial loadout, which I was given permission to incorporate.
 * Alex5Not: for russian translation.
+* Mycu: for compatibility with his mod
+
+## Known issues
+* First item on the list is selected by default when opening dialogue. However because the list table is not selected then the item selection is not visible, it can be unexpected when clicking the first item once loads it rather than simply selecting it.
+* Partial Loadout does not work with missiles.
+* Loading an item or clicking "Cancel" leads to the component slots on the 3D model becoming unresponsive. This is quickly fixed by simply breifly hovering the mouse over any UI element.
+* At screen resolutions under 1366x768 the UI will not work correctly.
 
 ## Updates
 
