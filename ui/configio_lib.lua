@@ -737,7 +737,7 @@ function RKN_Configio.chooseMacroByAutoRule(menu, possiblemacros, rule)
 		end
 	end
 	table.sort(filteredMacros, function (a, b) return a.price < b.price end)
-	if rule.value == "low" then
+	if rule.value == "low" or #filteredMacros == 1 then
 		return filteredMacros[1].macro
 	elseif rule.value == "medium" then
 		return filteredMacros[math.floor(#filteredMacros / 2)].macro
