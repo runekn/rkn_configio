@@ -543,7 +543,7 @@ function RKN_Configio.generateLoadoutUpgradePlan(menu, presetTemplate)
 			if chosenMacro then
 				table.insert(upgradeplan.enginegroup, { path = group.path, group = group.group, count = group.engine.total, macro = chosenMacro })
 				for i = 1, group.engine.total do
-					table.insert(upgradeplan.engine, { macro = chosenMacro })
+					table.insert(upgradeplan.engine, { macro = chosenMacro, weaponmode = "", ammomacro = "" })
 				end
 			end
 		end
@@ -592,7 +592,7 @@ function RKN_Configio.generateLoadoutUpgradePlan(menu, presetTemplate)
 				elseif type == "thruster" then
 					local chosenMacro = RKN_Configio.chooseMacroByRules(menu, slot.possiblemacros, presetTemplate.thrusters)
 					if chosenMacro then
-						upgradeplan.thruster[i] = { macro = chosenMacro, weaponmode = "", ammomacro = "" }
+						upgradeplan.thruster[i] = { macro = chosenMacro }
 					end
 				end
 			end
