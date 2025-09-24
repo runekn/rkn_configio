@@ -170,6 +170,43 @@ function RKN_Configio.getAllWaresByTag(tag)
 	return result
 end
 
+function RKN_Configio.getAliases()
+	-- Problem is that in lua I cannot differentiate between original macros without aliases, and alias macros.
+	-- So we create this map of alias macro -> original macro
+	-- We connect them by name, because that is the only thing available. This assumes that aliases has the same name.
+	if not RKN_Configio.aliases then
+		local hasAlias = {}
+		local hasNoAlias = {}
+		RKN_Configio.collectAliasesByTag("weapon", hasAlias, hasNoAlias)
+		RKN_Configio.collectAliasesByTag("turret", hasAlias, hasNoAlias)
+		RKN_Configio.collectAliasesByTag("shield", hasAlias, hasNoAlias)
+		RKN_Configio.collectAliasesByTag("engine", hasAlias, hasNoAlias)
+		RKN_Configio.collectAliasesByTag("thruster", hasAlias, hasNoAlias)
+
+		local result = {}
+		for text, macro in pairs(hasNoAlias) do
+			result[macro] = hasAlias[text]
+		end
+		RKN_Configio.aliases = result
+	end
+	return RKN_Configio.aliases
+end
+
+function RKN_Configio.collectAliasesByTag(tag, hasAliasMap, hasNoAliasMap)
+	for _, ware in ipairs(RKN_Configio.getAllWaresByTag(tag)) do
+		local name, macro = GetWareData(ware, "name", "component")
+		local hasAlias = GetMacroData(macro, "hasinfoalias")
+		if hasAlias then
+			hasAliasMap[name] = macro
+		else
+			if hasNoAliasMap[name] then
+				DebugError("collectAliasesByTag: MULTIPLE ALIASES! " .. macro)
+			end
+			hasNoAliasMap[name] = macro
+		end
+	end
+end
+
 function RKN_Configio.getAllProductionModules()
 	if not RKN_Configio.allProductionModules then
 		local result = {}
@@ -193,9 +230,8 @@ function RKN_Configio.getAllWeapons()
 		local result = {}
 		for _, ware in ipairs(RKN_Configio.getAllWaresByTag("weapon")) do
 			local name, macro = GetWareData(ware, "name", "component")
-			
-			local isAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
-			if not isAlias and IsKnownItem(librarytype, macro) then
+			local hasAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
+			if not hasAlias and IsKnownItem(librarytype, macro) then
 				local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
 				table.insert(result, entry)
 			end
@@ -214,8 +250,8 @@ function RKN_Configio.getAllTurrets()
 	local turrets = RKN_Configio.getAllWaresByTag("turret")
     for _, ware in ipairs(turrets) do
         local name, macro = GetWareData(ware, "name", "component")
-		local isNotAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
-		if isNotAlias and IsKnownItem(librarytype, macro) then
+		local hasAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
+		if not hasAlias and IsKnownItem(librarytype, macro) then
 			local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
 			local _, _, slotsize = macro:find("^%a+_%a+_(%a)_")
 			if slotsize then
@@ -241,8 +277,8 @@ function RKN_Configio.getAllShields()
     for _, ware in ipairs(RKN_Configio.getAllWaresByTag("shield")) do
         local name, macro = GetWareData(ware, "name", "component")
 		
-		local isAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
-		if not isAlias and IsKnownItem(librarytype, macro) then
+		local hasAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
+		if not hasAlias and IsKnownItem(librarytype, macro) then
 			local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
 			local _, _, type, slotsize = macro:find("^(%a+)_%a+_(%a+)_")
 			if slotsize and type ~= "ishield" then -- Ignore VRO internal shields
@@ -271,8 +307,8 @@ function RKN_Configio.getAllEngines()
     for _, ware in ipairs(RKN_Configio.getAllWaresByTag("engine")) do
         local name, macro = GetWareData(ware, "name", "component")
 		
-		local isAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
-		if not isAlias and IsKnownItem(librarytype, macro) then
+		local hasAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
+		if not hasAlias and IsKnownItem(librarytype, macro) then
 			local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
 			table.insert(result, entry)
 		end
@@ -287,8 +323,8 @@ function RKN_Configio.getAllThrusters()
     for _, ware in ipairs(RKN_Configio.getAllWaresByTag("thruster")) do
         local name, macro = GetWareData(ware, "name", "component")
 		
-		local isAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
-		if not isAlias and IsKnownItem(librarytype, macro) then
+		local hasAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
+		if not hasAlias and IsKnownItem(librarytype, macro) then
 			local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
 			table.insert(result, entry)
 		end
@@ -653,8 +689,9 @@ function RKN_Configio.chooseMacroByExactRule(possiblemacros, rule)
 	if not rule.macro then
 		return nil
 	end
+	local aliases = RKN_Configio.getAliases()
 	for _, macro in ipairs(possiblemacros) do
-		if macro == rule.macro then
+		if macro == rule.macro or aliases[rule.macro] == macro then
 			return macro
 		end
 	end
