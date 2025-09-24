@@ -199,11 +199,16 @@ function RKN_Configio.collectAliasesByTag(tag, hasAliasMap, hasNoAliasMap)
 		if hasAlias then
 			hasAliasMap[name] = macro
 		else
+			-- The assumption that names would only be same in aliases turned out to be wrong...
+			if string.find(macro, "tutorial") or string.find(macro, "racer") then
+				goto continue
+			end
 			if hasNoAliasMap[name] then
-				DebugError("collectAliasesByTag: MULTIPLE ALIASES! " .. macro)
+				DebugError("collectAliasesByTag: MULTIPLE ALIASES! name=" .. name .. " macro=" .. macro .. " macro2=" .. hasNoAliasMap[name])
 			end
 			hasNoAliasMap[name] = macro
 		end
+		::continue::
 	end
 end
 
