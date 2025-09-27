@@ -339,6 +339,24 @@ function RKN_Configio.getAllThrusters()
 	return result
 end
 
+function RKN_Configio.getAllMissiles()
+	if not RKN_Configio.allMissiles then
+		local result = {}
+		for _, ware in ipairs(RKN_Configio.getAllWaresByTag("missile")) do
+			local name, macro = GetWareData(ware, "name", "component")
+			local hasAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
+			if not hasAlias and IsKnownItem(librarytype, macro) then
+				local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
+				table.insert(result, entry)
+			end
+		end
+		
+		table.sort(result, function (a, b) return a.text < b.text end)
+		RKN_Configio.allMissiles = result
+	end
+	return RKN_Configio.allMissiles
+end
+
 function RKN_Configio.getRaceNameMap()
 	if not RKN_Configio.raceNameMap then
 		local races = {}
@@ -662,10 +680,71 @@ function RKN_Configio.generateLoadoutUpgradePlan(menu, presetTemplate)
 		if counterCapacity > 0 then
 			upgradeplan.countermeasure.countermeasure_flares_01_macro = RKN_Configio.getProportionateCount(counterCapacity, presetTemplate.countermeasure.flares)
 		end
-		--C.GetMacroMissileCapacity(currentmacro)
+		local missileCapacity = RKN_Configio.getMissileCapacity(menu, upgradeplan)
+		if missileCapacity > 0 then
+			local possiblemacros = RKN_Configio_Utils.FilterArray(RKN_Configio_Utils.KeyArray(menu.ammo.missile), function (v) return RKN_Configio.isMissileCompatible(upgradeplan, v) end)
+			local chosenMacro = RKN_Configio.chooseMacroByRules(menu, possiblemacros, presetTemplate.missiles)
+			if chosenMacro then
+				upgradeplan.missile[chosenMacro] = RKN_Configio.getMissileCapacity(menu, upgradeplan, chosenMacro)
+			end
+		end
 	end
 
 	return upgradeplan
+end
+
+function RKN_Configio.isMissileCompatible(upgradeplan, ammomacro)
+	for slot, data in pairs(upgradeplan.weapon) do
+		if data.macro ~= "" then
+			if C.IsAmmoMacroCompatible(data.macro, ammomacro) then
+				return true
+			end
+		end
+	end
+	for slot, data in pairs(upgradeplan.turret) do
+		if data.macro ~= "" then
+			if C.IsAmmoMacroCompatible(data.macro, ammomacro) then
+				return true
+			end
+		end
+	end
+	for slot, groupdata in pairs(upgradeplan.turretgroup) do
+		if groupdata.macro ~= "" then
+			if C.IsAmmoMacroCompatible(groupdata.macro, ammomacro) then
+				return true
+			end
+		end
+	end
+end
+
+function RKN_Configio.getMissileCapacity(menu, upgradeplan, macro)
+	-- Mostly copied from menu_ship_configuration.lua menu.getAmmoUsage()
+	local capacity
+	if menu.usemacro then
+		if menu.macro ~= "" then
+			capacity = C.GetDefaultMissileStorageCapacity(menu.macro)
+		end
+	elseif menu.mode == "upgrade" then
+		if menu.object ~= 0 then
+			capacity = GetComponentData(ConvertStringTo64Bit(tostring(menu.object)), "missilecapacity") or 0
+		end
+	end
+	for slot, data in pairs(upgradeplan.weapon) do
+		if data.macro and data.macro ~= "" and (not macro or C.IsAmmoMacroCompatible(data.macro, macro)) then
+			capacity = capacity + C.GetMacroMissileCapacity(data.macro)
+		end
+	end
+	for slot, data in pairs(upgradeplan.turret) do
+		if data.macro and data.macro ~= "" and (not macro or C.IsAmmoMacroCompatible(data.macro, macro)) then
+			capacity = capacity + C.GetMacroMissileCapacity(data.macro)
+		end
+	end
+	for slot, groupdata in pairs(upgradeplan.turretgroup) do
+		if groupdata.macro and groupdata.macro ~= "" and (not macro or C.IsAmmoMacroCompatible(groupdata.macro, macro)) then
+			capacity = capacity + groupdata.count * C.GetMacroMissileCapacity(groupdata.macro)
+		end
+	end
+	return capacity
 end
 
 function RKN_Configio.getProportionateCount(totalCapacity, preset)

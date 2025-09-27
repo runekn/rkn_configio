@@ -422,7 +422,8 @@ function RKN_Configio.buttonShipLoadoutTitleAutoPresets(menu, contextLayer)
 			xlShieldOptions = allXLShields,
 			engineOptions = RKN_Configio.getAllEngines(),
 			thrusterOptions = RKN_Configio.getAllThrusters(),
-			weaponOptions = RKN_Configio.getAllWeapons()
+			weaponOptions = RKN_Configio.getAllWeapons(),
+			missileOptions = RKN_Configio.getAllMissiles()
 		}
 		RKN_Configio.createAutoPresetEditorContext()
 	end
@@ -767,6 +768,7 @@ function RKN_Configio.createAutoPresetEditorContext()
 			lshields = {},
 			xlshields = {},
 			thrusters = {},
+			missiles = {},
 			software = {
 				longrangescanner = { type = "exact", id = "software_scannerlongrangemk1" },
 				objectscanner = { type = "exact", id = "software_scannerobjectmk1" },
@@ -850,6 +852,11 @@ function RKN_Configio.createAutoPresetEditorContext()
 		row[1]:setColSpan(6):createText(ReadText(RKN_Configio.config.textId, 44), {})
 		local onlyAnyRace = { { id = "any", text = ReadText(RKN_Configio.config.textId, 34), icon = "", displayremoveoption = false } }
 		RKN_Configio.createPresetRules(c1table, onlyAnyRace, RKN_Configio.config.valueOptions, RKN_Configio.params.thrusterOptions, preset.thrusters)
+
+		c1table:addEmptyRow(Helper.standardTextHeight / 2)
+		local row = c1table:addRow(false, { fixed = false })
+		row[1]:setColSpan(6):createText(ReadText(RKN_Configio.config.textId, 115), {})
+		RKN_Configio.createPresetRules(c1table, raceOptions, RKN_Configio.config.valueOptions, RKN_Configio.params.missileOptions, preset.missiles)
 	end
 
 

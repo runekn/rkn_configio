@@ -123,3 +123,25 @@ function RKN_Configio_Utils.First(tbl, f)
 	end
 	return nil
 end
+
+function RKN_Configio_Utils.KeyArray(table)
+    local keyset = {}
+    local n = 0
+    for k,_ in pairs(table) do
+        n = n + 1
+        keyset[n] = k
+    end
+    return keyset
+end
+
+function RKN_Configio_Utils.FilterArray(table, f)
+    local result = {}
+    local n = 0
+    for _,v in ipairs(table) do
+        if f(v) then
+            n = n + 1
+            result[n] = v
+        end
+    end
+    return result
+end
