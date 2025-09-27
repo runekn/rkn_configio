@@ -798,10 +798,9 @@ function RKN_Configio.trimPartialLoadout(currentUpgradePlan, upgradeplan, upgrad
 			end
 
 		elseif spec.supertype == 'ammo' then
-			local missile = type == "missile" -- Don't preserve existing missiles that cannot be built at this shipyard. This is due to left bar sliders setting max value to 0 and thus crashing UI
 			-- plan[macro] = count
 			for macro,_ in pairs(plan) do
-				if not RKN_Configio_Utils.Any(wares, function(v, _) return v.macro == macro and (v.isFromShipyard or not missile) end) then
+				if not RKN_Configio_Utils.Any(wares, function(v, _) return v.macro == macro end) then
 					plan[macro] = 0
 				end
 			end
