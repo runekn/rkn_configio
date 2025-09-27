@@ -118,7 +118,7 @@ end
 function RKN_Configio_Utils.First(tbl, f)
 	for k,v in pairs(tbl) do
 		if f(v, k) then
-			return {k, v}
+			return k, v
 		end
 	end
 	return nil

@@ -879,8 +879,11 @@ function RKN_Configio.trimPartialLoadout(currentUpgradePlan, upgradeplan, upgrad
 		elseif spec.supertype == 'ammo' then
 			-- plan[macro] = count
 			for macro,_ in pairs(plan) do
-				if not RKN_Configio_Utils.Any(wares, function(v, _) return v.macro == macro end) then
+				local _, ware = RKN_Configio_Utils.First(wares, function(v, _) return v.macro == macro end)
+				if not ware then
 					plan[macro] = 0
+				elseif not ware.isFromShipyard then
+					plan[macro] = ware.objectamount
 				end
 			end
 
