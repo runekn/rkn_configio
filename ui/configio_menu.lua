@@ -1334,7 +1334,7 @@ function RKN_Configio.onStationLoadoutLoad(menu, item)
 	elseif item.partial and RKN_Configio.getSettings().item_load_partial then
 		local loadout = Helper.getLoadoutHelper(C.GetLoadout, C.GetLoadoutCounts, 0, menu.loadoutModule.macro, item.id)
 		local upgradeplan = Helper.convertLoadout(menu.loadoutModule.component, menu.loadoutModule.macro, loadout, nil)
-		RKN_Configio.trimPartialLoadout(menu.constructionplan[menu.loadoutMode].upgradeplan, upgradeplan, menu.upgradewares, false)
+		RKN_Configio.trimPartialLoadout(menu.constructionplan[menu.loadoutMode].upgradeplan, upgradeplan, menu.upgradewares, false, menu)
 		menu.getUpgradeData(upgradeplan)
 		if menu.holomap and (menu.holomap ~= 0) then
 			Helper.callLoadoutFunction(menu.constructionplan[menu.loadoutMode].upgradeplan, nil, function (loadout, _) return C.UpdateObjectConfigurationMap(menu.holomap, menu.container, menu.loadoutModule.component, menu.loadoutModule.macro, true, loadout) end)
@@ -1359,7 +1359,7 @@ function RKN_Configio.onShipLoadoutLoad(menu, item)
 		menu.setCustomShipName()
 		local loadout = Helper.getLoadoutHelper2(C.GetLoadout2, C.GetLoadoutCounts2, "UILoadout2", menu.object, menu.macro, item.id)
 		local upgradeplan = Helper.convertLoadout(menu.object, menu.macro, loadout, menu.software, "UILoadout2")
-		RKN_Configio.trimPartialLoadout(menu.upgradeplan, upgradeplan, menu.upgradewares, true)
+		RKN_Configio.trimPartialLoadout(menu.upgradeplan, upgradeplan, menu.upgradewares, true, menu)
 		menu.getDataAndDisplay(upgradeplan, menu.crew)
 	else
 		menu.dropdownLoadout(_, item.id)

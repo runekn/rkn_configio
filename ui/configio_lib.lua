@@ -844,7 +844,7 @@ end
 
 -- Created by Eliptus
 -- Edited and integrated by Runekn
-function RKN_Configio.trimPartialLoadout(currentUpgradePlan, upgradeplan, upgradewares, isShipyard)
+function RKN_Configio.trimPartialLoadout(currentUpgradePlan, upgradeplan, upgradewares, isShipyard, menu)
 	for type,plan in pairs(upgradeplan) do
 		local spec = Helper.findUpgradeType(type)
 		local wares = upgradewares[type]
@@ -863,15 +863,14 @@ function RKN_Configio.trimPartialLoadout(currentUpgradePlan, upgradeplan, upgrad
 			-- plan[slot]['macro'] = macro
 			for slot,info in pairs(plan) do
 				local alreadyBuilt = currentUpgradePlan[type][slot].macro == info.macro
-				local buildable = RKN_Configio_Utils.Any(wares, function(v, _) return v.macro == info.macro and (v.isFromShipyard or not isShipyard) end)
+				local haslicence = menu.checkLicence(info.macro)
+				local buildable = haslicence and RKN_Configio_Utils.Any(wares, function(v, _) return v.macro == info.macro and (v.isFromShipyard or not isShipyard) end)
 				if not buildable then
 					if alreadyBuilt then
 						info.count = currentUpgradePlan[type][slot].count
 					else
-						info.macro = ''
-						if info.count then
-							info.count = 0
-						end
+						info.macro = currentUpgradePlan[type][slot].macro
+						info.count = currentUpgradePlan[type][slot].count
 					end
 				end
 			end
