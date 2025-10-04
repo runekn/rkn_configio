@@ -949,6 +949,7 @@ function RKN_Configio.createAutoPresetEditorContext()
 	
 	if RKN_Configio.getState().topRow then
 		c1table:setTopRow(RKN_Configio.getState().topRow.leftTable)
+		c2table:setTopRow(RKN_Configio.getState().topRow.rightTable)
 	end
 
 	contextFrame:display()
@@ -1190,6 +1191,11 @@ end
 
 function RKN_Configio.buttonLoadItem()
 	if RKN_Configio.isRowValidForLoad() then
+		local state = RKN_Configio.getState()
+		state.topRow = {
+			listTable = GetTopRow(state.tables[1]),
+			settingsTable = GetTopRow(state.tables[3])
+		}
 		RKN_Configio.params.onSelection(RKN_Configio.selectedEntry.item)
 	end
 end
@@ -1227,7 +1233,8 @@ end
 function RKN_Configio.refreshPresetFrame()
 	local state = RKN_Configio.getState()
 	state.topRow = {
-		leftTable = GetTopRow(state.tables[2])
+		leftTable = GetTopRow(state.tables[2]),
+		rightTable = GetTopRow(state.tables[3])
 	}
 	RKN_Configio.createAutoPresetEditorContext()
 end

@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<content id="ws_3329937856" author="Runekn" name="Expanded Configuration Load" description="Replaces station and loadout load dropdown with a feature-rich dialog window." version="156" date="2025-09-27" save="false" sync="false" lastupdate="1758734655">
+<content id="ws_3329937856" author="Runekn" name="Expanded Configuration Load" description="Replaces station and loadout load dropdown with a feature-rich dialog window." version="157" date="2025-10-01" save="false" sync="false" lastupdate="1759294932">
   <dependency name="SirNukes Mod Support APIs" id="ws_2042901274" version="100" optional="true"/>
 </content>
