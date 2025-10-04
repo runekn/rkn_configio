@@ -832,7 +832,7 @@ end
 function RKN_Configio.addPartialFlag(loadouts)
 	if RKN_Configio.getSettings().item_load_partial then
 		for _, loadout in ipairs(loadouts) do
-			if not loadout.active then
+			if loadout.active == false then
 				loadout.name = loadout.name
 				loadout.active = true
 				loadout.partial = true
