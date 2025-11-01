@@ -179,6 +179,11 @@ function RKN_Configio.buttonStationTitleLoad(menu, contextLayer)
 			sortDefault = "name",
 			onSave = function(name, overwrite)
 				menu.currentCPName = name
+				if (overwrite) then
+					-- menu.currentCPID will be whichever plan was previously loaded.
+					-- Overwrite it to force menu.buttonSave to find id based on menu.currentCPName
+					menu.currentCPID = nil
+				end
 				menu.buttonSave(overwrite)
 			end,
 			isItemSavable = function(item) return true end

@@ -92,6 +92,7 @@ Specific compatibility with "Store existing loadout" by Mycu was implemented by 
 
 ## Updates
 
+* 1.5.9: Fix overwriting station plan writing to last loaded plan rather than the one selected.
 * 1.5.8: Fix vanilla auto presets not working if partial loadout is enabled. Fix partial loadout when player does not have component licence. Partial loadout will now keep whatever is on the component slot, rather than clear it, if preset component cannot be equipped.
 * 1.5.7: Fix scroll position after loading item. Fix scroll position of right table in custom auto preset editor while editing.
 * 1.5.6: Partial loadout will now retain missiles that shipyard does not have and are part of preset. Custom auto presets now support missiles.
