@@ -248,6 +248,8 @@ function RKN_Configio.getAllWeapons()
 	return RKN_Configio.allWeapons
 end
 
+local macroSlotsizePattern = "_([smlx]x?l?)_"
+
 function RKN_Configio.getAllTurrets()
 	local mTurrets = {}
 	local lTurrets = {}
@@ -258,7 +260,7 @@ function RKN_Configio.getAllTurrets()
 		local hasAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
 		if not hasAlias and IsKnownItem(librarytype, macro) then
 			local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
-			local _, _, slotsize = macro:find("^%a+_%a+_(%a)_")
+			local _, _, slotsize = macro:find(macroSlotsizePattern)
 			if slotsize then
 				if slotsize:lower() == "l" then
 					table.insert(lTurrets, entry)
@@ -285,8 +287,9 @@ function RKN_Configio.getAllShields()
 		local hasAlias, librarytype = GetMacroData(macro, "hasinfoalias", "infolibrary")
 		if not hasAlias and IsKnownItem(librarytype, macro) then
 			local entry = { text = name, id = macro, icon = "", displayremoveoption = false }
-			local _, _, type, slotsize = macro:find("^(%a+)_%a+_(%a+)_")
-			if slotsize and type ~= "ishield" then -- Ignore VRO internal shields
+			local _, _, slotsize = macro:find(macroSlotsizePattern)
+			local isInternalShield = macro:find("^ishield_") -- Ignore VRO internal shields
+			if slotsize and not isInternalShield then
 				if slotsize:lower() == "l" then
 					table.insert(lShields, entry)
 				elseif slotsize:lower() == "m" then
