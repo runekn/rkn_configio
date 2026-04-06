@@ -55,8 +55,9 @@ function RKN_Configio.createStationTitleBarButton(row, menu, sc_config, loadOpti
 		row[2]:createButton({ helpOverlayID = "open_constructionplan_browser", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height }):setText(ReadText(RKN_Configio.config.textId, 1), RKN_Configio.config.loadButtonTextProperties)
 		row[2].handlers.onClick = function() RKN_Configio.buttonStationTitleLoad(menu, sc_config.contextLayer) end
 	else
-		row[2]:createDropDown(loadOptions, { textOverride = ReadText(1001, 7904), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize }):setTextProperties(sc_config.dropDownTextProperties)
-		row[2].handlers.onDropDownActivated = function () menu.noupdate = true end
+		row[2]:createDropDown(loadOptions, { textOverride = ReadText(1001, 7904), optionWidth = menu.titleData.dropdownWidth + 7 * (menu.titleData.height + Helper.borderSize) }):setTextProperties(config.dropDownTextProperties)
+		row[2].handlers.onDropDownActivated = function () menu.noupdate = true; menu.closeContextMenu() end
+		row[2].handlers.onDropDownDeactivated = function () menu.noupdate = false end
 		row[2].handlers.onDropDownConfirmed = menu.dropdownLoad
 		row[2].handlers.onDropDownRemoved = menu.dropdownRemovedCP
 	end
@@ -65,8 +66,8 @@ end
 function RKN_Configio.createRefreshStationTitleBarButton(menu, text, loadOptions)
 	-- No need for refreshing if enabled --
 	if not RKN_Configio.isModEnabledForType(RKN_Configio.config.stationKey) then
-		local desc = Helper.createDropDown(loadOptions, "", text, nil, true, true, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize)
-		Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, function () menu.noupdate = true end, menu.dropdownLoad, menu.dropdownRemovedCP)
+		local desc = Helper.createDropDown(loadOptions, "", text, nil, true, true, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + 7 * (menu.titleData.height + Helper.borderSize))
+		Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, function () menu.noupdate = true; menu.closeContextMenu() end, menu.dropdownLoad, menu.dropdownRemovedCP, function () menu.update = false end)
 	end
 end
 
@@ -123,6 +124,7 @@ function RKN_Configio.createShipTitleBarButton(row, menu, sc_config, classOption
 			y = 0,
 			scaling = false,
 		}
+
 		local dropdown = row[2]:createDropDown(shipOptions, { startOption = curShipOption, active = (not menu.isReadOnly) and (menu.class ~= ""), optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, helpOverlayID = "shipconfig_shipoptions", helpOverlayText = " ", helpOverlayHighlightOnly = true }):setTextProperties(sc_config.dropDownTextProperties):setIconProperties(dropDownIconProperties)
 		row[2].properties.text.halign = "left"
 		row[2].handlers.onDropDownConfirmed = menu.dropdownShip

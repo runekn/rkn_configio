@@ -25,9 +25,16 @@ local function init()
 	menu = Helper.getMenu("StationConfigurationMenu")
 	menu.createTitleBar = rkn_menu.createTitleBar
 	menu.refreshTitleBar = rkn_menu.refreshTitleBar
+
+	rkn_menu.onRowChangedOld = menu.onRowChanged
 	menu.onRowChanged = rkn_menu.onRowChanged
+
+	rkn_menu.onSelectElementOld = menu.onSelectElement
 	menu.onSelectElement = rkn_menu.onSelectElement
+
+	rkn_menu.onDropDownActivatedOld = menu.onDropDownActivated
 	menu.onDropDownActivated = rkn_menu.onDropDownActivated
+
 	rkn_menu.viewCreatedOld = menu.viewCreated
 	menu.viewCreated = rkn_menu.viewCreated
 end
@@ -37,7 +44,16 @@ function rkn_menu.createTitleBar(frame)
 	menu.updateConstructionPlans()
 	menu.getImportablePlans()
 
-	local ftable = frame:addTable(9, { tabOrder = 5, height = 0, x = menu.titleData.offsetX, y = menu.titleData.offsetY, scaling = false, reserveScrollBar = false })
+	local titlebarpanel = frame:addHiddenFrameBorder("titlebar", { active = menu.panelState.leftmenu })
+	local ftable = frame:addTable(9, {
+		tabOrder = 5,
+		height = 0,
+		x = menu.titleData.offsetX,
+		y = menu.titleData.offsetY,
+		scaling = false,
+		reserveScrollBar = false,
+		frameborder = titlebarpanel.id,
+	})
 	ftable:setColWidth(1, menu.titleData.nameWidth)
 	ftable:setColWidth(2, menu.titleData.dropdownWidth)
 	ftable:setColWidth(3, menu.titleData.height)
@@ -60,8 +76,9 @@ function rkn_menu.createTitleBar(frame)
 		end
 		table.sort(loadOptions, function (a, b) return a.text < b.text end)
 		------- Runekn's Changes Start Here! ----------
-		--row[2]:createDropDown(loadOptions, { textOverride = ReadText(1001, 7904), optionWidth = menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize }):setTextProperties(config.dropDownTextProperties)
-		--row[2].handlers.onDropDownActivated = function () menu.noupdate = true end
+		--row[2]:createDropDown(loadOptions, { textOverride = ReadText(1001, 7904), optionWidth = menu.titleData.dropdownWidth + 7 * (menu.titleData.height + Helper.borderSize) }):setTextProperties(config.dropDownTextProperties)
+		--row[2].handlers.onDropDownActivated = function () menu.noupdate = true; menu.closeContextMenu() end
+		--row[2].handlers.onDropDownDeactivated = function () menu.noupdate = false end
 		--row[2].handlers.onDropDownConfirmed = menu.dropdownLoad
 		--row[2].handlers.onDropDownRemoved = menu.dropdownRemovedCP
 
@@ -121,17 +138,19 @@ function rkn_menu.createTitleBar(frame)
 		row[9]:createButton({ helpOverlayID = "reset_topview", helpOverlayText = " ", helpOverlayHighlightOnly = true, active = true, height = menu.titleData.height, mouseOverText = ffi.string(C.ConvertInputString(ReadText(1026, 7911), ReadText(1026, 7902))) }):setIcon("menu_reset_view"):setHotkey("INPUT_STATE_DETAILMONITOR_RESET_VIEW", { displayIcon = false })
 		row[9].handlers.onClick = function () return C.ResetMapPlayerRotation(menu.holomap) end
 	end
+
+	ftable:addConnection(1, 3, true)
 end
 
 -- Overriden function --
 function rkn_menu.refreshTitleBar()
 	local text = {
-		alignment = "center",
+		alignment = "left",
 		fontname = Helper.standardFont,
 		fontsize = Helper.scaleFont(Helper.standardFont, Helper.standardFontSize),
 		color = Color["text_normal"],
-		x = 0,
-		y = 0
+		x = Helper.standardTextOffsetx,
+		y = 0,
 	}
 
 	menu.updateConstructionPlans()
@@ -141,17 +160,17 @@ function rkn_menu.refreshTitleBar()
 		text.override = ReadText(1001, 7904)
 		local loadOptions = {}
 		for _, plan in ipairs(menu.constructionplans) do
-			table.insert(loadOptions, { id = plan.id, text = plan.name, icon = "", displayremoveoption = plan.deleteable, active = plan.active, mouseovertext = plan.mouseovertext })
+			table.insert(loadOptions, { id = plan.id, text1 = plan.name, icon = "", displayremoveoption = plan.deleteable, active = plan.active, mouseovertext = plan.mouseovertext })
 		end
-		table.sort(loadOptions, function (a, b) return a.text < b.text end)
+		table.sort(loadOptions, function (a, b) return a.text1 < b.text1 end)
 
 		-- editbox
 		local desc = Helper.createEditBox(Helper.createTextInfo(ffi.string(C.GetComponentName(menu.container)), "center", Helper.headerRow1Font, Helper.scaleFont(Helper.headerRow1Font, Helper.headerRow1FontSize), 255, 255, 255, 100), true, 0, 0, 0, 0, nil, nil, false)
 		Helper.setCellContent(menu, menu.titlebartable, desc, 1, 1, nil, "editbox", nil, menu.editboxNameUpdateText)
 		-- dropdown
 		------- Runekn's Changes Start Here! ----------
-		--local desc = Helper.createDropDown(loadOptions, "", text, nil, true, true, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + menu.titleData.height + Helper.borderSize)
-		--Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, function () menu.noupdate = true end, menu.dropdownLoad, menu.dropdownRemovedCP)
+		--local desc = Helper.createDropDown(loadOptions, "", text, nil, true, true, 0, 0, 0, 0, nil, nil, "", menu.titleData.dropdownWidth + 7 * (menu.titleData.height + Helper.borderSize))
+		--Helper.setCellContent(menu, menu.titlebartable, desc, 1, 2, nil, "dropdown", nil, function () menu.noupdate = true; menu.closeContextMenu() end, menu.dropdownLoad, menu.dropdownRemovedCP, function () menu.update = false end)
 
 		RKN_Configio.createRefreshStationTitleBarButton(menu, text, loadOptions)
 		------- Runekn's Changes Stop Here! ----------
@@ -163,7 +182,7 @@ function rkn_menu.refreshTitleBar()
 		local loadoutOptions = {}
 		if next(menu.loadouts) then
 			for _, loadout in ipairs(menu.loadouts) do
-				table.insert(loadoutOptions, { id = loadout.id, text = loadout.name, icon = "", displayremoveoption = loadout.deleteable, active = loadout.active, mouseovertext = loadout.mouseovertext })
+				table.insert(loadoutOptions, { id = loadout.id, text1 = loadout.name, icon = "", displayremoveoption = loadout.deleteable, active = loadout.active, mouseovertext = loadout.mouseovertext })
 			end
 		end
 
@@ -183,62 +202,24 @@ function rkn_menu.refreshTitleBar()
 	end
 end
 
--- Overriden function --
 function rkn_menu.onRowChanged(row, rowdata, uitable, modified, input, source)
-	-- Runekn's Changes Start Here! --
 	if RKN_Configio.onRowChanged(uitable, rowdata) then
         return
     end
-	-- Runekn's Changes Stop Here! --
-
-	if not menu.loadoutMode then
-		if uitable == menu.plantable then
-			if menu.holomap ~= 0 then
-				if (source ~= "auto") or (menu.selectedModule == nil) then
-					if (type(rowdata) == "table") and rowdata.ismodule and (not rowdata.removed) then
-						menu.newSelectedModule = rowdata.module
-						C.SelectBuildMapEntry(menu.holomap, rowdata.idx)
-					elseif menu.selectedModule ~= nil then
-						menu.newSelectedModule = "clear"
-						C.ClearBuildMapSelection(menu.holomap)
-					end
-				end
-			end
-		elseif uitable == menu.contexttable then
-			if (source ~= "auto") or (menu.contextData and (menu.contextData.selectedEntry == nil)) then
-				if (type(rowdata) == "table") then
-					menu.contextData.newSelectedEntry = rowdata
-				end
-			end
-		end
-	end
+	rkn_menu.onRowChangedOld(row, rowdata, uitable, modified, input, source)
 end
 
 -- Overriden function --
 function rkn_menu.onSelectElement(uitable, modified, row)
-	if uitable == menu.plantable then
-		if menu.holomap ~= 0 then
-			if (source ~= "auto") or (menu.selectedModule == nil) then
-				local rowdata = Helper.getCurrentRowData(menu, uitable)
-				if (type(rowdata) == "table") and rowdata.ismodule and (not rowdata.removed) then
-					C.SetFocusMapConstructionPlanEntry(menu.holomap, rowdata.idx, true)
-				end
-			end
-		end
-    end
-	-- Runekn's Changes Start Here! --
+	rkn_menu.onSelectElementOld(uitable, modified, row)
     RKN_Configio.onSelectElement(uitable)
-	-- Runekn's Changes Stop Here! --
 end
 
 function rkn_menu.onDropDownActivated(dropdown)
-	-- Runekn's Changes Start Here! --
 	if RKN_Configio.onDropDownActivated(dropdown) then
 		return
 	end
-	-- Runekn's Changes Stop Here! --
-
-	menu.closeContextMenu()
+	rkn_menu.onDropDownActivatedOld(dropdown)
 end
 
 function rkn_menu.viewCreated(layer, ...)

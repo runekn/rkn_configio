@@ -46,7 +46,7 @@ RKN_Configio = {
         standardListColumnWidth = Helper.scaleY(Helper.standardTextHeight),
         shipNotOwnedColor = { r = 100, g = 100, b = 100, a = 100 }, -- dark grey
         stationLoadHeight = Helper.scaleY(530),
-        stationLoadoutLoadHeight = Helper.scaleY(400),
+        stationLoadoutLoadHeight = Helper.scaleY(410),
         shipLoadHeight = Helper.scaleY(400),
         loadSettingsWidthMultipler = 0.38,
         settingsBrowserSeparation = Helper.borderSize * 10,

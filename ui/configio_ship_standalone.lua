@@ -28,9 +28,16 @@ local config = {
 local function init()
 	menu = Helper.getMenu("ShipConfigurationMenu")
 	menu.createTitleBar = rkn_menu.createTitleBar
+
+	rkn_menu.onRowChangedOld = menu.onRowChanged
 	menu.onRowChanged = rkn_menu.onRowChanged
+
+	rkn_menu.onSelectElementOld = menu.onSelectElement
 	menu.onSelectElement = rkn_menu.onSelectElement
+
+	rkn_menu.onDropDownActivatedOld = menu.onDropDownActivated
 	menu.onDropDownActivated = rkn_menu.onDropDownActivated
+
 	rkn_menu.viewCreatedOld = menu.viewCreated
 	menu.viewCreated = rkn_menu.viewCreated
 end
@@ -100,6 +107,7 @@ function rkn_menu.createTitleBar(frame)
 			y = 0,
 			scaling = false,
 		}
+
 		local dropdown = row[2]:createDropDown(shipOptions, { startOption = curShipOption, active = (not menu.isReadOnly) and (menu.class ~= ""), optionHeight = (menu.statsTableOffsetY or Helper.viewHeight) - menu.titleData.offsetY - Helper.frameBorder, helpOverlayID = "shipconfig_shipoptions", helpOverlayText = " ", helpOverlayHighlightOnly = true }):setTextProperties(config.dropDownTextProperties):setIconProperties(dropDownIconProperties)
 		row[2].properties.text.halign = "left"
 		row[2].handlers.onDropDownConfirmed = menu.dropdownShip
@@ -167,34 +175,26 @@ function rkn_menu.createTitleBar(frame)
 	menu.selectedCols.ship = nil
 end
 
-function rkn_menu.onRowChanged(row, rowdata, uitable)
-	if menu.mode == "modify" then
-		if uitable == menu.slottable then
-			if type(rowdata) == "table" then
-				menu.currentSlot = rowdata[1]
-				menu.selectMapMacroSlot()
-			end
-		end
-	end
-	-- Runekn's Changes Start Here! --
-	RKN_Configio.onRowChanged(uitable, rowdata)
-	-- Runekn's Changes Stop Here! --
+function rkn_menu.onRowChanged(row, rowdata, uitable, modified, input, source)
+	rkn_menu.onRowChangedOld(row, rowdata, uitable, modified, input, source)
+	if RKN_Configio.onRowChanged(uitable, rowdata) then
+        return
+    end
 end
 
-function rkn_menu.onSelectElement(uitable)
-	-- Runekn's Changes Start Here! --
+-- Overriden function --
+function rkn_menu.onSelectElement(uitable, modified, row)
     RKN_Configio.onSelectElement(uitable)
-	-- Runekn's Changes Stop Here! --
+	if (rkn_menu.onSelectElementOld) then
+		rkn_menu.onSelectElementOld(uitable, modified, row)
+	end
 end
 
 function rkn_menu.onDropDownActivated(dropdown)
-	-- Runekn's Changes Start Here! --
 	if RKN_Configio.onDropDownActivated(dropdown) then
 		return
 	end
-	-- Runekn's Changes Stop Here! --
-
-	menu.closeContextMenu()
+	rkn_menu.onDropDownActivatedOld(dropdown)
 end
 
 function rkn_menu.viewCreated(layer, ...)
